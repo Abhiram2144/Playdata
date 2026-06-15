@@ -51,6 +51,7 @@
 
 ### Tech Stack: 
 - NextJS - Frontend and Server
+- UI Components - ShadCN and Mantine UI
 - OpenAI API - AI
 - Supabase - Backend and Authentication
 - Socket.io - Web Sockets
