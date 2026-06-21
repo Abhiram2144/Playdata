@@ -10,8 +10,9 @@ import {
   RefreshCw,
   ChevronUp,
   ChevronDown,
+  UserPlus,
 } from 'lucide-react';
-import { Sidebar, Navbar, LoadingState } from '@/components/admin';
+import { Sidebar, Navbar, LoadingState, AddTeacherModal } from '@/components/admin';
 import { useAdmin } from '@/contexts/AdminContext';
 import { toast } from 'sonner';
 
@@ -37,6 +38,7 @@ export default function AdminTeachers() {
   const [sortKey, setSortKey] = useState<SortKey>('created_at');
   const [sortAsc, setSortAsc] = useState(false);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [addModalOpen, setAddModalOpen] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) router.replace('/admin/login');
@@ -124,14 +126,23 @@ export default function AdminTeachers() {
               <h1 className="text-3xl font-bold text-slate-900">Teachers</h1>
               <p className="text-slate-600 mt-1">{teachers.length} teacher{teachers.length !== 1 ? 's' : ''} registered</p>
             </div>
-            <button
-              onClick={fetchTeachers}
-              disabled={fetching}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-all font-medium disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${fetching ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={fetchTeachers}
+                disabled={fetching}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-all font-medium disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 ${fetching ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+              <button
+                onClick={() => setAddModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all font-medium"
+              >
+                <UserPlus className="w-4 h-4" />
+                Add Teacher
+              </button>
+            </div>
           </motion.div>
 
           {/* Summary cards */}
@@ -280,6 +291,12 @@ export default function AdminTeachers() {
           </motion.div>
         </div>
       </main>
+
+      <AddTeacherModal
+        isOpen={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        onInvited={fetchTeachers}
+      />
     </div>
   );
 }

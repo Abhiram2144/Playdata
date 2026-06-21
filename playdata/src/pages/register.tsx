@@ -16,7 +16,6 @@ const schema = z.object({
   email: z.string().email('Enter a valid email'),
   password: z.string().min(8, 'Minimum 8 characters'),
   confirmPassword: z.string(),
-  role: z.enum(['student', 'teacher']),
 }).refine((d) => d.password === d.confirmPassword, {
   message: 'Passwords do not match',
   path: ['confirmPassword'],
@@ -29,17 +28,16 @@ export default function RegisterPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { role: 'student' },
   });
 
   const emailValue = watch('email') ?? '';
-  const roleValue = watch('role');
   const username = emailValue.includes('@') ? emailValue.split('@')[0].toLowerCase() : '';
 
   const onSubmit = async (data: FormData) => {
-    // Server-side domain check + user creation
+    // Server-side domain check + user creation (students only — teacher
+    // accounts are created by an admin)
     const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -47,7 +45,6 @@ export default function RegisterPage() {
         email: data.email,
         password: data.password,
         fullName: data.fullName,
-        role: data.role,
       }),
     });
 
@@ -70,7 +67,7 @@ export default function RegisterPage() {
       return;
     }
 
-    router.push(data.role === 'teacher' ? '/onboarding/teacher' : '/onboarding/student');
+    router.push('/onboarding/student');
   };
 
   return (
@@ -129,24 +126,6 @@ export default function RegisterPage() {
             {errors.confirmPassword && <p className="text-xs text-red-400">{errors.confirmPassword.message}</p>}
           </div>
 
-          {/* Role toggle */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-[#c9c9d4]">I am a</label>
-            <div className="grid grid-cols-2 gap-2">
-              {(['student', 'teacher'] as const).map((r) => (
-                <button key={r} type="button" onClick={() => setValue('role', r)}
-                  className={cn(
-                    'rounded-md border py-2 text-sm font-medium capitalize transition-colors',
-                    roleValue === r
-                      ? 'border-violet-500 bg-violet-600/20 text-violet-300'
-                      : 'border-[#35354a] bg-transparent text-[#8d8da0] hover:border-violet-500/50 hover:text-white'
-                  )}>
-                  {r}
-                </button>
-              ))}
-            </div>
-          </div>
-
           <Button type="submit" disabled={isSubmitting} className="w-full bg-violet-600 text-white hover:bg-violet-700">
             {isSubmitting ? <><Loader2 size={15} className="animate-spin" />Creating…</> : 'Create account'}
           </Button>
@@ -155,6 +134,9 @@ export default function RegisterPage() {
         <p className="text-center text-sm text-[#8d8da0]">
           Already have an account?{' '}
           <Link href="/loginpage" className="font-medium text-violet-400 hover:text-violet-300 transition-colors">Sign in</Link>
+        </p>
+        <p className="text-center text-xs text-[#6a6a80]">
+          Teacher account? Your administrator creates it for you — check your email for an invite link.
         </p>
       </div>
     </div>

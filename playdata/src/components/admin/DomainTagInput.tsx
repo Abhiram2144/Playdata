@@ -70,7 +70,7 @@ export function DomainTagInput({
           }}
           onKeyPress={handleKeyPress}
           placeholder={placeholder}
-          className="flex-1 px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          className="flex-1 px-4 py-2 border text-black border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
         />
         <motion.button
           whileHover={{ scale: 1.05 }}

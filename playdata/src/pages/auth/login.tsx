@@ -113,12 +113,7 @@ export default function AuthLoginPage() {
               </div>
               <p className="text-xl font-bold text-white">PlayData</p>
             </div>
-            <div className="mt-auto space-y-3">
-              <p className="text-2xl font-semibold leading-relaxed text-white/75">
-                &ldquo;Transforming esports statistics into interactive mathematics lessons.&rdquo;
-              </p>
-              <p className="font-mono text-sm font-semibold text-violet-400">AI · Real-time · Esports</p>
-            </div>
+            
           </div>
         </div>
         <div className="relative bg-[#0d0d18]">
@@ -227,6 +222,12 @@ export default function AuthLoginPage() {
               Don&apos;t have an account?{' '}
               <Link href="/register" className="text-violet-400 hover:text-violet-300 font-medium transition-colors">
                 Create one
+              </Link>
+            </p>
+            <p className="text-center text-sm text-[#6a6a80]">
+              Teacher?{' '}
+              <Link href="/auth/teacher-login" className="text-violet-400 hover:text-violet-300 font-medium transition-colors">
+                Sign in with a magic link
               </Link>
             </p>
           </div>

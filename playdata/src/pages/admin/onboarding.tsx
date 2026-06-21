@@ -25,7 +25,8 @@ export default function AdminOnboarding() {
   const [formData, setFormData] = useState<OnboardingState>({
     organization_name: '',
     organization_type: 'university',
-    allowed_domains: [],
+    allowed_student_domains: [],
+    allowed_teacher_domains: [],
     default_teacher_role_name: 'Teacher',
     default_student_role_name: 'Student',
     guest_access_enabled: false,
@@ -80,7 +81,7 @@ export default function AdminOnboarding() {
       }
     }
     if (currentStep === 2) {
-      if (formData.allowed_domains.length === 0) {
+      if (formData.allowed_student_domains.length === 0 && formData.allowed_teacher_domains.length === 0) {
         alert('Add at least one email domain');
         return;
       }
@@ -190,7 +191,7 @@ export default function AdminOnboarding() {
                           })
                         }
                         placeholder="e.g., University of Leicester"
-                        className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        className="w-full px-4 py-3 border text-black border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                       />
                     </div>
 
@@ -243,22 +244,50 @@ export default function AdminOnboarding() {
                     <p className="text-slate-600">Add allowed email domains for your organization</p>
                   </div>
 
-                  <div className="space-y-4">
-                    <DomainTagInput
-                      domains={formData.allowed_domains}
-                      onDomainsChange={(domains) =>
-                        setFormData({
-                          ...formData,
-                          allowed_domains: domains,
-                        })
-                      }
-                      placeholder="e.g., leicester.ac.uk"
-                    />
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Student email domains
+                      </label>
+                      <DomainTagInput
+                        domains={formData.allowed_student_domains}
+                        onDomainsChange={(domains) =>
+                          setFormData({
+                            ...formData,
+                            allowed_student_domains: domains,
+                          })
+                        }
+                        placeholder="e.g., student.leicester.ac.uk"
+                      />
+                      <p className="text-xs text-slate-500 mt-1.5">
+                        Students with an email from these domains can self-register.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Teacher email domains
+                      </label>
+                      <DomainTagInput
+                        domains={formData.allowed_teacher_domains}
+                        onDomainsChange={(domains) =>
+                          setFormData({
+                            ...formData,
+                            allowed_teacher_domains: domains,
+                          })
+                        }
+                        placeholder="e.g., leicester.ac.uk"
+                      />
+                      <p className="text-xs text-slate-500 mt-1.5">
+                        Teacher accounts are created by you (see Teachers → Add Teacher) — these
+                        domains are an informational reference for which staff emails you expect to invite.
+                      </p>
+                    </div>
 
                     <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                       <p className="text-sm text-blue-700">
-                        <span className="font-semibold">Tip:</span> Users with email addresses
-                        from these domains can create accounts and access PlayData.
+                        <span className="font-semibold">Tip:</span> Only the student domain list controls
+                        who can create their own account. Teachers never self-register.
                       </p>
                     </div>
                   </div>
@@ -298,7 +327,7 @@ export default function AdminOnboarding() {
                             })
                           }
                           placeholder="e.g., Teacher"
-                          className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          className="w-full px-4 py-3 text-black border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                         />
                       </div>
 
@@ -316,7 +345,7 @@ export default function AdminOnboarding() {
                             })
                           }
                           placeholder="e.g., Student"
-                          className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          className="w-full px-4 py-3 text-black border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                         />
                       </div>
                     </div>
@@ -418,19 +447,36 @@ export default function AdminOnboarding() {
                     </div>
 
                     {/* Domains Card */}
-                    <div className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg">
-                      <p className="text-sm text-green-600 font-medium uppercase mb-3">
-                        Allowed Domains ({formData.allowed_domains.length})
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {formData.allowed_domains.map((domain) => (
-                          <span
-                            key={domain}
-                            className="px-3 py-1.5 bg-white border border-green-200 text-green-700 rounded-full text-sm font-medium"
-                          >
-                            {domain}
-                          </span>
-                        ))}
+                    <div className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg space-y-4">
+                      <div>
+                        <p className="text-sm text-green-600 font-medium uppercase mb-3">
+                          Student Domains ({formData.allowed_student_domains.length})
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {formData.allowed_student_domains.map((domain) => (
+                            <span
+                              key={domain}
+                              className="px-3 py-1.5 bg-white border border-green-200 text-green-700 rounded-full text-sm font-medium"
+                            >
+                              {domain}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm text-green-600 font-medium uppercase mb-3">
+                          Teacher Domains ({formData.allowed_teacher_domains.length})
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {formData.allowed_teacher_domains.map((domain) => (
+                            <span
+                              key={domain}
+                              className="px-3 py-1.5 bg-white border border-green-200 text-green-700 rounded-full text-sm font-medium"
+                            >
+                              {domain}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     </div>
 

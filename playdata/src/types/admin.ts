@@ -21,7 +21,8 @@ export interface OrganizationSettings {
   admin_id?: string;
   organization_name: string;
   organization_type: OrganizationType;
-  allowed_domains: string[];
+  allowed_student_domains: string[];
+  allowed_teacher_domains: string[];
   default_teacher_role_name: string;
   default_student_role_name: string;
   guest_access_enabled: boolean;
@@ -35,8 +36,9 @@ export interface OnboardingState {
   organization_name: string;
   organization_type: OrganizationType;
 
-  // Step 2: Allowed Email Domains
-  allowed_domains: string[];
+  // Step 2: Allowed Email Domains (separate lists per role)
+  allowed_student_domains: string[];
+  allowed_teacher_domains: string[];
 
   // Step 3: Platform Configuration
   default_teacher_role_name: string;
@@ -58,7 +60,8 @@ export interface AdminContextType {
   // Organization data
   organizationName: string;
   organizationType: OrganizationType;
-  allowedDomains: string[];
+  allowedStudentDomains: string[];
+  allowedTeacherDomains: string[];
   defaultTeacherRoleName: string;
   defaultStudentRoleName: string;
   guestAccessEnabled: boolean;

@@ -5,17 +5,20 @@ type Body = {
   email: string;
   password: string;
   fullName: string;
-  role: 'student' | 'teacher';
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { email, password, fullName, role } = req.body as Body;
+  const { email, password, fullName } = req.body as Body;
 
-  if (!email || !password || !fullName || !role) {
+  if (!email || !password || !fullName) {
     return res.status(400).json({ error: 'Missing required fields.' });
   }
+
+  // Self-service sign-up always creates a student account. Teacher accounts
+  // can only be created by an admin (see /api/admin/teachers).
+  const role = 'student' as const;
 
   const domain = email.split('@')[1]?.toLowerCase();
   if (!domain) return res.status(400).json({ error: 'Invalid email address.' });
@@ -27,6 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .from('organization_email_domains')
     .select('id')
     .eq('domain', domain)
+    .eq('applies_to', 'student')
     .maybeSingle();
 
   if (domainError) {

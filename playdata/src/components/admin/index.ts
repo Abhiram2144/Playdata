@@ -8,3 +8,4 @@ export { LoadingState, EmptyState } from './LoadingState';
 export { DomainTagInput } from './DomainTagInput';
 export { OnboardingStepper } from './OnboardingStepper';
 export { SettingsModal } from './SettingsModal';
+export { AddTeacherModal } from './AddTeacherModal';

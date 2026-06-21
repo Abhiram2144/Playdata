@@ -30,7 +30,8 @@ export default function AdminSettings() {
     isLoading,
     organizationName,
     organizationType,
-    allowedDomains,
+    allowedStudentDomains,
+    allowedTeacherDomains,
     defaultTeacherRoleName,
     defaultStudentRoleName,
     guestAccessEnabled,
@@ -40,8 +41,10 @@ export default function AdminSettings() {
 
   const [orgName, setOrgName] = useState(organizationName);
   const [orgType, setOrgType] = useState<OrganizationType>(organizationType);
-  const [domains, setDomains] = useState<string[]>(allowedDomains);
-  const [domainInput, setDomainInput] = useState('');
+  const [studentDomains, setStudentDomains] = useState<string[]>(allowedStudentDomains);
+  const [studentDomainInput, setStudentDomainInput] = useState('');
+  const [teacherDomains, setTeacherDomains] = useState<string[]>(allowedTeacherDomains);
+  const [teacherDomainInput, setTeacherDomainInput] = useState('');
   const [teacherRoleName, setTeacherRoleName] = useState(defaultTeacherRoleName);
   const [studentRoleName, setStudentRoleName] = useState(defaultStudentRoleName);
   const [guestAccess, setGuestAccess] = useState(guestAccessEnabled);
@@ -53,33 +56,46 @@ export default function AdminSettings() {
   useEffect(() => {
     setOrgName(organizationName);
     setOrgType(organizationType);
-    setDomains(allowedDomains);
+    setStudentDomains(allowedStudentDomains);
+    setTeacherDomains(allowedTeacherDomains);
     setTeacherRoleName(defaultTeacherRoleName);
     setStudentRoleName(defaultStudentRoleName);
     setGuestAccess(guestAccessEnabled);
     setAiFeatures(aiFeaturesEnabled);
-  }, [organizationName, organizationType, allowedDomains, defaultTeacherRoleName, defaultStudentRoleName, guestAccessEnabled, aiFeaturesEnabled]);
+  }, [organizationName, organizationType, allowedStudentDomains, allowedTeacherDomains, defaultTeacherRoleName, defaultStudentRoleName, guestAccessEnabled, aiFeaturesEnabled]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) router.replace('/admin/login');
     else if (!isLoading && isAuthenticated && !onboardingCompleted) router.replace('/admin/onboarding');
   }, [isAuthenticated, isLoading, onboardingCompleted, router]);
 
-  const addDomain = () => {
-    const d = domainInput.trim().toLowerCase().replace(/^@/, '');
+  const addStudentDomain = () => {
+    const d = studentDomainInput.trim().toLowerCase().replace(/^@/, '');
     if (!d || !d.includes('.')) { toast.error('Enter a valid domain (e.g. university.ac.uk)'); return; }
-    if (domains.includes(d)) { toast.error('Domain already added'); return; }
-    setDomains((prev) => [...prev, d]);
-    setDomainInput('');
+    if (studentDomains.includes(d)) { toast.error('Domain already added'); return; }
+    setStudentDomains((prev) => [...prev, d]);
+    setStudentDomainInput('');
   };
 
-  const removeDomain = (domain: string) => {
-    setDomains((prev) => prev.filter((d) => d !== domain));
+  const removeStudentDomain = (domain: string) => {
+    setStudentDomains((prev) => prev.filter((d) => d !== domain));
+  };
+
+  const addTeacherDomain = () => {
+    const d = teacherDomainInput.trim().toLowerCase().replace(/^@/, '');
+    if (!d || !d.includes('.')) { toast.error('Enter a valid domain (e.g. university.ac.uk)'); return; }
+    if (teacherDomains.includes(d)) { toast.error('Domain already added'); return; }
+    setTeacherDomains((prev) => [...prev, d]);
+    setTeacherDomainInput('');
+  };
+
+  const removeTeacherDomain = (domain: string) => {
+    setTeacherDomains((prev) => prev.filter((d) => d !== domain));
   };
 
   const handleSave = async () => {
     if (!orgName.trim()) { toast.error('Organisation name is required'); return; }
-    if (domains.length === 0) { toast.error('At least one email domain is required'); return; }
+    if (studentDomains.length === 0 && teacherDomains.length === 0) { toast.error('At least one email domain is required'); return; }
 
     setSaving(true);
     setSaved(false);
@@ -87,7 +103,8 @@ export default function AdminSettings() {
       await updateOrganizationSettings({
         organization_name: orgName.trim(),
         organization_type: orgType,
-        allowed_domains: domains,
+        allowed_student_domains: studentDomains,
+        allowed_teacher_domains: teacherDomains,
         default_teacher_role_name: teacherRoleName.trim() || 'Teacher',
         default_student_role_name: studentRoleName.trim() || 'Student',
         guest_access_enabled: guestAccess,
@@ -200,62 +217,117 @@ export default function AdminSettings() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="bg-white rounded-xl border border-slate-200 p-6"
+              className="bg-white rounded-xl border border-slate-200 p-6 space-y-6"
             >
-              <h2 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
-                <Globe className="w-5 h-5 text-indigo-600" />
-                Allowed Email Domains
-              </h2>
-              <p className="text-sm text-slate-500 mb-5">
-                Only users with these email domains can register and sign in.
-              </p>
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+                  <Globe className="w-5 h-5 text-indigo-600" />
+                  Student Email Domains
+                </h2>
+                <p className="text-sm text-slate-500 mb-5">
+                  Students with these email domains can self-register and sign in.
+                </p>
 
-              {/* Add domain */}
-              <div className="flex gap-2 mb-4">
-                <input
-                  type="text"
-                  value={domainInput}
-                  onChange={(e) => setDomainInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addDomain(); } }}
-                  placeholder="university.ac.uk"
-                  className="flex-1 px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={addDomain}
-                  className="flex items-center gap-1.5 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all text-sm font-medium"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add
-                </button>
+                <div className="flex gap-2 mb-4">
+                  <input
+                    type="text"
+                    value={studentDomainInput}
+                    onChange={(e) => setStudentDomainInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addStudentDomain(); } }}
+                    placeholder="student.university.ac.uk"
+                    className="flex-1 px-4 py-2.5 border text-black border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={addStudentDomain}
+                    className="flex items-center gap-1.5 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all text-sm font-medium"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add
+                  </button>
+                </div>
+
+                {studentDomains.length === 0 ? (
+                  <p className="text-sm text-slate-400 text-center py-4 border border-dashed border-slate-200 rounded-lg">
+                    No domains added yet
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {studentDomains.map((domain) => (
+                      <motion.span
+                        key={domain}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-lg text-sm font-medium"
+                      >
+                        @{domain}
+                        <button
+                          type="button"
+                          onClick={() => removeStudentDomain(domain)}
+                          className="text-indigo-400 hover:text-indigo-700 transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </motion.span>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {/* Domain tags */}
-              {domains.length === 0 ? (
-                <p className="text-sm text-slate-400 text-center py-4 border border-dashed border-slate-200 rounded-lg">
-                  No domains added yet
+              <div className="border-t border-slate-100 pt-6">
+                <h2 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+                  <Globe className="w-5 h-5 text-indigo-600" />
+                  Teacher Email Domains
+                </h2>
+                <p className="text-sm text-slate-500 mb-5">
+                  Reference list of domains you expect to invite teachers from (see Teachers → Add Teacher). Teachers never self-register.
                 </p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {domains.map((domain) => (
-                    <motion.span
-                      key={domain}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-lg text-sm font-medium"
-                    >
-                      @{domain}
-                      <button
-                        type="button"
-                        onClick={() => removeDomain(domain)}
-                        className="text-indigo-400 hover:text-indigo-700 transition-colors"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </motion.span>
-                  ))}
+
+                <div className="flex gap-2 mb-4">
+                  <input
+                    type="text"
+                    value={teacherDomainInput}
+                    onChange={(e) => setTeacherDomainInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTeacherDomain(); } }}
+                    placeholder="university.ac.uk"
+                    className="flex-1 px-4 py-2.5 border text-black border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={addTeacherDomain}
+                    className="flex items-center gap-1.5 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all text-sm font-medium"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add
+                  </button>
                 </div>
-              )}
+
+                {teacherDomains.length === 0 ? (
+                  <p className="text-sm text-slate-400 text-center py-4 border border-dashed border-slate-200 rounded-lg">
+                    No domains added yet
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {teacherDomains.map((domain) => (
+                      <motion.span
+                        key={domain}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-lg text-sm font-medium"
+                      >
+                        @{domain}
+                        <button
+                          type="button"
+                          onClick={() => removeTeacherDomain(domain)}
+                          className="text-indigo-400 hover:text-indigo-700 transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </motion.span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </motion.div>
 
             {/* Role Names */}

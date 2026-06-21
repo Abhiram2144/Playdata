@@ -28,7 +28,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   const [organizationName, setOrganizationName] = useState('');
   const [organizationType, setOrganizationType] = useState<OrganizationType>('university');
-  const [allowedDomains, setAllowedDomains] = useState<string[]>([]);
+  const [allowedStudentDomains, setAllowedStudentDomains] = useState<string[]>([]);
+  const [allowedTeacherDomains, setAllowedTeacherDomains] = useState<string[]>([]);
   const [defaultTeacherRoleName, setDefaultTeacherRoleName] = useState('Teacher');
   const [defaultStudentRoleName, setDefaultStudentRoleName] = useState('Student');
   const [guestAccessEnabled, setGuestAccessEnabled] = useState(false);
@@ -77,10 +78,11 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
       const { data: domainRows } = await supabase
         .from('organization_email_domains')
-        .select('domain')
+        .select('domain, applies_to')
         .eq('organization_id', org.id);
 
-      setAllowedDomains(domainRows?.map((r) => r.domain) ?? []);
+      setAllowedStudentDomains(domainRows?.filter((r) => r.applies_to === 'student').map((r) => r.domain) ?? []);
+      setAllowedTeacherDomains(domainRows?.filter((r) => r.applies_to === 'teacher').map((r) => r.domain) ?? []);
     }
 
     const { count: tc } = await supabase
@@ -168,7 +170,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     setOrganizationId(null);
     setOrganizationName('');
     setOrganizationType('university');
-    setAllowedDomains([]);
+    setAllowedStudentDomains([]);
+    setAllowedTeacherDomains([]);
     setOnboardingCompleted(false);
     setTeacherCount(0);
     setStudentCount(0);
@@ -177,39 +180,52 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const updateOnboarding = useCallback(async (state: Partial<OnboardingState>) => {
     if (state.organization_name !== undefined) setOrganizationName(state.organization_name);
     if (state.organization_type !== undefined) setOrganizationType(state.organization_type);
-    if (state.allowed_domains !== undefined) setAllowedDomains(state.allowed_domains);
+    if (state.allowed_student_domains !== undefined) setAllowedStudentDomains(state.allowed_student_domains);
+    if (state.allowed_teacher_domains !== undefined) setAllowedTeacherDomains(state.allowed_teacher_domains);
     if (state.default_teacher_role_name !== undefined) setDefaultTeacherRoleName(state.default_teacher_role_name);
     if (state.default_student_role_name !== undefined) setDefaultStudentRoleName(state.default_student_role_name);
     if (state.guest_access_enabled !== undefined) setGuestAccessEnabled(state.guest_access_enabled);
     if (state.ai_features_enabled !== undefined) setAiFeaturesEnabled(state.ai_features_enabled);
   }, []);
 
+  // Upserts (rather than inserts) so that retrying onboarding after a
+  // partial failure — or a double-submit — never trips the unique
+  // constraint on organizations.admin_id / organization_settings.organization_id.
   const completeOnboarding = useCallback(async (state: OnboardingState) => {
     if (!adminId) throw new Error('Not authenticated');
     const supabase = getSupabase();
 
     const { data: org, error: orgError } = await supabase
       .from('organizations')
-      .insert({ admin_id: adminId, name: state.organization_name, type: state.organization_type })
+      .upsert(
+        { admin_id: adminId, name: state.organization_name, type: state.organization_type },
+        { onConflict: 'admin_id' }
+      )
       .select('id')
       .single();
     if (orgError) throw new Error(orgError.message);
 
     const { error: settingsError } = await supabase
       .from('organization_settings')
-      .insert({
-        organization_id: org.id,
-        default_teacher_role_name: state.default_teacher_role_name,
-        default_student_role_name: state.default_student_role_name,
-        guest_access_enabled: state.guest_access_enabled,
-        ai_features_enabled: state.ai_features_enabled,
-      });
+      .upsert(
+        {
+          organization_id: org.id,
+          default_teacher_role_name: state.default_teacher_role_name,
+          default_student_role_name: state.default_student_role_name,
+          guest_access_enabled: state.guest_access_enabled,
+          ai_features_enabled: state.ai_features_enabled,
+        },
+        { onConflict: 'organization_id' }
+      );
     if (settingsError) throw new Error(settingsError.message);
 
-    if (state.allowed_domains.length > 0) {
-      const { error: domainsError } = await supabase
-        .from('organization_email_domains')
-        .insert(state.allowed_domains.map((domain) => ({ organization_id: org.id, domain })));
+    await supabase.from('organization_email_domains').delete().eq('organization_id', org.id);
+    const domainRows = [
+      ...state.allowed_student_domains.map((domain) => ({ organization_id: org.id, domain, applies_to: 'student' })),
+      ...state.allowed_teacher_domains.map((domain) => ({ organization_id: org.id, domain, applies_to: 'teacher' })),
+    ];
+    if (domainRows.length > 0) {
+      const { error: domainsError } = await supabase.from('organization_email_domains').insert(domainRows);
       if (domainsError) throw new Error(domainsError.message);
     }
 
@@ -222,7 +238,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     setOrganizationId(org.id);
     setOrganizationName(state.organization_name);
     setOrganizationType(state.organization_type);
-    setAllowedDomains(state.allowed_domains);
+    setAllowedStudentDomains(state.allowed_student_domains);
+    setAllowedTeacherDomains(state.allowed_teacher_domains);
     setDefaultTeacherRoleName(state.default_teacher_role_name);
     setDefaultStudentRoleName(state.default_student_role_name);
     setGuestAccessEnabled(state.guest_access_enabled);
@@ -253,19 +270,30 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       if (error) throw new Error(error.message);
     }
 
-    if (settings.allowed_domains !== undefined) {
-      await supabase.from('organization_email_domains').delete().eq('organization_id', organizationId);
-      if (settings.allowed_domains.length > 0) {
+    if (settings.allowed_student_domains !== undefined) {
+      await supabase.from('organization_email_domains').delete().eq('organization_id', organizationId).eq('applies_to', 'student');
+      if (settings.allowed_student_domains.length > 0) {
         const { error } = await supabase
           .from('organization_email_domains')
-          .insert(settings.allowed_domains.map((domain) => ({ organization_id: organizationId, domain })));
+          .insert(settings.allowed_student_domains.map((domain) => ({ organization_id: organizationId, domain, applies_to: 'student' })));
+        if (error) throw new Error(error.message);
+      }
+    }
+
+    if (settings.allowed_teacher_domains !== undefined) {
+      await supabase.from('organization_email_domains').delete().eq('organization_id', organizationId).eq('applies_to', 'teacher');
+      if (settings.allowed_teacher_domains.length > 0) {
+        const { error } = await supabase
+          .from('organization_email_domains')
+          .insert(settings.allowed_teacher_domains.map((domain) => ({ organization_id: organizationId, domain, applies_to: 'teacher' })));
         if (error) throw new Error(error.message);
       }
     }
 
     if (settings.organization_name !== undefined) setOrganizationName(settings.organization_name);
     if (settings.organization_type !== undefined) setOrganizationType(settings.organization_type);
-    if (settings.allowed_domains !== undefined) setAllowedDomains(settings.allowed_domains);
+    if (settings.allowed_student_domains !== undefined) setAllowedStudentDomains(settings.allowed_student_domains);
+    if (settings.allowed_teacher_domains !== undefined) setAllowedTeacherDomains(settings.allowed_teacher_domains);
     if (settings.default_teacher_role_name !== undefined) setDefaultTeacherRoleName(settings.default_teacher_role_name);
     if (settings.default_student_role_name !== undefined) setDefaultStudentRoleName(settings.default_student_role_name);
     if (settings.guest_access_enabled !== undefined) setGuestAccessEnabled(settings.guest_access_enabled);
@@ -279,7 +307,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     adminName,
     organizationName,
     organizationType,
-    allowedDomains,
+    allowedStudentDomains,
+    allowedTeacherDomains,
     defaultTeacherRoleName,
     defaultStudentRoleName,
     guestAccessEnabled,

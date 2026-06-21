@@ -18,6 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     .from('organization_email_domains')
     .select('organization_id, organizations!inner(name)')
     .eq('domain', domain)
+    .eq('applies_to', 'student')
     .maybeSingle();
 
   if (!data) {

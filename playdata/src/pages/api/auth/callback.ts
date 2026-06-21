@@ -105,24 +105,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // ── Regular user (teacher / student) flow ───────────────
-  const domain = user.email.split('@')[1].toLowerCase();
-
-  const { data: domainRow } = await adminClient
-    .from('organization_email_domains')
-    .select('organization_id')
-    .eq('domain', domain)
-    .maybeSingle();
-
-  if (!domainRow) {
-    await adminClient.auth.admin.deleteUser(user.id);
-    return res.redirect('/auth/login?error=domain-not-allowed');
-  }
-
   const { data: existingProfile } = await adminClient
     .from('profiles')
     .select('role, onboarding_completed')
     .eq('id', user.id)
     .maybeSingle();
+
+  // Teacher accounts are created by an admin (see /api/admin/teachers) and
+  // already have a profile by the time the invite/magic-link is followed —
+  // they're pre-vetted, so the self-signup domain gate doesn't apply to them.
+  if (!existingProfile || existingProfile.role === 'student') {
+    const domain = user.email.split('@')[1].toLowerCase();
+
+    const { data: domainRow } = await adminClient
+      .from('organization_email_domains')
+      .select('organization_id')
+      .eq('domain', domain)
+      .eq('applies_to', 'student')
+      .maybeSingle();
+
+    if (!domainRow) {
+      await adminClient.auth.admin.deleteUser(user.id);
+      return res.redirect('/auth/login?error=domain-not-allowed');
+    }
+  }
 
   if (!existingProfile) {
     await adminClient.from('profiles').insert({

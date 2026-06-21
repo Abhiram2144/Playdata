@@ -46,20 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     return res.json({ redirect: '/auth/login?error=no-session' });
   }
 
-  const domain = user.email.split('@')[1].toLowerCase();
   const supabase = createAdminClient();
-
-  // Validate domain
-  const { data: domainRow } = await supabase
-    .from('organization_email_domains')
-    .select('organization_id')
-    .eq('domain', domain)
-    .maybeSingle();
-
-  if (!domainRow) {
-    await supabase.auth.admin.deleteUser(user.id);
-    return res.json({ redirect: '/auth/login?error=domain-not-allowed' });
-  }
 
   // Upsert profile
   const { data: existingProfile } = await supabase
@@ -67,6 +54,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     .select('role, onboarding_completed')
     .eq('id', user.id)
     .maybeSingle();
+
+  // Teacher accounts are created by an admin (see /api/admin/teachers) and
+  // already have a profile by the time they verify their OTP — they're
+  // pre-vetted, so the self-signup domain gate doesn't apply to them.
+  if (!existingProfile || existingProfile.role === 'student') {
+    const domain = user.email.split('@')[1].toLowerCase();
+
+    const { data: domainRow } = await supabase
+      .from('organization_email_domains')
+      .select('organization_id')
+      .eq('domain', domain)
+      .eq('applies_to', 'student')
+      .maybeSingle();
+
+    if (!domainRow) {
+      await supabase.auth.admin.deleteUser(user.id);
+      return res.json({ redirect: '/auth/login?error=domain-not-allowed' });
+    }
+  }
 
   if (!existingProfile) {
     await supabase.from('profiles').insert({

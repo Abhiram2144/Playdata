@@ -32,7 +32,8 @@ export default function AdminDashboard() {
     onboardingCompleted,
     isLoading,
     organizationName,
-    allowedDomains,
+    allowedStudentDomains,
+    allowedTeacherDomains,
     guestAccessEnabled,
     aiFeaturesEnabled,
     teacherCount,
@@ -145,7 +146,7 @@ export default function AdminDashboard() {
                 <div className="flex gap-4 text-sm">
                   <div>
                     <p className="text-slate-600">Allowed Domains</p>
-                    <p className="font-bold text-slate-900">{allowedDomains.length}</p>
+                    <p className="font-bold text-slate-900">{allowedStudentDomains.length + allowedTeacherDomains.length}</p>
                   </div>
                   <div>
                     <p className="text-slate-600">Guest Access</p>
@@ -191,8 +192,8 @@ export default function AdminDashboard() {
             <motion.div variants={itemVariants}>
               <DashboardCard
                 title="Allowed Domains"
-                value={allowedDomains.length}
-                description={`${allowedDomains.length} domain${allowedDomains.length !== 1 ? 's' : ''} configured`}
+                value={allowedStudentDomains.length + allowedTeacherDomains.length}
+                description={`${allowedStudentDomains.length} student, ${allowedTeacherDomains.length} teacher`}
                 icon={<Globe2 className="w-6 h-6 text-purple-600" />}
                 color="purple"
               />
@@ -285,7 +286,7 @@ export default function AdminDashboard() {
           </motion.div>
 
           {/* Domains List */}
-          {allowedDomains.length > 0 && (
+          {(allowedStudentDomains.length > 0 || allowedTeacherDomains.length > 0) && (
             <motion.div
               variants={containerVariants}
               initial="hidden"
@@ -295,31 +296,56 @@ export default function AdminDashboard() {
               <div className="mb-6">
                 <h2 className="text-lg font-bold text-slate-900">Allowed Email Domains</h2>
                 <p className="text-slate-600 text-sm">
-                  Users with these email domains can access your platform
+                  Students can self-register from these domains; teacher domains are informational.
                 </p>
               </div>
 
-              <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="p-6 bg-white rounded-lg border border-slate-200"
-              >
-                <div className="flex flex-wrap gap-2">
-                  {allowedDomains.map((domain, index) => (
-                    <motion.div
-                      key={domain}
-                      variants={itemVariants}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="px-4 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-lg font-medium"
-                    >
-                      {domain}
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <motion.div
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="p-6 bg-white rounded-lg border border-slate-200"
+                >
+                  <p className="text-xs font-semibold uppercase text-slate-500 mb-3">Student</p>
+                  <div className="flex flex-wrap gap-2">
+                    {allowedStudentDomains.map((domain, index) => (
+                      <motion.div
+                        key={domain}
+                        variants={itemVariants}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="px-4 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-lg font-medium"
+                      >
+                        {domain}
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+                <motion.div
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="p-6 bg-white rounded-lg border border-slate-200"
+                >
+                  <p className="text-xs font-semibold uppercase text-slate-500 mb-3">Teacher</p>
+                  <div className="flex flex-wrap gap-2">
+                    {allowedTeacherDomains.map((domain, index) => (
+                      <motion.div
+                        key={domain}
+                        variants={itemVariants}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="px-4 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-lg font-medium"
+                      >
+                        {domain}
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              </div>
             </motion.div>
           )}
         </div>
