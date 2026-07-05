@@ -25,9 +25,21 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user = null;
+  try {
+    const {
+      data: { user: authUser },
+      error,
+    } = await supabase.auth.getUser();
+
+    if (error) {
+      console.error('Supabase auth error during session refresh:', error.message);
+    } else {
+      user = authUser;
+    }
+  } catch (error) {
+    console.error('Supabase auth unavailable during session refresh:', error);
+  }
 
   const { pathname } = request.nextUrl;
 

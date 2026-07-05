@@ -11,20 +11,31 @@
 -- STEP 2: Run this SQL in the SQL Editor AFTER creating the auth users
 -- ============================================================
 
+-- Ensure the admin-specific table exists for onboarding state.
+CREATE TABLE IF NOT EXISTS public.admin_profiles (
+  id UUID PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
+  onboarding_completed BOOLEAN NOT NULL DEFAULT false,
+  first_login_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- ── Set admin role ──────────────────────────────────────────
 UPDATE public.profiles
 SET
-  role                 = 'admin',
-  full_name            = 'Abhiram Sathiraju',
-  onboarding_completed = true
+  role      = 'admin',
+  full_name = 'Abhiram Sathiraju'
 WHERE email = 'abhiram.sathiraju@gmail.com';
 
--- Create admin_profiles entry for the admin (onboarding starts at false)
+-- Ensure the admin profile row exists and mark onboarding as complete.
+-- In this schema, onboarding_completed lives in admin_profiles, not profiles.
 INSERT INTO public.admin_profiles (id, onboarding_completed)
-SELECT id, false
+SELECT id, true
 FROM   public.profiles
 WHERE  email = 'abhiram.sathiraju@gmail.com'
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE
+SET onboarding_completed = true,
+    updated_at = NOW();
 
 -- ── Set test teacher role ───────────────────────────────────
 -- Replace 'teacher@yourdomain.edu' with the actual email you created
@@ -44,6 +55,12 @@ ON CONFLICT (id) DO NOTHING;
 -- WHERE email = 'student@yourdomain.edu';
 
 -- ── Verify ──────────────────────────────────────────────────
-SELECT id, email, role, full_name, onboarding_completed, is_active, created_at
-FROM   public.profiles
-ORDER  BY created_at DESC;
+SELECT p.id,
+       p.email,
+       p.role,
+       p.full_name,
+       COALESCE(ap.onboarding_completed, false) AS onboarding_completed,
+       p.created_at
+FROM   public.profiles p
+LEFT JOIN public.admin_profiles ap ON ap.id = p.id
+ORDER  BY p.created_at DESC;

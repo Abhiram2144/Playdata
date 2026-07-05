@@ -20,8 +20,8 @@ interface Teacher {
   id: string;
   full_name: string;
   email: string;
-  username: string;
-  is_active: boolean;
+  username?: string;
+  is_active?: boolean;
   created_at: string;
   session_count: number;
 }
@@ -97,10 +97,11 @@ export default function AdminTeachers() {
   const filtered = teachers
     .filter((t) => {
       const q = search.toLowerCase();
+      const username = (t.username ?? t.email.split('@')[0].toLowerCase());
       return (
         t.full_name.toLowerCase().includes(q) ||
         t.email.toLowerCase().includes(q) ||
-        t.username.toLowerCase().includes(q)
+        username.toLowerCase().includes(q)
       );
     })
     .sort((a, b) => {
@@ -154,8 +155,8 @@ export default function AdminTeachers() {
           >
             {[
               { label: 'Total Teachers', value: teachers.length, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-              { label: 'Active', value: teachers.filter((t) => t.is_active).length, color: 'text-green-600', bg: 'bg-green-50' },
-              { label: 'Inactive', value: teachers.filter((t) => !t.is_active).length, color: 'text-red-600', bg: 'bg-red-50' },
+              { label: 'Active', value: teachers.filter((t) => t.is_active !== false).length, color: 'text-green-600', bg: 'bg-green-50' },
+              { label: 'Inactive', value: teachers.filter((t) => t.is_active === false).length, color: 'text-red-600', bg: 'bg-red-50' },
             ].map((card) => (
               <div key={card.label} className={`${card.bg} rounded-xl p-5 border border-slate-200`}>
                 <p className="text-sm font-medium text-slate-600">{card.label}</p>
@@ -240,7 +241,7 @@ export default function AdminTeachers() {
                           </div>
                           <div>
                             <p className="font-medium text-slate-900">{teacher.full_name || '—'}</p>
-                            <p className="text-xs text-slate-500">@{teacher.username}</p>
+                            <p className="text-xs text-slate-500">@{teacher.username ?? teacher.email.split('@')[0].toLowerCase()}</p>
                           </div>
                         </div>
                       </td>
@@ -254,7 +255,7 @@ export default function AdminTeachers() {
                         {new Date(teacher.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </td>
                       <td className="px-5 py-4">
-                        {teacher.is_active ? (
+                        {(teacher.is_active ?? true) ? (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700">
                             <CheckCircle className="w-3 h-3" /> Active
                           </span>
@@ -269,14 +270,14 @@ export default function AdminTeachers() {
                           onClick={() => toggleActive(teacher)}
                           disabled={updating === teacher.id}
                           className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all disabled:opacity-50 ${
-                            teacher.is_active
+                            (teacher.is_active ?? true)
                               ? 'bg-red-50 text-red-600 hover:bg-red-100'
                               : 'bg-green-50 text-green-700 hover:bg-green-100'
                           }`}
                         >
                           {updating === teacher.id ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : teacher.is_active ? (
+                          ) : (teacher.is_active ?? true) ? (
                             'Deactivate'
                           ) : (
                             'Activate'

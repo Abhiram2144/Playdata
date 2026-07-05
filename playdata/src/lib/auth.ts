@@ -19,7 +19,7 @@ type AuthOptions = {
  *     { allowedRoles: ['teacher'] }
  *   );
  */
-export function withAuth<P extends Record<string, unknown>>(
+export function withAuth<P extends object>(
   handler: (
     context: GetServerSidePropsContext,
     userId: string,
@@ -30,9 +30,21 @@ export function withAuth<P extends Record<string, unknown>>(
   return async (context) => {
     const supabase = createClientFromContext(context);
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    let user = null;
+    try {
+      const {
+        data: { user: authUser },
+        error,
+      } = await supabase.auth.getUser();
+
+      if (error) {
+        console.error('Supabase auth error during SSR auth check:', error.message);
+      } else {
+        user = authUser;
+      }
+    } catch (error) {
+      console.error('Supabase auth unavailable during SSR auth check:', error);
+    }
 
     if (!user) {
       return {

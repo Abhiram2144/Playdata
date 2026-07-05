@@ -19,8 +19,8 @@ interface Student {
   id: string;
   full_name: string;
   email: string;
-  username: string;
-  is_active: boolean;
+  username?: string;
+  is_active?: boolean;
   created_at: string;
 }
 
@@ -94,10 +94,11 @@ export default function AdminStudents() {
   const filtered = students
     .filter((s) => {
       const q = search.toLowerCase();
+      const username = (s.username ?? s.email.split('@')[0].toLowerCase());
       return (
         s.full_name.toLowerCase().includes(q) ||
         s.email.toLowerCase().includes(q) ||
-        s.username.toLowerCase().includes(q)
+        username.toLowerCase().includes(q)
       );
     })
     .sort((a, b) => {
@@ -140,8 +141,8 @@ export default function AdminStudents() {
           >
             {[
               { label: 'Total Students', value: students.length, color: 'text-purple-600', bg: 'bg-purple-50' },
-              { label: 'Active', value: students.filter((s) => s.is_active).length, color: 'text-green-600', bg: 'bg-green-50' },
-              { label: 'Inactive', value: students.filter((s) => !s.is_active).length, color: 'text-red-600', bg: 'bg-red-50' },
+              { label: 'Active', value: students.filter((s) => s.is_active !== false).length, color: 'text-green-600', bg: 'bg-green-50' },
+              { label: 'Inactive', value: students.filter((s) => s.is_active === false).length, color: 'text-red-600', bg: 'bg-red-50' },
             ].map((card) => (
               <div key={card.label} className={`${card.bg} rounded-xl p-5 border border-slate-200`}>
                 <p className="text-sm font-medium text-slate-600">{card.label}</p>
@@ -225,7 +226,7 @@ export default function AdminStudents() {
                           </div>
                           <div>
                             <p className="font-medium text-slate-900">{student.full_name || '—'}</p>
-                            <p className="text-xs text-slate-500">@{student.username}</p>
+                            <p className="text-xs text-slate-500">@{student.username ?? student.email.split('@')[0].toLowerCase()}</p>
                           </div>
                         </div>
                       </td>
@@ -234,7 +235,7 @@ export default function AdminStudents() {
                         {new Date(student.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </td>
                       <td className="px-5 py-4">
-                        {student.is_active ? (
+                        {(student.is_active ?? true) ? (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700">
                             <CheckCircle className="w-3 h-3" /> Active
                           </span>
@@ -249,14 +250,14 @@ export default function AdminStudents() {
                           onClick={() => toggleActive(student)}
                           disabled={updating === student.id}
                           className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all disabled:opacity-50 ${
-                            student.is_active
+                            (student.is_active ?? true)
                               ? 'bg-red-50 text-red-600 hover:bg-red-100'
                               : 'bg-green-50 text-green-700 hover:bg-green-100'
                           }`}
                         >
                           {updating === student.id ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : student.is_active ? (
+                          ) : (student.is_active ?? true) ? (
                             'Deactivate'
                           ) : (
                             'Activate'

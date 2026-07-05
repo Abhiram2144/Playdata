@@ -26,11 +26,6 @@ const EDUCATION_LEVELS = [
 
 const schema = z.object({
   full_name: z.string().min(2, 'Enter your full name'),
-  username: z
-    .string()
-    .min(3, 'Minimum 3 characters')
-    .max(30, 'Maximum 30 characters')
-    .regex(/^[a-z0-9_]+$/, 'Lowercase letters, numbers, and underscores only'),
   education_level: z.string().min(1, 'Select your education level'),
   consent: z.boolean().refine((v) => v === true, { message: 'You must accept to continue' }),
 });
@@ -80,7 +75,6 @@ export default function StudentOnboarding({ email }: Props) {
       .from('profiles')
       .update({
         full_name: data.full_name.trim(),
-        username: data.username.trim(),
         education_level: data.education_level,
         onboarding_completed: true,
         updated_at: new Date().toISOString(),
@@ -170,21 +164,8 @@ export default function StudentOnboarding({ email }: Props) {
                 {errors.full_name && <p className="text-xs text-red-400">{errors.full_name.message}</p>}
               </div>
 
-              {/* Username */}
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-[#c9c9d4]">Username</label>
-                <div className="relative">
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#8d8da0]">@</span>
-                  <Input
-                    placeholder="your_username"
-                    className={cn('pl-7', errors.username && 'border-red-500/70')}
-                    {...register('username')}
-                  />
-                </div>
-                {errors.username
-                  ? <p className="text-xs text-red-400">{errors.username.message}</p>
-                  : <p className="text-xs text-[#6a6a80]">Lowercase, numbers and underscores. Visible to your classmates.</p>
-                }
+              <div className="rounded-xl border border-[#35354a]/50 bg-[#151526]/70 p-3 text-sm text-[#8d8da0]">
+                Your email address is already your sign-in identity. We’ll use your full name and education level for your profile.
               </div>
 
               {/* Education level */}

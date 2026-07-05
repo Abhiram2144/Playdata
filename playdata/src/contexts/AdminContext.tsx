@@ -52,37 +52,24 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
     if (!completed) return;
 
-    const { data: org } = await supabase
-      .from('organizations')
-      .select('id, name, type')
-      .eq('admin_id', userId)
+    const { data: employerProfile } = await supabase
+      .from('employer_profiles')
+      .select('organisation_id')
+      .eq('id', userId)
       .maybeSingle();
 
-    if (org) {
-      setOrganizationId(org.id);
-      setOrganizationName(org.name);
-      setOrganizationType(org.type as OrganizationType);
-
-      const { data: settings } = await supabase
-        .from('organization_settings')
-        .select('*')
-        .eq('organization_id', org.id)
+    if (employerProfile?.organisation_id) {
+      const { data: org } = await supabase
+        .from('organisations')
+        .select('id, name')
+        .eq('id', employerProfile.organisation_id)
         .maybeSingle();
 
-      if (settings) {
-        setDefaultTeacherRoleName(settings.default_teacher_role_name);
-        setDefaultStudentRoleName(settings.default_student_role_name);
-        setGuestAccessEnabled(settings.guest_access_enabled);
-        setAiFeaturesEnabled(settings.ai_features_enabled);
+      if (org) {
+        setOrganizationId(org.id);
+        setOrganizationName(org.name);
+        setOrganizationType('university');
       }
-
-      const { data: domainRows } = await supabase
-        .from('organization_email_domains')
-        .select('domain, applies_to')
-        .eq('organization_id', org.id);
-
-      setAllowedStudentDomains(domainRows?.filter((r) => r.applies_to === 'student').map((r) => r.domain) ?? []);
-      setAllowedTeacherDomains(domainRows?.filter((r) => r.applies_to === 'teacher').map((r) => r.domain) ?? []);
     }
 
     const { count: tc } = await supabase
@@ -188,46 +175,38 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     if (state.ai_features_enabled !== undefined) setAiFeaturesEnabled(state.ai_features_enabled);
   }, []);
 
-  // Upserts (rather than inserts) so that retrying onboarding after a
-  // partial failure — or a double-submit — never trips the unique
-  // constraint on organizations.admin_id / organization_settings.organization_id.
   const completeOnboarding = useCallback(async (state: OnboardingState) => {
     if (!adminId) throw new Error('Not authenticated');
     const supabase = getSupabase();
 
-    const { data: org, error: orgError } = await supabase
-      .from('organizations')
-      .upsert(
-        { admin_id: adminId, name: state.organization_name, type: state.organization_type },
-        { onConflict: 'admin_id' }
-      )
-      .select('id')
-      .single();
-    if (orgError) throw new Error(orgError.message);
+    const { data: existingEmployerProfile } = await supabase
+      .from('employer_profiles')
+      .select('organisation_id')
+      .eq('id', adminId)
+      .maybeSingle();
 
-    const { error: settingsError } = await supabase
-      .from('organization_settings')
-      .upsert(
-        {
-          organization_id: org.id,
-          default_teacher_role_name: state.default_teacher_role_name,
-          default_student_role_name: state.default_student_role_name,
-          guest_access_enabled: state.guest_access_enabled,
-          ai_features_enabled: state.ai_features_enabled,
-        },
-        { onConflict: 'organization_id' }
-      );
-    if (settingsError) throw new Error(settingsError.message);
+    let organizationIdToUse = existingEmployerProfile?.organisation_id ?? null;
 
-    await supabase.from('organization_email_domains').delete().eq('organization_id', org.id);
-    const domainRows = [
-      ...state.allowed_student_domains.map((domain) => ({ organization_id: org.id, domain, applies_to: 'student' })),
-      ...state.allowed_teacher_domains.map((domain) => ({ organization_id: org.id, domain, applies_to: 'teacher' })),
-    ];
-    if (domainRows.length > 0) {
-      const { error: domainsError } = await supabase.from('organization_email_domains').insert(domainRows);
-      if (domainsError) throw new Error(domainsError.message);
+    if (organizationIdToUse) {
+      const { error: orgError } = await supabase
+        .from('organisations')
+        .update({ name: state.organization_name })
+        .eq('id', organizationIdToUse);
+      if (orgError) throw new Error(orgError.message);
+    } else {
+      const { data: org, error: orgError } = await supabase
+        .from('organisations')
+        .insert({ name: state.organization_name })
+        .select('id')
+        .single();
+      if (orgError) throw new Error(orgError.message);
+      organizationIdToUse = org.id;
     }
+
+    const { error: employerProfileError } = await supabase
+      .from('employer_profiles')
+      .upsert({ id: adminId, organisation_id: organizationIdToUse }, { onConflict: 'id' });
+    if (employerProfileError) throw new Error(employerProfileError.message);
 
     const { error: adminError } = await supabase
       .from('admin_profiles')
@@ -235,7 +214,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       .eq('id', adminId);
     if (adminError) throw new Error(adminError.message);
 
-    setOrganizationId(org.id);
+    setOrganizationId(organizationIdToUse);
     setOrganizationName(state.organization_name);
     setOrganizationType(state.organization_type);
     setAllowedStudentDomains(state.allowed_student_domains);
@@ -251,43 +230,9 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     if (!organizationId) throw new Error('No organization found');
     const supabase = getSupabase();
 
-    if (settings.organization_name !== undefined || settings.organization_type !== undefined) {
-      const orgPatch: Record<string, unknown> = {};
-      if (settings.organization_name !== undefined) orgPatch.name = settings.organization_name;
-      if (settings.organization_type !== undefined) orgPatch.type = settings.organization_type;
-      const { error } = await supabase.from('organizations').update(orgPatch).eq('id', organizationId);
+    if (settings.organization_name !== undefined) {
+      const { error } = await supabase.from('organisations').update({ name: settings.organization_name }).eq('id', organizationId);
       if (error) throw new Error(error.message);
-    }
-
-    const settingsPatch: Record<string, unknown> = {};
-    if (settings.default_teacher_role_name !== undefined) settingsPatch.default_teacher_role_name = settings.default_teacher_role_name;
-    if (settings.default_student_role_name !== undefined) settingsPatch.default_student_role_name = settings.default_student_role_name;
-    if (settings.guest_access_enabled !== undefined) settingsPatch.guest_access_enabled = settings.guest_access_enabled;
-    if (settings.ai_features_enabled !== undefined) settingsPatch.ai_features_enabled = settings.ai_features_enabled;
-
-    if (Object.keys(settingsPatch).length > 0) {
-      const { error } = await supabase.from('organization_settings').update(settingsPatch).eq('organization_id', organizationId);
-      if (error) throw new Error(error.message);
-    }
-
-    if (settings.allowed_student_domains !== undefined) {
-      await supabase.from('organization_email_domains').delete().eq('organization_id', organizationId).eq('applies_to', 'student');
-      if (settings.allowed_student_domains.length > 0) {
-        const { error } = await supabase
-          .from('organization_email_domains')
-          .insert(settings.allowed_student_domains.map((domain) => ({ organization_id: organizationId, domain, applies_to: 'student' })));
-        if (error) throw new Error(error.message);
-      }
-    }
-
-    if (settings.allowed_teacher_domains !== undefined) {
-      await supabase.from('organization_email_domains').delete().eq('organization_id', organizationId).eq('applies_to', 'teacher');
-      if (settings.allowed_teacher_domains.length > 0) {
-        const { error } = await supabase
-          .from('organization_email_domains')
-          .insert(settings.allowed_teacher_domains.map((domain) => ({ organization_id: organizationId, domain, applies_to: 'teacher' })));
-        if (error) throw new Error(error.message);
-      }
     }
 
     if (settings.organization_name !== undefined) setOrganizationName(settings.organization_name);

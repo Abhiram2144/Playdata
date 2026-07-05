@@ -21,7 +21,6 @@ interface Profile {
   id: string;
   full_name: string;
   email: string;
-  username: string | null;
   role: string;
   education_level: string | null;
   subject_taught: string | null;
@@ -38,7 +37,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, full_name, email, username, role, education_level, subject_taught, institution_role, created_at, onboarding_completed')
+    .select('id, full_name, email, role, education_level, subject_taught, institution_role, created_at, onboarding_completed')
     .eq('id', user.id)
     .single();
 
@@ -53,11 +52,6 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
 
 const schema = z.object({
   full_name: z.string().min(2, 'Enter your full name'),
-  username: z
-    .string()
-    .min(3, 'Minimum 3 characters')
-    .max(30, 'Maximum 30 characters')
-    .regex(/^[a-z0-9_]+$/, 'Lowercase letters, numbers, and underscores only'),
 });
 type FormData = z.infer<typeof schema>;
 
@@ -85,13 +79,13 @@ export default function ProfilePage({ profile }: Props) {
 
   const { register, handleSubmit, formState: { errors, isSubmitting, isDirty } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { full_name: profile.full_name, username: profile.username ?? '' },
+    defaultValues: { full_name: profile.full_name },
   });
 
   const onSubmit = async (data: FormData) => {
     const { error } = await supabase
       .from('profiles')
-      .update({ full_name: data.full_name.trim(), username: data.username.trim(), updated_at: new Date().toISOString() })
+      .update({ full_name: data.full_name.trim(), updated_at: new Date().toISOString() })
       .eq('id', profile.id);
 
     if (error) {
@@ -163,17 +157,8 @@ export default function ProfilePage({ profile }: Props) {
               {errors.full_name && <p className="text-xs text-red-400">{errors.full_name.message}</p>}
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-[#c9c9d4]">Username</label>
-              <div className="relative">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#8d8da0]">@</span>
-                <Input
-                  placeholder="your_username"
-                  className={cn('pl-7', errors.username && 'border-red-500/70')}
-                  {...register('username')}
-                />
-              </div>
-              {errors.username && <p className="text-xs text-red-400">{errors.username.message}</p>}
+            <div className="rounded-xl border border-[#35354a]/50 bg-[#151526]/70 p-3 text-sm text-[#8d8da0]">
+              Your account uses your email address for sign-in. You can update your display name above.
             </div>
 
             <Button

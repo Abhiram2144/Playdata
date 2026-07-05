@@ -25,11 +25,6 @@ const INSTITUTION_ROLES = [
 
 const schema = z.object({
   full_name: z.string().min(2, 'Enter your full name'),
-  username: z
-    .string()
-    .min(3, 'Minimum 3 characters')
-    .max(30, 'Maximum 30 characters')
-    .regex(/^[a-z0-9_]+$/, 'Lowercase letters, numbers, and underscores only'),
   subject_taught: z.string().min(1, 'Select your subject'),
   institution_role: z.string().min(1, 'Select your role'),
   consent: z.boolean().refine((v) => v === true, { message: 'You must accept to continue' }),
@@ -82,7 +77,6 @@ export default function TeacherOnboarding({ email }: Props) {
       .from('profiles')
       .update({
         full_name: data.full_name.trim(),
-        username: data.username.trim(),
         subject_taught: data.subject_taught,
         institution_role: data.institution_role,
         onboarding_completed: true,
@@ -163,18 +157,8 @@ export default function TeacherOnboarding({ email }: Props) {
               {errors.full_name && <p className="text-xs text-red-400">{errors.full_name.message}</p>}
             </div>
 
-            {/* Username */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-[#c9c9d4]">Username</label>
-              <div className="relative">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#8d8da0]">@</span>
-                <Input
-                  placeholder="your_username"
-                  className={cn('pl-7', errors.username && 'border-red-500/70')}
-                  {...register('username')}
-                />
-              </div>
-              {errors.username && <p className="text-xs text-red-400">{errors.username.message}</p>}
+            <div className="rounded-xl border border-[#35354a]/50 bg-[#151526]/70 p-3 text-sm text-[#8d8da0]">
+              Your email address is already your identity in PlayData. We’ll use your teaching details for your profile.
             </div>
 
             {/* Subject taught */}

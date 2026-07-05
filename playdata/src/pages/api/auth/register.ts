@@ -25,8 +25,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const supabase = createAdminClient();
 
-  // Check domain against registered organisations
-  const { data: domainRow, error: domainError } = await supabase
+  // Check domain against registered organisations when the domain table is available.
+  let domainRow: { id: string } | null = null;
+  const { data, error: domainError } = await supabase
     .from('organization_email_domains')
     .select('id')
     .eq('domain', domain)
@@ -34,7 +35,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .maybeSingle();
 
   if (domainError) {
-    return res.status(500).json({ error: 'Failed to verify email domain.' });
+    const message = domainError.message.toLowerCase();
+    if (!message.includes('does not exist') && !message.includes('relation') && !message.includes('column')) {
+      return res.status(500).json({ error: 'Failed to verify email domain.' });
+    }
+  } else {
+    domainRow = data as { id: string } | null;
   }
 
   if (!domainRow) {

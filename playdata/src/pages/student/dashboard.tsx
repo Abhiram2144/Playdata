@@ -12,7 +12,6 @@ interface Profile {
   id: string;
   full_name: string;
   email: string;
-  username: string | null;
   role: string;
   education_level: string | null;
   created_at: string;
@@ -28,7 +27,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, full_name, email, username, role, education_level, created_at, onboarding_completed')
+    .select('id, full_name, email, role, education_level, created_at, onboarding_completed')
     .eq('id', user.id)
     .single();
 
@@ -102,7 +101,7 @@ export default function StudentDashboard({ profile }: Props) {
           <div className="rounded-2xl border border-[#35354a]/60 bg-[#1a1a2e]/60 divide-y divide-[#35354a]/40">
             {[
               { label: 'Full name', value: profile.full_name },
-              { label: 'Username', value: profile.username ? `@${profile.username}` : '—' },
+              { label: 'Email prefix', value: profile.email.split('@')[0] || '—' },
               { label: 'Email', value: profile.email },
               { label: 'Role', value: 'Student' },
               { label: 'Education level', value: profile.education_level ?? '—' },

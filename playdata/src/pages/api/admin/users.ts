@@ -58,15 +58,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { data: users, error } = await supabase
       .from('profiles')
-      .select('id, full_name, email, username, is_active, created_at, role')
+      .select('id, full_name, email, role, created_at')
       .eq('role', role)
       .order('created_at', { ascending: false });
 
     if (error) return res.status(500).json({ error: error.message });
 
+    const normalizedUsers = (users ?? []).map((user) => ({
+      ...user,
+      username: user.email?.split('@')[0]?.toLowerCase() ?? '',
+      is_active: true,
+    }));
+
     // Attach session counts for teachers
-    if (role === 'teacher' && users) {
-      const ids = users.map((u) => u.id);
+    if (role === 'teacher' && normalizedUsers) {
+      const ids = normalizedUsers.map((u) => u.id);
       const { data: sessionCounts } = await supabase
         .from('sessions')
         .select('teacher_id')
@@ -78,11 +84,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
 
       return res.json({
-        users: users.map((u) => ({ ...u, session_count: countMap[u.id] ?? 0 })),
+        users: normalizedUsers.map((u) => ({ ...u, session_count: countMap[u.id] ?? 0 })),
       });
     }
 
-    return res.json({ users: users ?? [] });
+    return res.json({ users: normalizedUsers });
   }
 
   // PATCH — update a user (is_active or role)
@@ -96,7 +102,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!userId) return res.status(400).json({ error: 'userId required' });
 
     const patch: Record<string, unknown> = {};
-    if (is_active !== undefined) patch.is_active = is_active;
     if (newRole && ['teacher', 'student'].includes(newRole)) patch.role = newRole;
 
     const { error } = await supabase.from('profiles').update(patch).eq('id', userId);

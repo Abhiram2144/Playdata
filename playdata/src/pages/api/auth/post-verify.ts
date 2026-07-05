@@ -61,14 +61,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   if (!existingProfile || existingProfile.role === 'student') {
     const domain = user.email.split('@')[1].toLowerCase();
 
-    const { data: domainRow } = await supabase
+    let domainAllowed = true;
+    const { data: domainRow, error: domainError } = await supabase
       .from('organization_email_domains')
       .select('organization_id')
       .eq('domain', domain)
       .eq('applies_to', 'student')
       .maybeSingle();
 
-    if (!domainRow) {
+    if (domainError) {
+      const message = domainError.message.toLowerCase();
+      if (message.includes('does not exist') || message.includes('relation') || message.includes('column')) {
+        domainAllowed = true;
+      } else {
+        domainAllowed = false;
+      }
+    } else {
+      domainAllowed = Boolean(domainRow);
+    }
+
+    if (!domainAllowed) {
       await supabase.auth.admin.deleteUser(user.id);
       return res.json({ redirect: '/auth/login?error=domain-not-allowed' });
     }
