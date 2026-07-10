@@ -38,9 +38,7 @@ async function getSessionUser(req: NextApiRequest, res: NextApiResponse) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (!['GET', 'PUT'].includes(req.method ?? '')) {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   const user = await getSessionUser(req, res);
   if (!user) return res.status(401).json({ error: 'Unauthorised' });
@@ -71,46 +69,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: 'Dataset not found' });
     }
 
-    if (req.method === 'GET') {
-      const { data: columns, error } = await admin
-        .from('dataset_visible_columns')
-        .select('column_name')
-        .eq('dataset_id', id);
+    const [{ data: vizRows }, { data: quizRows }] = await Promise.all([
+      admin.from('visualisations').select('id, name').eq('dataset_id', id),
+      admin.from('quizzes').select('id, title').eq('dataset_id', id),
+    ]);
 
-      if (error) return res.status(500).json({ error: error.message });
-
-      return res.status(200).json({
-        visible: (columns ?? []).map((r) => r.column_name),
-      });
-    }
-
-    if (req.method === 'PUT') {
-      // Replace the full visible-column list atomically
-      const { columns } = req.body as { columns?: unknown };
-
-      if (!Array.isArray(columns) || columns.some((c) => typeof c !== 'string')) {
-        return res.status(400).json({ error: '`columns` must be an array of strings' });
-      }
-
-      const names = (columns as string[]).map((c) => c.trim()).filter(Boolean);
-
-      // Delete then re-insert (simpler than diffing, safe because constraint is UNIQUE)
-      const { error: delErr } = await admin
-        .from('dataset_visible_columns')
-        .delete()
-        .eq('dataset_id', id);
-
-      if (delErr) return res.status(500).json({ error: delErr.message });
-
-      if (names.length > 0) {
-        const { error: insErr } = await admin.from('dataset_visible_columns').insert(
-          names.map((column_name) => ({ dataset_id: id, column_name }))
-        );
-        if (insErr) return res.status(500).json({ error: insErr.message });
-      }
-
-      return res.status(200).json({ visible: names });
-    }
+    return res.status(200).json({
+      visualisations: vizRows ?? [],
+      quizzes: quizRows ?? [],
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     return res.status(500).json({ error: message });

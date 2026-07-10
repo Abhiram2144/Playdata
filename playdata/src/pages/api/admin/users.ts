@@ -110,5 +110,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.json({ success: true });
   }
 
+  // DELETE — permanently remove a teacher account
+  if (req.method === 'DELETE') {
+    const { userId } = req.body as { userId?: string };
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+
+    // Safety: only allow deleting teachers, never admins
+    const { data: target } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (!target) return res.status(404).json({ error: 'User not found' });
+    if (target.role !== 'teacher') return res.status(403).json({ error: 'Only teacher accounts can be deleted' });
+
+    // Deleting the auth user cascades to profiles via FK
+    const { error } = await supabase.auth.admin.deleteUser(userId);
+    if (error) return res.status(500).json({ error: error.message });
+
+    return res.json({ success: true });
+  }
+
   return res.status(405).end();
 }

@@ -91,7 +91,7 @@ export default function AdminLogin() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@yourdomain.com"
+                  placeholder="admin@gmail.com"
                   className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   required
                 />

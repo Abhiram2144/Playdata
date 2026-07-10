@@ -67,7 +67,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // List all datasets for this teacher
       const { data: datasets, error } = await admin
         .from('datasets')
-        .select('id, name, description, source_url, drive_file_id, row_count, created_at')
+        .select('id, name, description, source_url, external_file_id, row_count, created_at')
         .eq('teacher_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -80,7 +80,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (req.method === 'POST') {
       // Create a new dataset
-      const { name, description, source_url, drive_file_id } = req.body;
+      const { name, description, source_url, external_file_id } = req.body;
 
       if (!name) {
         return res.status(400).json({ error: 'Dataset name is required' });
@@ -93,11 +93,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           name,
           description: description ?? null,
           source_url: source_url ?? null,
-          drive_file_id: drive_file_id ?? null,
+          external_file_id: external_file_id ?? null,
           schema: {},
           row_count: 0,
         })
-        .select('id, name, description, source_url, drive_file_id, row_count, created_at')
+        .select('id, name, description, source_url, external_file_id, row_count, created_at')
         .single();
 
       if (error) {

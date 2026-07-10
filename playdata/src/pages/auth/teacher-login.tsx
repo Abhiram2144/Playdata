@@ -13,7 +13,7 @@ import { createClient } from '@/lib/supabase/client';
 
 const schema = z.object({
   email: z.string().email('Enter a valid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: z.string().min(1, 'Password is required'),
 });
 type FormData = z.infer<typeof schema>;
 
@@ -28,10 +28,21 @@ export default function TeacherLoginPage() {
 
   const onSubmit = async ({ email, password }: FormData) => {
     setErrorMessage('');
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
       setErrorMessage(error.message || 'Unable to sign in. Please check your email and password.');
+      return;
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, password_reset_required')
+      .eq('id', data.user?.id)
+      .maybeSingle();
+
+    if (profile?.role === 'teacher' && profile.password_reset_required) {
+      router.push('/reset-password?phase=update&first_login=1');
       return;
     }
 

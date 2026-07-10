@@ -73,13 +73,16 @@ export default function StudentOnboarding({ email }: Props) {
 
     const { error } = await supabase
       .from('profiles')
-      .update({
+      .upsert({
+        id: user.id,
+        email: user.email,
+        username: user.email!.split('@')[0].toLowerCase(),
         full_name: data.full_name.trim(),
         education_level: data.education_level,
+        role: 'student',
         onboarding_completed: true,
         updated_at: new Date().toISOString(),
-      })
-      .eq('id', user.id);
+      }, { onConflict: 'id' });
 
     if (error) {
       if (error.code === '23505') {

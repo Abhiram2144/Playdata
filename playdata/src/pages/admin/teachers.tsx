@@ -11,6 +11,7 @@ import {
   ChevronUp,
   ChevronDown,
   UserPlus,
+  Trash2,
 } from 'lucide-react';
 import { Sidebar, Navbar, LoadingState, AddTeacherModal } from '@/components/admin';
 import { useAdmin } from '@/contexts/AdminContext';
@@ -38,6 +39,8 @@ export default function AdminTeachers() {
   const [sortKey, setSortKey] = useState<SortKey>('created_at');
   const [sortAsc, setSortAsc] = useState(false);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [addModalOpen, setAddModalOpen] = useState(false);
 
   useEffect(() => {
@@ -77,6 +80,24 @@ export default function AdminTeachers() {
       toast.success(`${teacher.full_name || teacher.email} ${!teacher.is_active ? 'activated' : 'deactivated'}`);
     } finally {
       setUpdating(null);
+    }
+  };
+
+  const deleteTeacher = async (teacher: Teacher) => {
+    setDeleting(teacher.id);
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: teacher.id }),
+      });
+      const json = await res.json() as { success?: boolean; error?: string };
+      if (json.error) { toast.error(json.error); return; }
+      setTeachers((prev) => prev.filter((t) => t.id !== teacher.id));
+      toast.success(`${teacher.full_name || teacher.email} deleted`);
+    } finally {
+      setDeleting(null);
+      setPendingDelete(null);
     }
   };
 
@@ -266,23 +287,54 @@ export default function AdminTeachers() {
                         )}
                       </td>
                       <td className="px-5 py-4">
-                        <button
-                          onClick={() => toggleActive(teacher)}
-                          disabled={updating === teacher.id}
-                          className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all disabled:opacity-50 ${
-                            (teacher.is_active ?? true)
-                              ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                              : 'bg-green-50 text-green-700 hover:bg-green-100'
-                          }`}
-                        >
-                          {updating === teacher.id ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (teacher.is_active ?? true) ? (
-                            'Deactivate'
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => toggleActive(teacher)}
+                            disabled={updating === teacher.id || deleting === teacher.id}
+                            className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all disabled:opacity-50 ${
+                              (teacher.is_active ?? true)
+                                ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                                : 'bg-green-50 text-green-700 hover:bg-green-100'
+                            }`}
+                          >
+                            {updating === teacher.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (teacher.is_active ?? true) ? (
+                              'Deactivate'
+                            ) : (
+                              'Activate'
+                            )}
+                          </button>
+
+                          {pendingDelete === teacher.id ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs text-slate-500">Delete?</span>
+                              <button
+                                onClick={() => deleteTeacher(teacher)}
+                                disabled={deleting === teacher.id}
+                                className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-all disabled:opacity-50"
+                              >
+                                {deleting === teacher.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Yes'}
+                              </button>
+                              <button
+                                onClick={() => setPendingDelete(null)}
+                                disabled={deleting === teacher.id}
+                                className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all"
+                              >
+                                No
+                              </button>
+                            </div>
                           ) : (
-                            'Activate'
+                            <button
+                              onClick={() => setPendingDelete(teacher.id)}
+                              disabled={deleting === teacher.id}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all disabled:opacity-50"
+                              title="Delete teacher"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           )}
-                        </button>
+                        </div>
                       </td>
                     </motion.tr>
                   ))}

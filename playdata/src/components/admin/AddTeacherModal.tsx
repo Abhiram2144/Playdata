@@ -18,7 +18,7 @@ interface Row {
 
 interface ResultItem {
   email: string;
-  status: 'invited' | 'skipped' | 'error';
+  status: 'created' | 'skipped' | 'error';
   message?: string;
 }
 
@@ -119,18 +119,18 @@ export function AddTeacherModal({ isOpen, onClose, onInvited }: AddTeacherModalP
       const list = json.results ?? [];
       setResults(list);
 
-      const invited = list.filter((r) => r.status === 'invited').length;
+      const created = list.filter((r) => r.status === 'created').length;
       const skipped = list.filter((r) => r.status === 'skipped').length;
       const errored = list.filter((r) => r.status === 'error').length;
 
-      if (invited > 0) {
+      if (created > 0) {
         toast.success(
-          `Invited ${invited} teacher${invited !== 1 ? 's' : ''}`,
+          `Created ${created} teacher${created !== 1 ? 's' : ''}`,
           { description: skipped || errored ? `${skipped} skipped, ${errored} failed` : undefined }
         );
         onInvited();
       } else {
-        toast.error('No invites sent', { description: `${skipped} skipped, ${errored} failed` });
+        toast.error('No teacher accounts created', { description: `${skipped} skipped, ${errored} failed` });
       }
     } finally {
       setSubmitting(false);
@@ -172,13 +172,13 @@ export function AddTeacherModal({ isOpen, onClose, onInvited }: AddTeacherModalP
                       className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm"
                     >
                       <div className="flex items-center gap-2">
-                        {r.status === 'invited' && <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />}
+                        {r.status === 'created' && <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />}
                         {r.status === 'skipped' && <MinusCircle className="w-4 h-4 text-amber-500 shrink-0" />}
                         {r.status === 'error' && <XCircle className="w-4 h-4 text-red-500 shrink-0" />}
                         <span className="text-slate-800">{r.email}</span>
                       </div>
                       <span className="text-xs text-slate-500">
-                        {r.status === 'invited' ? 'Invited' : r.message}
+                        {r.status === 'created' ? 'Created' : r.message}
                       </span>
                     </div>
                   ))}
@@ -288,7 +288,7 @@ export function AddTeacherModal({ isOpen, onClose, onInvited }: AddTeacherModalP
                     className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all font-medium flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-                    {submitting ? 'Sending invites…' : `Invite ${rows.length || ''}`.trim()}
+                    {submitting ? 'Creating accounts…' : `Create ${rows.length || ''}`.trim()}
                   </button>
                 </>
               )}

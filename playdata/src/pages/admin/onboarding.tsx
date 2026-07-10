@@ -81,10 +81,8 @@ export default function AdminOnboarding() {
       }
     }
     if (currentStep === 2) {
-      if (formData.allowed_student_domains.length === 0 && formData.allowed_teacher_domains.length === 0) {
-        alert('Add at least one email domain');
-        return;
-      }
+      // Domain lists are optional for this schema, so allow the admin to continue.
+      // The onboarding flow can still be completed without any domain entries.
     }
 
     if (currentStep < 4) {

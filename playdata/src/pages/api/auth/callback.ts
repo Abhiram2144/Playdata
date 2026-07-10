@@ -2,7 +2,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { createAdminClient } from '@/lib/supabase/admin';
 
-const ADMIN_EMAIL = 'abhiram.sathiraju@gmail.com';
+const ADMIN_EMAIL = 'admin@gmail.com';
 
 function serializeCookie(name: string, value: string, opts: CookieOptions = {}): string {
   const parts = [`${encodeURIComponent(name)}=${encodeURIComponent(value)}`];
@@ -80,11 +80,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!existing) {
       await adminClient.from('profiles').insert({
         id: user.id,
-        username: 'abhiram.sathiraju',
         email: user.email,
         full_name: 'Abhiram Sathiraju',
         role: 'admin',
-        onboarding_completed: true,
       });
     } else if (existing.role !== 'admin') {
       await adminClient.from('profiles').update({ role: 'admin' }).eq('id', user.id);
@@ -107,7 +105,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // ── Regular user (teacher / student) flow ───────────────
   const { data: existingProfile } = await adminClient
     .from('profiles')
-    .select('role, onboarding_completed')
+    .select('role, password_reset_required, onboarding_completed')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -145,15 +143,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!existingProfile) {
     await adminClient.from('profiles').insert({
       id: user.id,
-      username: user.email.split('@')[0],
       email: user.email,
       role: 'student',
       full_name: '',
-      onboarding_completed: false,
     });
   }
 
-  const profile = existingProfile ?? { role: 'student', onboarding_completed: false };
+  const profile = (existingProfile ?? { role: 'student', password_reset_required: false, onboarding_completed: false }) as {
+    role: string;
+    password_reset_required?: boolean;
+    onboarding_completed?: boolean;
+  };
+
+  if (profile.role === 'teacher' && profile.password_reset_required) {
+    return res.redirect('/reset-password?phase=update&first_login=1');
+  }
 
   if (!profile.onboarding_completed) {
     return res.redirect(profile.role === 'teacher' ? '/onboarding/teacher' : '/onboarding/student');

@@ -38,7 +38,7 @@ async function getSessionUser(req: NextApiRequest, res: NextApiResponse) {
 }
 
 type TeacherInput = { email: string; full_name?: string };
-type ResultItem = { email: string; status: 'invited' | 'skipped' | 'error'; message?: string };
+type ResultItem = { email: string; status: 'created' | 'skipped' | 'error'; message?: string };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).end();
@@ -70,14 +70,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return true;
   });
 
-  const proto = (req.headers['x-forwarded-proto'] as string) ?? 'http';
-  const origin = `${proto}://${req.headers.host}`;
-
   const results: ResultItem[] = [];
 
   for (const t of unique) {
     const email = t.email.trim().toLowerCase();
-    const fullName = t.full_name?.trim() ?? '';
+    const fullName = t.full_name?.trim() || email.split('@')[0];
 
     if (!EMAIL_RE.test(email)) {
       results.push({ email, status: 'error', message: 'Invalid email address' });
@@ -99,25 +96,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       continue;
     }
 
-    // Creates the auth user (unconfirmed) and emails them a magic link to
-    // accept the invite. The handle_new_user trigger reads role/full_name
-    // from this metadata to create their profile immediately.
-    const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
-      data: { full_name: fullName, role: 'teacher' },
-      redirectTo: `${origin}/api/auth/callback`,
+    const temporaryPassword = email.split('@')[0].toLowerCase();
+
+    const { data: createdUser, error: createError } = await supabase.auth.admin.createUser({
+      email,
+      password: temporaryPassword,
+      email_confirm: true,
+      user_metadata: { full_name: fullName, role: 'teacher', password_reset_required: true },
     });
 
-    if (inviteError) {
-      const msg = inviteError.message.toLowerCase();
+    if (createError) {
+      const msg = createError.message.toLowerCase();
       results.push({
         email,
         status: msg.includes('already') ? 'skipped' : 'error',
-        message: inviteError.message,
+        message: createError.message,
       });
       continue;
     }
 
-    results.push({ email, status: 'invited' });
+    if (createdUser.user?.id) {
+      const { error: profileError } = await supabase.from('profiles').upsert({
+        id: createdUser.user.id,
+        email,
+        username: email.split('@')[0].toLowerCase(),
+        full_name: fullName,
+        role: 'teacher',
+        password_reset_required: true,
+      }, { onConflict: 'id' });
+
+      if (profileError) {
+        results.push({ email, status: 'error', message: profileError.message });
+        continue;
+      }
+    }
+
+    results.push({ email, status: 'created' });
   }
 
   return res.json({ results });

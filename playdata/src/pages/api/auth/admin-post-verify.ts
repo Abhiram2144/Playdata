@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/admin';
 
-const ADMIN_EMAIL = 'abhiram.sathiraju@gmail.com';
+const ADMIN_EMAIL = 'admin@gmail.com';
 
 type Response = { redirect: string; error?: string };
 
@@ -64,11 +64,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   if (!existing) {
     await supabase.from('profiles').insert({
       id: user.id,
-      username: 'abhiram.sathiraju',
       email: user.email,
       full_name: 'Abhiram Sathiraju',
       role: 'admin',
-      onboarding_completed: true,
     });
   } else if (existing.role !== 'admin') {
     await supabase.from('profiles').update({ role: 'admin' }).eq('id', user.id);

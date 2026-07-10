@@ -80,14 +80,18 @@ export default function AuthLoginPage() {
       // Get profile to determine routing
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role, onboarding_completed')
+        .select('role, password_reset_required, onboarding_completed')
         .eq('id', data.user.id)
         .maybeSingle();
 
       const role = profile?.role ?? 'student';
-      const onboarded = profile?.onboarding_completed ?? false;
 
-      if (!onboarded) {
+      if (role === 'teacher' && (profile as { password_reset_required?: boolean } | null | undefined)?.password_reset_required) {
+        router.push('/reset-password?phase=update&first_login=1');
+        return;
+      }
+
+      if (!profile || !profile.onboarding_completed) {
         router.push(role === 'teacher' ? '/onboarding/teacher' : '/onboarding/student');
         return;
       }
@@ -227,7 +231,7 @@ export default function AuthLoginPage() {
             <p className="text-center text-sm text-[#6a6a80]">
               Teacher?{' '}
               <Link href="/auth/teacher-login" className="text-violet-400 hover:text-violet-300 font-medium transition-colors">
-                Sign in with a magic link
+                Sign in here
               </Link>
             </p>
           </div>

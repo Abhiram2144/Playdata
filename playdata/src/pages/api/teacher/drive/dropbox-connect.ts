@@ -52,21 +52,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (profile?.role !== 'teacher') return res.status(403).json({ error: 'Forbidden' });
 
-  const state = Buffer.from(JSON.stringify({ provider: 'google_drive' })).toString('base64');
+  if (!process.env.DROPBOX_APP_KEY) {
+    return res.status(500).json({ error: 'Dropbox app key not configured' });
+  }
+
   const origin = `${req.headers['x-forwarded-proto'] ?? 'http'}://${req.headers.host}`;
+  const redirectUri = `${origin}/api/teacher/drive/dropbox-callback`;
+  const state = Buffer.from(JSON.stringify({ provider: 'dropbox' })).toString('base64');
 
   const params = new URLSearchParams({
-    client_id: process.env.GOOGLE_CLIENT_ID ?? '',
-    redirect_uri: `${origin}/api/teacher/drive/auth-callback`,
+    client_id: process.env.DROPBOX_APP_KEY,
+    redirect_uri: redirectUri,
     response_type: 'code',
-    access_type: 'offline',
-    prompt: 'consent',
+    token_access_type: 'offline',
     state,
-    scope: [
-      'https://www.googleapis.com/auth/drive.readonly',
-      'https://www.googleapis.com/auth/userinfo.email',
-    ].join(' '),
   });
 
-  return res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+  return res.redirect(`https://www.dropbox.com/oauth2/authorize?${params.toString()}`);
 }

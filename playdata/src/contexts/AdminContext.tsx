@@ -41,34 +41,60 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const fetchOrgData = useCallback(async (userId: string) => {
     const supabase = getSupabase();
 
-    const { data: adminProfile } = await supabase
+    const { data: adminProfile, error: adminProfileError } = await supabase
       .from('admin_profiles')
       .select('onboarding_completed')
       .eq('id', userId)
       .maybeSingle();
 
+    if (adminProfileError) {
+      console.error('Failed to load admin onboarding state', adminProfileError);
+    }
+
     const completed = adminProfile?.onboarding_completed ?? false;
+
+    if (!adminProfile) {
+      await supabase
+        .from('admin_profiles')
+        .upsert({ id: userId, onboarding_completed: false }, { onConflict: 'id', ignoreDuplicates: true });
+    }
+
     setOnboardingCompleted(completed);
 
     if (!completed) return;
 
-    const { data: employerProfile } = await supabase
-      .from('employer_profiles')
-      .select('organisation_id')
-      .eq('id', userId)
+    const { data: org } = await supabase
+      .from('organizations')
+      .select('id, name, type')
+      .eq('admin_id', userId)
       .maybeSingle();
 
-    if (employerProfile?.organisation_id) {
-      const { data: org } = await supabase
-        .from('organisations')
-        .select('id, name')
-        .eq('id', employerProfile.organisation_id)
+    if (org) {
+      setOrganizationId(org.id);
+      setOrganizationName(org.name);
+      setOrganizationType(org.type as OrganizationType);
+
+      const { data: settings } = await supabase
+        .from('organization_settings')
+        .select('default_teacher_role_name, default_student_role_name, guest_access_enabled, ai_features_enabled')
+        .eq('organization_id', org.id)
         .maybeSingle();
 
-      if (org) {
-        setOrganizationId(org.id);
-        setOrganizationName(org.name);
-        setOrganizationType('university');
+      if (settings) {
+        setDefaultTeacherRoleName(settings.default_teacher_role_name);
+        setDefaultStudentRoleName(settings.default_student_role_name);
+        setGuestAccessEnabled(settings.guest_access_enabled);
+        setAiFeaturesEnabled(settings.ai_features_enabled);
+      }
+
+      const { data: domains } = await supabase
+        .from('organization_email_domains')
+        .select('domain, applies_to')
+        .eq('organization_id', org.id);
+
+      if (domains) {
+        setAllowedStudentDomains(domains.filter((d) => d.applies_to === 'student').map((d) => d.domain));
+        setAllowedTeacherDomains(domains.filter((d) => d.applies_to === 'teacher').map((d) => d.domain));
       }
     }
 
@@ -177,44 +203,28 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   const completeOnboarding = useCallback(async (state: OnboardingState) => {
     if (!adminId) throw new Error('Not authenticated');
-    const supabase = getSupabase();
 
-    const { data: existingEmployerProfile } = await supabase
-      .from('employer_profiles')
-      .select('organisation_id')
-      .eq('id', adminId)
-      .maybeSingle();
+    const response = await fetch('/api/admin/onboarding', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        organization_name: state.organization_name,
+        organization_type: state.organization_type,
+        allowed_student_domains: state.allowed_student_domains,
+        allowed_teacher_domains: state.allowed_teacher_domains,
+        default_teacher_role_name: state.default_teacher_role_name,
+        default_student_role_name: state.default_student_role_name,
+        guest_access_enabled: state.guest_access_enabled,
+        ai_features_enabled: state.ai_features_enabled,
+      }),
+    });
 
-    let organizationIdToUse = existingEmployerProfile?.organisation_id ?? null;
-
-    if (organizationIdToUse) {
-      const { error: orgError } = await supabase
-        .from('organisations')
-        .update({ name: state.organization_name })
-        .eq('id', organizationIdToUse);
-      if (orgError) throw new Error(orgError.message);
-    } else {
-      const { data: org, error: orgError } = await supabase
-        .from('organisations')
-        .insert({ name: state.organization_name })
-        .select('id')
-        .single();
-      if (orgError) throw new Error(orgError.message);
-      organizationIdToUse = org.id;
+    const json = await response.json() as { success?: boolean; error?: string; organization_id?: string | null };
+    if (!response.ok || !json.success) {
+      throw new Error(json.error || 'Failed to complete onboarding');
     }
 
-    const { error: employerProfileError } = await supabase
-      .from('employer_profiles')
-      .upsert({ id: adminId, organisation_id: organizationIdToUse }, { onConflict: 'id' });
-    if (employerProfileError) throw new Error(employerProfileError.message);
-
-    const { error: adminError } = await supabase
-      .from('admin_profiles')
-      .update({ onboarding_completed: true })
-      .eq('id', adminId);
-    if (adminError) throw new Error(adminError.message);
-
-    setOrganizationId(organizationIdToUse);
+    setOrganizationId(json.organization_id ?? null);
     setOrganizationName(state.organization_name);
     setOrganizationType(state.organization_type);
     setAllowedStudentDomains(state.allowed_student_domains);
@@ -228,11 +238,16 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   const updateOrganizationSettings = useCallback(async (settings: Partial<OrganizationSettings>) => {
     if (!organizationId) throw new Error('No organization found');
-    const supabase = getSupabase();
 
-    if (settings.organization_name !== undefined) {
-      const { error } = await supabase.from('organisations').update({ name: settings.organization_name }).eq('id', organizationId);
-      if (error) throw new Error(error.message);
+    const response = await fetch('/api/admin/onboarding', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings),
+    });
+
+    const json = await response.json() as { success?: boolean; error?: string };
+    if (!response.ok || !json.success) {
+      throw new Error(json.error || 'Failed to update organization settings');
     }
 
     if (settings.organization_name !== undefined) setOrganizationName(settings.organization_name);

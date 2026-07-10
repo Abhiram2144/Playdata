@@ -37,24 +37,29 @@ async function getSessionUser(req: NextApiRequest, res: NextApiResponse) {
   return user;
 }
 
-async function exchangeCode(code: string, redirectUri: string) {
+async function exchangeDropboxCode(code: string, redirectUri: string) {
+  const credentials = Buffer.from(
+    `${process.env.DROPBOX_APP_KEY}:${process.env.DROPBOX_APP_SECRET}`
+  ).toString('base64');
+
   const params = new URLSearchParams({
     code,
-    client_id: process.env.GOOGLE_CLIENT_ID ?? '',
-    client_secret: process.env.GOOGLE_CLIENT_SECRET ?? '',
-    redirect_uri: redirectUri,
     grant_type: 'authorization_code',
+    redirect_uri: redirectUri,
   });
 
-  const res = await fetch('https://oauth2.googleapis.com/token', {
+  const res = await fetch('https://api.dropboxapi.com/oauth2/token', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization: `Basic ${credentials}`,
+    },
     body: params.toString(),
   });
 
   if (!res.ok) {
-    const data = await res.json();
-    throw new Error(data?.error_description ?? 'Failed to exchange code for tokens');
+    const data = await res.json().catch(() => ({}));
+    throw new Error((data as Record<string, string>).error_description ?? 'Failed to exchange Dropbox code');
   }
   return res.json();
 }
@@ -71,20 +76,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const origin = `${req.headers['x-forwarded-proto'] ?? 'http'}://${req.headers.host}`;
-    const redirectUri = `${origin}/api/teacher/drive/auth-callback`;
+    const redirectUri = `${origin}/api/teacher/drive/dropbox-callback`;
 
-    const tokens = await exchangeCode(code, redirectUri);
+    const tokens = await exchangeDropboxCode(code, redirectUri);
     const expiresAt = tokens.expires_in
       ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
       : null;
 
     const admin = createAdminClient();
 
+    // Upsert: one row per (teacher_id, provider)
     const { data: existing } = await admin
       .from('drive_connections')
       .select('id')
       .eq('teacher_id', user.id)
-      .eq('provider', 'google_drive')
+      .eq('provider', 'dropbox')
       .maybeSingle();
 
     if (existing) {
@@ -92,8 +98,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         access_token: tokens.access_token,
         expires_at: expiresAt,
       };
-      // Only overwrite refresh_token when Google actually returns a new one;
-      // Google omits it on re-auth if the existing one is still valid.
       if (tokens.refresh_token) patch.refresh_token = tokens.refresh_token;
 
       const { error: updateError } = await admin
@@ -109,8 +113,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .from('drive_connections')
         .insert({
           teacher_id: user.id,
-          name: 'Google Drive',
-          provider: 'google_drive',
+          name: 'Dropbox',
+          provider: 'dropbox',
           access_token: tokens.access_token,
           refresh_token: tokens.refresh_token ?? null,
           expires_at: expiresAt,
@@ -123,7 +127,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    return res.redirect('/teacher/datasets?success=google-connected');
+    return res.redirect('/teacher/datasets?success=dropbox-connected');
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     return res.redirect(`/teacher/datasets?error=${encodeURIComponent(message)}`);

@@ -41,8 +41,15 @@ export default function ResetPasswordPage() {
   const handleUpdate = async ({ password }: { password: string }) => {
     const { error } = await supabase.auth.updateUser({ password });
     if (error) { toast.error(error.message); return; }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.id) {
+      await supabase.from('profiles').update({ password_reset_required: false }).eq('id', user.id);
+    }
+
     toast.success('Password updated');
-    router.push('/loginpage');
+    const isFirstLogin = router.query.first_login === '1';
+    router.push(isFirstLogin ? '/teacher/dashboard' : '/loginpage');
   };
 
   return (

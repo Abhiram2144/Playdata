@@ -37,15 +37,11 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, full_name, email, role, education_level, subject_taught, institution_role, created_at, onboarding_completed')
+    .select('id, full_name, email, role, education_level, subject_taught, institution_role, created_at')
     .eq('id', user.id)
     .single();
 
   if (!profile) return { redirect: { destination: '/auth/login', permanent: false } };
-  if (!profile.onboarding_completed) {
-    const dest = profile.role === 'teacher' ? '/onboarding/teacher' : '/onboarding/student';
-    return { redirect: { destination: dest, permanent: false } };
-  }
 
   return { props: { profile } };
 };

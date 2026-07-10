@@ -73,7 +73,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const { data: connection, error } = await admin
         .from('drive_connections')
         .select(
-          'id, teacher_id, name, drive_folder_id, is_approved, approved_by, approved_at, created_at, profiles!drive_connections_teacher_id_fkey(full_name, email)'
+          'id, teacher_id, name, external_folder_id, is_approved, approved_by, approved_at, created_at, profiles!drive_connections_teacher_id_fkey(full_name, email)'
         )
         .eq('id', id)
         .single();
@@ -91,7 +91,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (req.method === 'PUT') {
       // Approve or update drive connection
-      const { is_approved, drive_folder_id } = req.body;
+      const { is_approved, external_folder_id } = req.body;
 
       const updateData: Record<string, unknown> = {};
       if (is_approved !== undefined) {
@@ -101,8 +101,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           updateData.approved_at = new Date().toISOString();
         }
       }
-      if (drive_folder_id !== undefined) {
-        updateData.drive_folder_id = drive_folder_id;
+      if (external_folder_id !== undefined) {
+        updateData.external_folder_id = external_folder_id;
       }
 
       const { data: updated, error } = await admin
@@ -110,7 +110,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .update(updateData)
         .eq('id', id)
         .select(
-          'id, teacher_id, name, drive_folder_id, is_approved, approved_by, approved_at, created_at'
+          'id, teacher_id, name, external_folder_id, is_approved, approved_by, approved_at, created_at'
         )
         .single();
 

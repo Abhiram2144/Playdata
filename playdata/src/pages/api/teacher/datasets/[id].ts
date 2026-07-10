@@ -68,10 +68,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (profile?.role !== 'teacher') return res.status(403).json({ error: 'Forbidden' });
 
-    // Verify ownership
+    // Verify ownership (also fetch storage_path for DELETE cleanup)
     const { data: dataset } = await admin
       .from('datasets')
-      .select('id, teacher_id')
+      .select('id, teacher_id, storage_path')
       .eq('id', id)
       .single();
 
@@ -82,7 +82,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (req.method === 'GET') {
       const { data: fullDataset, error } = await admin
         .from('datasets')
-        .select('id, name, description, source_url, drive_file_id, schema, row_count, created_at, updated_at')
+        .select('id, name, description, source_url, external_file_id, schema, row_count, created_at, updated_at')
         .eq('id', id)
         .single();
 
@@ -107,7 +107,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           updated_at: new Date().toISOString(),
         })
         .eq('id', id)
-        .select('id, name, description, source_url, drive_file_id, schema, row_count, created_at, updated_at')
+        .select('id, name, description, source_url, external_file_id, schema, row_count, created_at, updated_at')
         .single();
 
       if (error) {
@@ -118,15 +118,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === 'DELETE') {
-      // Delete associated visible columns
+      // Remove storage file first so no orphan files remain on DB failure
+      const storagePath = (dataset as { storage_path: string | null }).storage_path;
+      if (storagePath) {
+        await admin.storage.from('datasets').remove([storagePath]);
+      }
+
       await admin.from('dataset_visible_columns').delete().eq('dataset_id', id);
 
-      // Delete dataset
       const { error } = await admin.from('datasets').delete().eq('id', id);
-
-      if (error) {
-        return res.status(500).json({ error: error.message });
-      }
+      if (error) return res.status(500).json({ error: error.message });
 
       return res.status(204).end();
     }

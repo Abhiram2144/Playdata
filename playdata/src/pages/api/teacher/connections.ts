@@ -38,12 +38,15 @@ async function getSessionUser(req: NextApiRequest, res: NextApiResponse) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  if (!['GET', 'POST'].includes(req.method ?? '')) {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
   const user = await getSessionUser(req, res);
   if (!user) return res.status(401).json({ error: 'Unauthorised' });
 
   const admin = createAdminClient();
+
   const { data: profile } = await admin
     .from('profiles')
     .select('role')
@@ -52,21 +55,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (profile?.role !== 'teacher') return res.status(403).json({ error: 'Forbidden' });
 
-  const state = Buffer.from(JSON.stringify({ provider: 'google_drive' })).toString('base64');
-  const origin = `${req.headers['x-forwarded-proto'] ?? 'http'}://${req.headers.host}`;
+  if (req.method === 'GET') {
+    const { data: rows, error } = await admin
+      .from('drive_connections')
+      .select('id, name, provider, is_approved, approved_at, external_folder_id, created_at, access_token, expires_at')
+      .eq('teacher_id', user.id)
+      .order('created_at', { ascending: false });
 
-  const params = new URLSearchParams({
-    client_id: process.env.GOOGLE_CLIENT_ID ?? '',
-    redirect_uri: `${origin}/api/teacher/drive/auth-callback`,
-    response_type: 'code',
-    access_type: 'offline',
-    prompt: 'consent',
-    state,
-    scope: [
-      'https://www.googleapis.com/auth/drive.readonly',
-      'https://www.googleapis.com/auth/userinfo.email',
-    ].join(' '),
-  });
+    if (error) return res.status(500).json({ error: error.message });
 
-  return res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+    const connections = (rows ?? []).map(({ access_token, expires_at, ...rest }) => ({
+      ...rest,
+      has_token: !!access_token,
+      token_expired: expires_at ? new Date(expires_at) < new Date() : false,
+    }));
+
+    return res.status(200).json({ connections });
+  }
+
+  if (req.method === 'POST') {
+    const { name, provider } = req.body;
+
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+      return res.status(400).json({ error: 'Connection name is required' });
+    }
+
+    if (!provider || !['google_drive', 'dropbox'].includes(provider)) {
+      return res.status(400).json({ error: "Provider must be 'google_drive' or 'dropbox'" });
+    }
+
+    const { data: connection, error } = await admin
+      .from('drive_connections')
+      .insert({
+        teacher_id: user.id,
+        name: name.trim(),
+        provider,
+        is_approved: false,
+        external_folder_id: null,
+      })
+      .select('id, name, provider, is_approved, created_at')
+      .single();
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    return res.status(201).json({ connection });
+  }
 }

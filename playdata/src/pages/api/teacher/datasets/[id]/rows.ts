@@ -1,6 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/admin';
+import path from 'path';
+import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 
 function serializeCookie(name: string, value: string, opts: CookieOptions = {}): string {
   const parts = [`${encodeURIComponent(name)}=${encodeURIComponent(value)}`];
@@ -37,10 +40,25 @@ async function getSessionUser(req: NextApiRequest, res: NextApiResponse) {
   return user;
 }
 
+function parseCSV(buffer: Buffer): Record<string, unknown>[] {
+  const result = Papa.parse<Record<string, unknown>>(buffer.toString('utf-8'), {
+    header: true,
+    skipEmptyLines: true,
+    dynamicTyping: false, // keep as strings so we can display raw values
+  });
+  return result.data;
+}
+
+function parseXLSX(buffer: Buffer): Record<string, unknown>[] {
+  const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true });
+  const sheetName = workbook.SheetNames[0];
+  if (!sheetName) return [];
+  const sheet = workbook.Sheets[sheetName];
+  return XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (!['GET', 'PUT'].includes(req.method ?? '')) {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   const user = await getSessionUser(req, res);
   if (!user) return res.status(401).json({ error: 'Unauthorised' });
@@ -49,6 +67,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!id || typeof id !== 'string') {
     return res.status(400).json({ error: 'Dataset ID is required' });
   }
+
+  const page = Math.max(0, parseInt((req.query.page as string) ?? '0', 10) || 0);
+  const pageSize = Math.min(200, Math.max(1, parseInt((req.query.pageSize as string) ?? '50', 10) || 50));
 
   try {
     const admin = createAdminClient();
@@ -63,7 +84,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { data: dataset } = await admin
       .from('datasets')
-      .select('id, teacher_id')
+      .select('id, teacher_id, storage_path')
       .eq('id', id)
       .single();
 
@@ -71,46 +92,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: 'Dataset not found' });
     }
 
-    if (req.method === 'GET') {
-      const { data: columns, error } = await admin
-        .from('dataset_visible_columns')
-        .select('column_name')
-        .eq('dataset_id', id);
-
-      if (error) return res.status(500).json({ error: error.message });
-
-      return res.status(200).json({
-        visible: (columns ?? []).map((r) => r.column_name),
-      });
+    const storagePath = (dataset as { storage_path: string | null }).storage_path;
+    if (!storagePath) {
+      return res.status(200).json({ rows: [], total: 0, page, pageSize });
     }
 
-    if (req.method === 'PUT') {
-      // Replace the full visible-column list atomically
-      const { columns } = req.body as { columns?: unknown };
+    const { data: blob, error: dlErr } = await admin.storage
+      .from('datasets')
+      .download(storagePath);
 
-      if (!Array.isArray(columns) || columns.some((c) => typeof c !== 'string')) {
-        return res.status(400).json({ error: '`columns` must be an array of strings' });
-      }
-
-      const names = (columns as string[]).map((c) => c.trim()).filter(Boolean);
-
-      // Delete then re-insert (simpler than diffing, safe because constraint is UNIQUE)
-      const { error: delErr } = await admin
-        .from('dataset_visible_columns')
-        .delete()
-        .eq('dataset_id', id);
-
-      if (delErr) return res.status(500).json({ error: delErr.message });
-
-      if (names.length > 0) {
-        const { error: insErr } = await admin.from('dataset_visible_columns').insert(
-          names.map((column_name) => ({ dataset_id: id, column_name }))
-        );
-        if (insErr) return res.status(500).json({ error: insErr.message });
-      }
-
-      return res.status(200).json({ visible: names });
+    if (dlErr || !blob) {
+      return res.status(500).json({ error: 'Failed to download dataset file' });
     }
+
+    const buffer = Buffer.from(await blob.arrayBuffer());
+    const ext = path.extname(storagePath.split('/').pop() ?? '').toLowerCase();
+    const allRows = ext === '.csv' ? parseCSV(buffer) : parseXLSX(buffer);
+
+    const total = allRows.length;
+    const rows = allRows.slice(page * pageSize, (page + 1) * pageSize);
+
+    return res.status(200).json({ rows, total, page, pageSize });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     return res.status(500).json({ error: message });
