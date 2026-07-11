@@ -7,6 +7,7 @@ import {
   BarChart2, TrendingUp, PieChart as PieIcon, Maximize2, AlignLeft,
   ArrowLeft, Save, Eye, EyeOff, Info,
 } from 'lucide-react';
+import Link from 'next/link';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid,
@@ -49,7 +50,6 @@ interface Props {
   visibleColumns: string[];
 }
 
-// Config stored verbatim in visualisations.config JSONB
 interface VizConfig {
   title: string;
   xAxis: string;
@@ -132,6 +132,13 @@ const TOOLTIP_STYLE = {
 
 const AXIS_STYLE = { fill: '#6a6a80', fontSize: 11 };
 
+// ── Smart number parser ──────────────────────────────────────────────────────
+function smartParseNumber(v: unknown): number {
+  if (typeof v === 'number') return v;
+  const s = String(v ?? '').trim().replace(/[$£€%,]/g, '');
+  return parseFloat(s);
+}
+
 // ── Data helpers ─────────────────────────────────────────────────────────────
 function applyFilter(
   rows: Record<string, unknown>[],
@@ -166,7 +173,7 @@ function groupAggregate(
   for (const r of rows) {
     const key = String(r[xCol] ?? '—');
     if (!groups.has(key)) { groups.set(key, []); order.push(key); }
-    const n = parseFloat(String(r[yCol] ?? ''));
+    const n = smartParseNumber(r[yCol]);
     if (!isNaN(n)) groups.get(key)!.push(n);
   }
   return order.map((k) => {
@@ -180,7 +187,7 @@ function groupAggregate(
 }
 
 function buildHistBins(rows: Record<string, unknown>[], col: string): { bin: string; count: number }[] {
-  const vals = rows.map((r) => parseFloat(String(r[col] ?? ''))).filter((v) => !isNaN(v));
+  const vals = rows.map((r) => smartParseNumber(r[col])).filter((v) => !isNaN(v));
   if (vals.length === 0) return [];
   const min = Math.min(...vals);
   const max = Math.max(...vals);
@@ -195,6 +202,29 @@ function buildHistBins(rows: Record<string, unknown>[], col: string): { bin: str
     bins[idx].count++;
   }
   return bins;
+}
+
+// ── Empty chart with contextual hints ────────────────────────────────────────
+function EmptyChart({ chartType, hasX, hasY }: { chartType: ChartType; hasX: boolean; hasY: boolean }) {
+  let msg: string;
+  if (chartType === 'scatter') {
+    msg = 'Scatter needs two numeric columns — X and Y';
+  } else if (chartType === 'histogram') {
+    msg = 'Choose a numeric column to distribute into bins';
+  } else if (chartType === 'pie' && !hasX) {
+    msg = 'Choose a category column (e.g. team, game mode)';
+  } else if ((chartType === 'bar' || chartType === 'line') && !hasX) {
+    msg = 'Choose a category for the X axis (e.g. player name, team)';
+  } else if ((chartType === 'bar' || chartType === 'line') && !hasY) {
+    msg = 'Choose a numeric column for the Y axis';
+  } else {
+    msg = 'No data to display';
+  }
+  return (
+    <div className="flex h-[320px] items-center justify-center rounded-xl border border-dashed border-[#35354a]/50">
+      <p className="text-sm text-[#4a4a60] text-center px-4">{msg}</p>
+    </div>
+  );
 }
 
 // ── Chart renderer ───────────────────────────────────────────────────────────
@@ -217,14 +247,14 @@ function ChartPane({
   const hasY = !!config.yAxis;
 
   if (chartType === 'scatter') {
-    if (!hasX || !hasY) return <EmptyChart msg="Select X and Y columns" />;
+    if (!hasX || !hasY) return <EmptyChart chartType={chartType} hasX={hasX} hasY={hasY} />;
     const data = filtered
       .map((r) => ({
-        x: parseFloat(String(r[config.xAxis] ?? '')),
-        y: parseFloat(String(r[config.yAxis] ?? '')),
+        x: smartParseNumber(r[config.xAxis]),
+        y: smartParseNumber(r[config.yAxis]),
       }))
       .filter((p) => !isNaN(p.x) && !isNaN(p.y));
-    if (!data.length) return <EmptyChart msg="No valid numeric pairs found" />;
+    if (!data.length) return <EmptyChart chartType={chartType} hasX={hasX} hasY={hasY} />;
     return (
       <ResponsiveContainer width="100%" height={320}>
         <ScatterChart>
@@ -239,9 +269,9 @@ function ChartPane({
   }
 
   if (chartType === 'histogram') {
-    if (!hasX) return <EmptyChart msg="Select a value column" />;
+    if (!hasX) return <EmptyChart chartType={chartType} hasX={hasX} hasY={hasY} />;
     const data = buildHistBins(filtered, config.xAxis);
-    if (!data.length) return <EmptyChart msg="No numeric values found" />;
+    if (!data.length) return <EmptyChart chartType={chartType} hasX={hasX} hasY={hasY} />;
     return (
       <ResponsiveContainer width="100%" height={320}>
         <BarChart data={data} barCategoryGap="2%">
@@ -256,7 +286,7 @@ function ChartPane({
   }
 
   if (chartType === 'pie') {
-    if (!hasX) return <EmptyChart msg="Select a category column" />;
+    if (!hasX) return <EmptyChart chartType={chartType} hasX={hasX} hasY={hasY} />;
     const data = hasY
       ? groupAggregate(filtered, config.xAxis, config.yAxis, config.aggregation).slice(0, 12)
       : (() => {
@@ -270,7 +300,7 @@ function ChartPane({
             .sort((a, b) => b.value - a.value)
             .slice(0, 12);
         })();
-    if (!data.length) return <EmptyChart msg="No data to display" />;
+    if (!data.length) return <EmptyChart chartType={chartType} hasX={hasX} hasY={hasY} />;
     return (
       <ResponsiveContainer width="100%" height={320}>
         <PieChart>
@@ -286,10 +316,9 @@ function ChartPane({
     );
   }
 
-  // bar and line
-  if (!hasX || !hasY) return <EmptyChart msg="Select X and Y columns" />;
+  if (!hasX || !hasY) return <EmptyChart chartType={chartType} hasX={hasX} hasY={hasY} />;
   const data = groupAggregate(filtered, config.xAxis, config.yAxis, config.aggregation);
-  if (!data.length) return <EmptyChart msg="No data to display" />;
+  if (!data.length) return <EmptyChart chartType={chartType} hasX={hasX} hasY={hasY} />;
 
   if (chartType === 'line') {
     return (
@@ -318,14 +347,6 @@ function ChartPane({
   );
 }
 
-function EmptyChart({ msg }: { msg: string }) {
-  return (
-    <div className="flex h-[320px] items-center justify-center rounded-xl border border-dashed border-[#35354a]/50">
-      <p className="text-sm text-[#4a4a60]">{msg}</p>
-    </div>
-  );
-}
-
 // ── Field-mapping helpers ─────────────────────────────────────────────────────
 const FIELD_LABELS: Record<ChartType, { x: string; y: string | null; showAgg: boolean }> = {
   bar:       { x: 'X axis (category)',      y: 'Y axis (numeric)',   showAgg: true  },
@@ -345,7 +366,14 @@ const FILTER_OPS: { op: FilterOp; label: string }[] = [
   { op: 'contains', label: 'contains (text)' },
 ];
 
-// ── Select component ─────────────────────────────────────────────────────────
+// ── Col select with type prefix ───────────────────────────────────────────────
+const TYPE_PREFIX: Record<ColType, string> = {
+  number: '#',
+  string: 'Aa',
+  date: '◷',
+  boolean: '✓',
+};
+
 function ColSelect({
   label,
   value,
@@ -353,6 +381,7 @@ function ColSelect({
   cols,
   optional,
   hint,
+  coercibleNames,
 }: {
   label: string;
   value: string;
@@ -360,6 +389,7 @@ function ColSelect({
   cols: ColumnSchema[];
   optional?: boolean;
   hint?: string;
+  coercibleNames?: string[];
 }) {
   return (
     <div>
@@ -373,11 +403,15 @@ function ColSelect({
         className="w-full rounded-xl border border-[#35354a] bg-[#0f0f1d] px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
       >
         <option value="">{optional ? '— none —' : '— select —'}</option>
-        {cols.map((c) => (
-          <option key={c.name} value={c.name}>
-            {c.name} ({c.type})
-          </option>
-        ))}
+        {cols.map((c) => {
+          const prefix = TYPE_PREFIX[c.type] ?? '?';
+          const coercibleSuffix = coercibleNames?.includes(c.name) ? ' (~numeric)' : '';
+          return (
+            <option key={c.name} value={c.name}>
+              {prefix} {c.name}{coercibleSuffix}
+            </option>
+          );
+        })}
       </select>
     </div>
   );
@@ -404,12 +438,31 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
   const [rows, setRows] = useState<Record<string, unknown>[]>([]);
   const [loadingRows, setLoadingRows] = useState(true);
   const [rowError, setRowError] = useState<string | null>(null);
+  const [coercibleCols, setCoercibleCols] = useState<string[]>([]);
 
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
+
+  const patchConfig = useCallback((patch: Partial<VizConfig>) => {
+    setConfig((prev) => ({ ...prev, ...patch }));
+  }, []);
+
+  const availableCols = useMemo(() => {
+    if (useVisibleOnly && visibleColumns.length > 0) {
+      return schema.filter((c) => visibleColumns.includes(c.name));
+    }
+    return schema;
+  }, [schema, visibleColumns, useVisibleOnly]);
+
+  const numericCols = useMemo(() => {
+    const trueNum = availableCols.filter(c => c.type === 'number');
+    const coercible = availableCols.filter(c => coercibleCols.includes(c.name));
+    const seen = new Set(trueNum.map(c => c.name));
+    return [...trueNum, ...coercible.filter(c => !seen.has(c.name))];
+  }, [availableCols, coercibleCols]);
 
   useEffect(() => {
     (async () => {
@@ -419,30 +472,63 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
       const data = await res.json();
       setLoadingRows(false);
       if (!res.ok) { setRowError(data.error ?? 'Failed to load data'); return; }
-      setRows(data.rows ?? []);
+      const newRows: Record<string, unknown>[] = data.rows ?? [];
+      setRows(newRows);
+
+      const coercible: string[] = [];
+      for (const col of schema) {
+        if (col.type !== 'string') continue;
+        const vals = newRows.map((r: Record<string, unknown>) => r[col.name]).filter(v => v !== null && v !== '' && v !== undefined);
+        if (vals.length < 3) continue;
+        const parseable = vals.filter(v => !isNaN(smartParseNumber(v)));
+        if (parseable.length / vals.length >= 0.7) coercible.push(col.name);
+      }
+      setCoercibleCols(coercible);
+
+      setConfig(prev => {
+        if (prev.xAxis !== '') return prev;
+
+        const trueNumeric = schema.filter(c => c.type === 'number');
+        const coercibleSchemas = schema.filter(c => coercible.includes(c.name));
+        const seenNum = new Set(trueNumeric.map(c => c.name));
+        const anyNumeric = [...trueNumeric, ...coercibleSchemas.filter(c => !seenNum.has(c.name))];
+        const anyNumericNames = new Set(anyNumeric.map(c => c.name));
+        const categorical = schema.filter(c => !anyNumericNames.has(c.name));
+
+        let suggestX = '';
+        let suggestY = '';
+
+        if (prev.xAxis === '') {
+          if (chartType === 'bar' || chartType === 'line') {
+            suggestX = categorical[0]?.name ?? schema[0]?.name ?? '';
+            suggestY = anyNumeric[0]?.name ?? '';
+          } else if (chartType === 'pie') {
+            let bestCat = categorical[0];
+            let bestCount = Infinity;
+            for (const col of categorical) {
+              const unique = new Set(newRows.map(r => String(r[col.name] ?? ''))).size;
+              if (unique <= 20 && unique < bestCount) { bestCat = col; bestCount = unique; }
+            }
+            suggestX = bestCat?.name ?? categorical[0]?.name ?? '';
+            suggestY = anyNumeric[0]?.name ?? '';
+          } else if (chartType === 'scatter') {
+            suggestX = anyNumeric[0]?.name ?? '';
+            suggestY = anyNumeric[1]?.name ?? anyNumeric[0]?.name ?? '';
+          } else if (chartType === 'histogram') {
+            suggestX = anyNumeric[0]?.name ?? '';
+          }
+        }
+
+        if (!suggestX && !suggestY) return prev;
+        return { ...prev, ...(suggestX ? { xAxis: suggestX } : {}), ...(suggestY ? { yAxis: suggestY } : {}) };
+      });
     })();
   }, [dataset.id]);
 
-  const patchConfig = useCallback((patch: Partial<VizConfig>) => {
-    setConfig((prev) => ({ ...prev, ...patch }));
-  }, []);
-
-  // Columns available for the current "visible only" toggle
-  const availableCols = useMemo(() => {
-    if (useVisibleOnly && visibleColumns.length > 0) {
-      return schema.filter((c) => visibleColumns.includes(c.name));
-    }
-    return schema;
-  }, [schema, visibleColumns, useVisibleOnly]);
-
-  const numericCols = useMemo(() => availableCols.filter((c) => c.type === 'number'), [availableCols]);
-
   const fieldMeta = FIELD_LABELS[chartType];
-
   const xCols = chartType === 'scatter' || chartType === 'histogram' ? numericCols : availableCols;
   const yCols = numericCols;
 
-  // Reset axis picks when chart type changes (so stale picks don't confuse charts)
   const handleChartTypeChange = (ct: ChartType) => {
     setChartType(ct);
     patchConfig({ xAxis: '', yAxis: '' });
@@ -469,6 +555,19 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
     if (!res.ok) { setSaveError(data.error ?? 'Save failed'); return; }
     router.push('/teacher/visualisations');
   };
+
+  const xUniqueCount = useMemo(() => {
+    if (!config.xAxis || rows.length === 0) return null;
+    return new Set(rows.map(r => String(r[config.xAxis] ?? ''))).size;
+  }, [rows, config.xAxis]);
+
+  const filterUniqueValues = useMemo(() => {
+    if (!config.filterColumn || rows.length === 0) return [];
+    const vals = [...new Set(rows.map(r => String(r[config.filterColumn] ?? '')).filter(Boolean))].sort();
+    return vals.slice(0, 50);
+  }, [rows, config.filterColumn]);
+
+  const showNoNumericBanner = rows.length > 0 && numericCols.length === 0 && coercibleCols.length === 0;
 
   return (
     <DashboardLayout navItems={NAV_ITEMS} profile={profile}>
@@ -557,12 +656,18 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
             <div className="rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80 p-4 space-y-3">
               <p className="text-xs font-semibold uppercase tracking-widest text-[#6a6a80]">Field mapping</p>
 
-              <ColSelect
-                label={fieldMeta.x}
-                value={config.xAxis}
-                onChange={(v) => patchConfig({ xAxis: v })}
-                cols={xCols}
-              />
+              <div>
+                <ColSelect
+                  label={fieldMeta.x}
+                  value={config.xAxis}
+                  onChange={(v) => patchConfig({ xAxis: v })}
+                  cols={xCols}
+                  coercibleNames={coercibleCols}
+                />
+                {config.xAxis && xUniqueCount !== null && (chartType === 'bar' || chartType === 'pie' || chartType === 'line') && (
+                  <p className="mt-1 text-xs text-[#6a6a80]">→ {xUniqueCount} unique values</p>
+                )}
+              </div>
 
               {fieldMeta.y !== null && (
                 <ColSelect
@@ -572,6 +677,7 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
                   cols={yCols}
                   optional={chartType === 'pie'}
                   hint={chartType === 'pie' ? 'leave blank to count rows' : undefined}
+                  coercibleNames={coercibleCols}
                 />
               )}
 
@@ -587,6 +693,15 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
                     <option value="sum">Sum (total)</option>
                     <option value="count">Count (rows per group)</option>
                   </select>
+                </div>
+              )}
+
+              {showNoNumericBanner && (
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-xs text-amber-400">
+                  ⚠ No numeric columns detected — bar, line, scatter and histogram charts need at least one numeric column.{' '}
+                  <Link href={`/teacher/datasets/${dataset.id}?tab=clean`} className="underline hover:text-amber-300">
+                    Clean dataset
+                  </Link>
                 </div>
               )}
             </div>
@@ -627,9 +742,17 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
                     <input
                       value={config.filterValue}
                       onChange={(e) => patchConfig({ filterValue: e.target.value })}
+                      list="filter-value-options"
                       placeholder="Filter value…"
                       className="w-full rounded-xl border border-[#35354a] bg-[#0f0f1d] px-3 py-2 text-sm text-white placeholder-[#4a4a60] focus:border-violet-500 focus:outline-none"
                     />
+                    {filterUniqueValues.length > 0 && (
+                      <datalist id="filter-value-options">
+                        {filterUniqueValues.map((v) => (
+                          <option key={v} value={v} />
+                        ))}
+                      </datalist>
+                    )}
                   </div>
                 </>
               )}
@@ -700,7 +823,7 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
               {rows.length > 0 && (
                 <div className="mt-3 flex items-center gap-1 text-xs text-[#4a4a60]">
                   <Info className="size-3 shrink-0" />
-                  Preview uses first {rows.length} rows. Full dataset at save time.
+                  Preview uses first {rows.length.toLocaleString()} of {dataset.row_count.toLocaleString()} rows.
                 </div>
               )}
             </div>

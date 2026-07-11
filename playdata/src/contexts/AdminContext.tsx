@@ -92,7 +92,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         .select('domain, applies_to')
         .eq('organization_id', org.id);
 
-      if (domains) {
+      if(domains) {
         setAllowedStudentDomains(domains.filter((d) => d.applies_to === 'student').map((d) => d.domain));
         setAllowedTeacherDomains(domains.filter((d) => d.applies_to === 'teacher').map((d) => d.domain));
       }

@@ -156,24 +156,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const missingPerColumn: Record<string, number> = {};
     const typeErrorsPerColumn: Record<string, TypeErrorSummary> = {};
 
-    for (const col of columns) {
-      missingPerColumn[col.name] = 0;
+    // Use the file's actual column names as source of truth so a stale schema
+    // never causes all cells to report as missing.
+    const fileColumnNames = rows.length > 0
+      ? Object.keys(rows[0])
+      : columns.map((c) => c.name);
+    const schemaTypeMap = new Map(columns.map((c) => [c.name, c.type]));
+
+    for (const colName of fileColumnNames) {
+      const colType: ColumnType = schemaTypeMap.get(colName) ?? 'string';
+      missingPerColumn[colName] = 0;
       const errExamples: string[] = [];
       let errCount = 0;
 
       for (const row of rows) {
-        const val = row[col.name];
+        const val = row[colName];
         if (isMissing(val)) {
-          missingPerColumn[col.name]++;
-        } else if (!matchesType(val, col.type)) {
+          missingPerColumn[colName]++;
+        } else if (!matchesType(val, colType)) {
           errCount++;
           if (errExamples.length < 3) errExamples.push(String(val).slice(0, 40));
         }
       }
 
       if (errCount > 0) {
-        typeErrorsPerColumn[col.name] = {
-          expected: col.type,
+        typeErrorsPerColumn[colName] = {
+          expected: colType,
           count: errCount,
           examples: errExamples,
         };

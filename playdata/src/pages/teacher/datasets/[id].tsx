@@ -6,7 +6,7 @@ import {
   Database, FolderPlus, BarChart3,
   Hash, Type, Calendar, ToggleLeft, ArrowLeft, Rows,
   Pencil, Trash2, Check, X, AlertTriangle, Eye, EyeOff,
-  ChevronLeft, ChevronRight, BarChart2, BookOpen,
+  ChevronLeft, ChevronRight, BarChart2, BookOpen, Wand2,
 } from 'lucide-react';
 import { GetServerSidePropsResult } from 'next';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -17,7 +17,6 @@ import { createAdminClient } from '@/lib/supabase/admin';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type ColumnType = 'number' | 'string' | 'boolean' | 'date';
-
 interface ColumnSchema { name: string; type: ColumnType }
 
 interface Dataset {
@@ -111,7 +110,35 @@ const TYPE_META: Record<ColumnType, { icon: React.ElementType; label: string; co
   boolean: { icon: ToggleLeft, label: 'Boolean', colour: 'text-amber-400 bg-amber-500/10 ring-amber-500/20' },
 };
 
-type Tab = 'preview' | 'validation' | 'columns';
+type Tab = 'preview' | 'validation' | 'columns' | 'clean';
+
+// ── Clean tab helpers (module-level) ─────────────────────────────────────────
+function smartParseNumber(v: unknown): number {
+  if (typeof v === 'number') return v;
+  const s = String(v ?? '').trim().replace(/[$£€%,\s]/g, '');
+  return parseFloat(s);
+}
+
+function isCoercibleToNumber(values: unknown[]): boolean {
+  const nonEmpty = values.filter(v => v !== null && v !== '' && v !== undefined);
+  if (nonEmpty.length < 3) return false;
+  const parseable = nonEmpty.filter(v => !isNaN(smartParseNumber(v)));
+  return parseable.length / nonEmpty.length >= 0.7;
+}
+
+function looksLikeGenericHeader(name: string): boolean {
+  if (!name || !name.trim()) return true;
+  return /^(unnamed|column|col|field|var)\s*\d*$/i.test(name.trim());
+}
+
+function firstRowLooksLikeHeaders(firstRow: Record<string, unknown>, cols: ColumnSchema[]): boolean {
+  if (!firstRow || cols.length === 0) return false;
+  return cols.every(col => {
+    const val = firstRow[col.name];
+    if (val === null || val === '' || val === undefined) return false;
+    return isNaN(Number(String(val)));
+  });
+}
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function DatasetDetail({ profile, dataset, initialVisibleColumns }: Props) {
@@ -166,7 +193,14 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
   };
 
   // ── Tabs ──────────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<Tab>('preview');
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const t = params.get('tab');
+      if (t === 'clean' || t === 'validation' || t === 'columns' || t === 'preview') return t as Tab;
+    }
+    return 'preview';
+  });
 
   // ── Preview tab ───────────────────────────────────────────────────────────
   const [previewRows, setPreviewRows] = useState<Record<string, unknown>[]>([]);
@@ -212,7 +246,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
     setValidation(data.report);
   }, [dataset.id]);
 
-  useEffect(() => { if (activeTab === 'validation') fetchValidation(); }, [activeTab, fetchValidation]);
+  useEffect(() => { if (activeTab === 'validation' || activeTab === 'clean') fetchValidation(); }, [activeTab, fetchValidation]);
 
   // ── Columns tab ───────────────────────────────────────────────────────────
   const [visible, setVisible] = useState<Set<string>>(new Set(initialVisibleColumns));
@@ -240,6 +274,101 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
     if (res.ok) setColumnsSaved(true);
   };
 
+  // ── Clean tab ─────────────────────────────────────────────────────────────
+  const [cleanRows, setCleanRows] = useState<Record<string, unknown>[]>([]);
+  const [cleanLoading, setCleanLoading] = useState(false);
+  const cleanLoadedRef = useRef(false);
+  const [coercibleCols, setCoercibleCols] = useState<number[]>([]);
+  const [genericHeaderCols, setGenericHeaderCols] = useState<number[]>([]);
+  const [firstRowIsHeader, setFirstRowIsHeader] = useState(false);
+  const [pendingPromote, setPendingPromote] = useState(false);
+  const [pendingCoerce, setPendingCoerce] = useState<Set<number>>(new Set());
+  const [pendingRenames, setPendingRenames] = useState<string[]>([]);
+  const [firstRowValues, setFirstRowValues] = useState<string[]>([]);
+  const [pendingDropDuplicates, setPendingDropDuplicates] = useState(false);
+  const [pendingDropMissingRows, setPendingDropMissingRows] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
+  const [cleanError, setCleanError] = useState<string | null>(null);
+  const [cleanDone, setCleanDone] = useState(false);
+
+  useEffect(() => {
+    if (activeTab !== 'clean' || cleanLoadedRef.current) return;
+    cleanLoadedRef.current = true;
+    setCleanLoading(true);
+    (async () => {
+      const res = await fetch(`/api/teacher/datasets/${dataset.id}/rows?page=0&pageSize=100`);
+      const data = await res.json();
+      setCleanLoading(false);
+      if (!res.ok) return;
+      const rows: Record<string, unknown>[] = data.rows ?? [];
+      setCleanRows(rows);
+
+      if (rows.length > 0) {
+        const preview: string[] = [];
+        columns.forEach((col, index) => {
+          preview[index] = String(rows[0][col.name] ?? '');
+        });
+        setFirstRowValues(preview);
+      }
+
+      const coercible: number[] = [];
+      columns.forEach((col, index) => {
+        if (col.type !== 'string') return;
+        const vals = rows.map((r) => r[col.name]);
+        if (isCoercibleToNumber(vals)) coercible.push(index);
+      });
+      setCoercibleCols(coercible);
+
+      const generic = columns
+        .map((col, index) => (looksLikeGenericHeader(col.name) ? index : null))
+        .filter((index): index is number => index !== null);
+      setGenericHeaderCols(generic);
+
+      const fIsHeader = generic.length > 0 && rows.length > 0 && firstRowLooksLikeHeaders(rows[0], columns);
+      setFirstRowIsHeader(fIsHeader);
+
+      setPendingPromote(fIsHeader);
+      setPendingCoerce(new Set(coercible));
+
+      const initialRenames = columns.map((col) => {
+        if (!col.name.trim() && rows.length > 0) {
+          return String(rows[0][col.name] ?? '').trim();
+        }
+        return col.name;
+      });
+      setPendingRenames(initialRenames);
+    })();
+  }, [activeTab, columns, dataset.id]);
+
+  const applyClean = async () => {
+    setCleaning(true);
+    setCleanError(null);
+    const filteredRenames: Record<string, string> = {};
+    pendingRenames.forEach((newName, index) => {
+      const trimmed = newName.trim();
+      if (trimmed && trimmed !== (columns[index]?.name ?? '')) {
+        filteredRenames[String(index)] = trimmed;
+      }
+    });
+    const body = {
+      promoteFirstRow: pendingPromote,
+      coerceToNumber: [...pendingCoerce],
+      columnRenames: filteredRenames,
+      dropDuplicates: pendingDropDuplicates,
+      dropMissingRows: pendingDropMissingRows,
+    };
+    const res = await fetch(`/api/teacher/datasets/${dataset.id}/clean`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    setCleaning(false);
+    if (!res.ok) { setCleanError(data.error ?? 'Clean failed'); return; }
+    setCleanDone(true);
+    setTimeout(() => window.location.reload(), 1500);
+  };
+
   // ── Validation helpers ────────────────────────────────────────────────────
   const totalMissing = validation
     ? Object.values(validation.missingPerColumn).reduce((a, b) => a + b, 0)
@@ -247,6 +376,19 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
   const totalTypeErrors = validation
     ? Object.values(validation.typeErrorsPerColumn).reduce((a, e) => a + e.count, 0)
     : 0;
+
+  const hasStructuralIssues =
+    coercibleCols.length > 0 ||
+    genericHeaderCols.length > 0 ||
+    firstRowIsHeader ||
+    (validation !== null && (validation.duplicateRowCount > 0 || totalMissing > 0));
+
+  const hasAnyPending =
+    pendingPromote ||
+    pendingCoerce.size > 0 ||
+    pendingDropDuplicates ||
+    pendingDropMissingRows ||
+    pendingRenames.some((newName, index) => newName.trim() && newName.trim() !== (columns[index]?.name ?? ''));
 
   const colsWithIssues = validation
     ? columns.filter(
@@ -376,17 +518,18 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
           className="rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80"
         >
           {/* Tab bar */}
-          <div className="flex border-b border-[#35354a]/60">
-            {(['preview', 'validation', 'columns'] as Tab[]).map((tab) => (
+          <div className="flex border-b border-[#35354a]/60 overflow-x-auto">
+            {(['preview', 'validation', 'columns', 'clean'] as Tab[]).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`relative px-6 py-4 text-sm font-semibold capitalize transition-colors ${
+                className={`relative flex items-center gap-1.5 whitespace-nowrap px-6 py-4 text-sm font-semibold capitalize transition-colors ${
                   activeTab === tab
                     ? 'text-white'
                     : 'text-[#6a6a80] hover:text-[#c9c9d4]'
                 }`}
               >
+                {tab === 'clean' && <Wand2 className="size-3.5" />}
                 {tab}
                 {activeTab === tab && (
                   <motion.span
@@ -411,12 +554,20 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                 <p className="text-sm text-[#6a6a80]">No rows found.</p>
               ) : (
                 <>
+                  {visible.size > 0 && visible.size < columns.length && (
+                    <p className="mb-3 text-xs text-[#6a6a80]">
+                      Showing {visible.size} of {columns.length} columns — student view.{' '}
+                      <button onClick={() => setActiveTab('columns')} className="text-violet-400 hover:text-violet-300 transition">
+                        Manage visibility
+                      </button>
+                    </p>
+                  )}
                   <div className="overflow-x-auto rounded-xl border border-[#35354a]/40">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-[#35354a]/40 bg-[#0f0f1d]">
                           <th className="px-3 py-2.5 text-left text-xs font-semibold text-[#6a6a80] w-10">#</th>
-                          {columns.map((col) => {
+                          {(visible.size > 0 ? columns.filter(c => visible.has(c.name)) : columns).map((col) => {
                             const meta = TYPE_META[col.type] ?? TYPE_META.string;
                             const Icon = meta.icon;
                             return (
@@ -439,7 +590,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                             <td className="px-3 py-2 text-xs text-[#4a4a60]">
                               {previewPage * PAGE_SIZE + i + 1}
                             </td>
-                            {columns.map((col) => (
+                            {(visible.size > 0 ? columns.filter(c => visible.has(c.name)) : columns).map((col) => (
                               <td key={col.name} className="px-3 py-2 text-xs text-[#c9c9d4] max-w-[200px]">
                                 <span className="block truncate">
                                   {row[col.name] === undefined || row[col.name] === null || row[col.name] === ''
@@ -493,7 +644,6 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                 <p className="text-sm text-red-400">{validationError}</p>
               ) : !validation ? null : (
                 <div className="space-y-6">
-                  {/* Summary metrics */}
                   <div className="grid gap-3 sm:grid-cols-4">
                     {[
                       { label: 'Total rows', value: validation.totalRows.toLocaleString(), ok: true },
@@ -641,6 +791,264 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
               </div>
             </div>
           )}
+
+          {/* Clean tab */}
+          {activeTab === 'clean' && (
+            <div className="p-6 space-y-6">
+              {cleanDone && (
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-400">
+                  Dataset cleaned! Refreshing…
+                </div>
+              )}
+
+              {cleanLoading ? (
+                <p className="text-sm text-[#8d8da0]">Analysing dataset…</p>
+              ) : (
+                <>
+                  {!hasStructuralIssues && (
+                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-400">
+                      No structural issues detected — your data looks chart-ready.
+                    </div>
+                  )}
+
+                  {/* Section: Column Headers */}
+                  {cleanRows.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-sm font-semibold text-[#c9c9d4]">Column Headers</p>
+
+                      {(genericHeaderCols.length > 0 || firstRowIsHeader) && (
+                        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-amber-400">
+                          {genericHeaderCols.some((index) => !columns[index]?.name.trim())
+                            ? 'Some columns have no name. Row 1 may contain the actual column headers — enable the option below to use those values.'
+                            : firstRowIsHeader
+                            ? 'These columns have generic names and row 1 looks like real headers — promoting is recommended.'
+                            : 'Some columns have generic names. If row 1 contains your actual column headers, enable the option below.'}
+                        </div>
+                      )}
+
+                      <label className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition ${
+                        pendingPromote ? 'border-violet-500/30 bg-violet-500/5' : 'border-[#35354a]/40 bg-[#0f0f1d]'
+                      }`}>
+                        <input
+                          type="checkbox"
+                          checked={pendingPromote}
+                          onChange={(e) => setPendingPromote(e.target.checked)}
+                          className="accent-violet-500"
+                        />
+                        <div>
+                          <p className="text-sm font-medium text-white">Use first row as column headers</p>
+                          <p className="text-xs text-[#6a6a80] mt-0.5">
+                            Row 1 values become the column names and that row is removed from the data
+                          </p>
+                        </div>
+                      </label>
+
+                      {/* Preview: all columns — current name vs row 1 value */}
+                      <div className="rounded-xl border border-[#35354a]/40 overflow-hidden">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="border-b border-[#35354a]/40 bg-[#0f0f1d]">
+                              <th className="px-4 py-2 text-left font-semibold text-[#6a6a60]">Current header</th>
+                              <th className="px-4 py-2 text-left font-semibold text-[#6a6a60]">
+                                {pendingPromote ? 'New header (from row 1)' : 'Row 1 value'}
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {columns.map((col, idx) => {
+                              const isEmpty = !col.name.trim();
+                              const isGeneric = genericHeaderCols.includes(idx);
+                              const rowVal = firstRowValues[idx];
+                              return (
+                                <tr key={`${col.name}-${idx}`} className="border-b border-[#35354a]/20 last:border-0">
+                                  <td className="px-4 py-2.5">
+                                    {isEmpty
+                                      ? <span className="flex items-center gap-1 italic text-amber-400"><AlertTriangle className="size-3 shrink-0" />empty</span>
+                                      : <span className={isGeneric ? 'font-medium text-amber-400' : 'text-[#c9c9d4]'}>{col.name}</span>}
+                                  </td>
+                                  <td className="px-4 py-2.5">
+                                    {rowVal
+                                      ? <span className={pendingPromote ? 'font-medium text-emerald-400' : 'text-[#8888a0]'}>{rowVal}</span>
+                                      : <span className="italic text-[#4a4a60]">—</span>}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Section: Row Cleanup */}
+                  <div className="space-y-3">
+                    <p className="text-sm font-semibold text-[#c9c9d4]">Row Cleanup</p>
+
+                    {/* Drop duplicates */}
+                    <label className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition ${
+                      pendingDropDuplicates ? 'border-violet-500/30 bg-violet-500/5' : 'border-[#35354a]/40 bg-[#0f0f1d]'
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={pendingDropDuplicates}
+                        onChange={(e) => setPendingDropDuplicates(e.target.checked)}
+                        className="accent-violet-500 shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium text-white">Remove duplicate rows</p>
+                          {validation && (
+                            <span className={`text-xs rounded-full px-2 py-0.5 ring-1 ${
+                              validation.duplicateRowCount > 0
+                                ? 'bg-amber-500/10 text-amber-400 ring-amber-500/20'
+                                : 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20'
+                            }`}>
+                              {validation.duplicateRowCount} duplicate{validation.duplicateRowCount !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-[#6a6a80] mt-0.5">Keep only the first occurrence of each exact duplicate row</p>
+                      </div>
+                    </label>
+
+                    {/* Drop rows with missing values */}
+                    <label className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition ${
+                      pendingDropMissingRows ? 'border-violet-500/30 bg-violet-500/5' : 'border-[#35354a]/40 bg-[#0f0f1d]'
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={pendingDropMissingRows}
+                        onChange={(e) => setPendingDropMissingRows(e.target.checked)}
+                        className="accent-violet-500 shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium text-white">Remove rows with missing values</p>
+                          {validation && totalMissing > 0 && (
+                            <span className="text-xs rounded-full px-2 py-0.5 bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20">
+                              {totalMissing} missing cell{totalMissing !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                          {validation && totalMissing === 0 && (
+                            <span className="text-xs rounded-full px-2 py-0.5 bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20">
+                              no missing values
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-[#6a6a80] mt-0.5">Drop any row that has an empty or null value in any column</p>
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* Section B: Numeric Columns */}
+                  {coercibleCols.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-sm font-semibold text-[#c9c9d4]">Numeric Columns</p>
+                      <p className="text-xs text-[#8888a0]">
+                        These columns are stored as text but contain numeric values (e.g. &apos;$1,234&apos;, &apos;45.6%&apos;). Converting them enables charts.
+                      </p>
+                      <div className="space-y-2">
+                        {coercibleCols.map((colIndex) => {
+                          const colName = columns[colIndex]?.name ?? '';
+                          const sample = cleanRows[0]?.[colName];
+                          const selected = pendingCoerce.has(colIndex);
+                          return (
+                            <label
+                              key={colName}
+                              className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition ${
+                                selected
+                                  ? 'border-violet-500/30 bg-violet-500/5'
+                                  : 'border-[#35354a]/40 bg-[#0f0f1d]'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selected}
+                                onChange={(e) => {
+                                  setPendingCoerce(prev => {
+                                    const next = new Set(prev);
+                                    if (e.target.checked) next.add(colIndex);
+                                    else next.delete(colIndex);
+                                    return next;
+                                  });
+                                }}
+                                className="accent-violet-500 shrink-0"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-sm font-medium text-white">{colName}</span>
+                                  {sample !== undefined && sample !== null && sample !== '' && (
+                                    <span className="text-xs text-[#6a6a80]">e.g. &quot;{String(sample)}&quot;</span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-[#6a6a80] mt-0.5">
+                                  currently: <span className="text-[#8888a0]">Text</span>
+                                  {selected && <span className="text-violet-400 ml-1">→ will become: Number</span>}
+                                </p>
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Section C: Column Renames */}
+                  <div className="space-y-3">
+                    <p className="text-sm font-semibold text-[#c9c9d4]">Column Renames</p>
+                    <p className="text-xs text-[#6a6a80]">Rename any column. Empty column names are pre-filled with the row 1 value as a suggestion.</p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {columns.map((col, idx) => {
+                        const isEmpty = !col.name.trim();
+                        const currentVal = pendingRenames[idx] ?? col.name;
+                        const changed = currentVal.trim() && currentVal.trim() !== col.name;
+                        return (
+                          <div
+                            key={`${col.name}-${idx}`}
+                            className={`flex items-center gap-2 rounded-xl border px-3 py-2 ${
+                              isEmpty ? 'border-amber-500/20 bg-amber-500/5' : 'border-[#35354a]/40 bg-[#0f0f1d]'
+                            }`}
+                          >
+                            <span className={`text-xs shrink-0 min-w-[80px] truncate flex items-center gap-1 ${isEmpty ? 'text-amber-400 italic' : 'text-[#8888a0]'}`}>
+                              {isEmpty ? <><AlertTriangle className="size-3 shrink-0" />empty</> : col.name}
+                            </span>
+                            <span className="text-[#35354a] shrink-0 text-xs">→</span>
+                            <input
+                              value={currentVal}
+                              onChange={(e) => setPendingRenames(prev => {
+                                const next = [...prev];
+                                next[idx] = e.target.value;
+                                return next;
+                              })}
+                              placeholder={isEmpty ? (firstRowValues[idx] || 'New name…') : 'Keep original'}
+                              className={`flex-1 min-w-0 rounded-lg border bg-[#0d0d18] px-2 py-1 text-xs text-white placeholder-[#4a4a60] focus:outline-none ${
+                                changed ? 'border-violet-500/50 focus:border-violet-500' : isEmpty ? 'border-amber-500/30 focus:border-violet-500/50' : 'border-[#35354a] focus:border-violet-500/50'
+                              }`}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {cleanError && (
+                    <div className="rounded-xl border border-red-500/30 bg-red-500/5 px-4 py-3 text-sm text-red-400">
+                      {cleanError}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={applyClean}
+                    disabled={cleaning || !hasAnyPending || cleanDone}
+                    className="flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:bg-violet-500/40 disabled:cursor-not-allowed"
+                  >
+                    <Wand2 className="size-4" />
+                    {cleaning ? 'Applying…' : 'Apply Fixes'}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </motion.div>
       </div>
 
@@ -664,7 +1072,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                   <Trash2 className="size-4 text-red-400" />
                 </span>
                 <div>
-                  <h2 className="text-base font-bold text-white">Delete "{name}"?</h2>
+                  <h2 className="text-base font-bold text-white">Delete &quot;{name}&quot;?</h2>
                   <p className="text-sm text-[#8d8da0] mt-0.5">This cannot be undone. The file will be removed from storage.</p>
                 </div>
               </div>
