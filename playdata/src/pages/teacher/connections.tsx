@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Database, FolderPlus, BarChart3, Cable, CheckCircle2, Clock, AlertCircle, Plus, X } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { type NavItem } from '@/components/layout/Sidebar';
+import { TEACHER_NAV } from '@/lib/teacher-nav';
 import { withAuth } from '@/lib/auth';
 import { createClientFromContext } from '@/lib/supabase/server-props';
 
@@ -46,12 +47,7 @@ export const getServerSideProps = withAuth(
   { allowedRoles: ['teacher'] }
 );
 
-const NAV_ITEMS: NavItem[] = [
-  { href: '/teacher/dashboard', label: 'Dashboard', icon: Database },
-  { href: '/teacher/datasets', label: 'Datasets', icon: FolderPlus },
-  { href: '/teacher/connections', label: 'Connections', icon: Cable },
-  { href: '/teacher/visualisations', label: 'Visualisations', icon: BarChart3 },
-];
+const NAV_ITEMS = TEACHER_NAV;
 
 const PROVIDER_LABELS: Record<string, string> = {
   google_drive: 'Google Drive',

@@ -10,6 +10,7 @@ import { withAuth } from '@/lib/auth';
 import { createClientFromContext } from '@/lib/supabase/server-props';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { NavItem } from '@/components/layout/Sidebar';
+import { TEACHER_NAV } from '@/lib/teacher-nav';
 
 interface Profile {
   id: string;
@@ -76,15 +77,7 @@ export const getServerSideProps = withAuth(
   { allowedRoles: ['teacher'] }
 ) as GetServerSideProps<Props>;
 
-const NAV_ITEMS: NavItem[] = [
-  { href: '/teacher/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/teacher/datasets',  label: 'Datasets',  icon: Database },
-  { href: '/teacher/visualisations', label: 'Visualisations', icon: BarChart3 },
-  { href: '/teacher/quizzes',   label: 'Quizzes',   icon: BookOpen,  disabled: true },
-  { href: '/teacher/sessions',  label: 'Sessions',  icon: Users,     disabled: true },
-  { href: '/teacher/analytics', label: 'Analytics', icon: TrendingUp, disabled: true },
-  { href: '/profile',           label: 'Profile',   icon: UserCircle },
-];
+const NAV_ITEMS = TEACHER_NAV;
 
 export default function TeacherDashboard({ profile, stats }: Props) {
   const firstName = profile.full_name?.split(' ')[0] || 'Teacher';
@@ -150,9 +143,9 @@ export default function TeacherDashboard({ profile, stats }: Props) {
       icon: Users,
       title: 'Start a live session',
       desc: 'Run a real-time classroom session.',
-      href: null,
+      href: '/teacher/sessions',
       colour: 'text-amber-400 bg-amber-600/10 ring-amber-500/20',
-      available: false,
+      available: true,
     },
     {
       icon: TrendingUp,

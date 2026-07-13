@@ -11,6 +11,7 @@ import {
 import { GetServerSidePropsResult } from 'next';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { type NavItem } from '@/components/layout/Sidebar';
+import { TEACHER_NAV } from '@/lib/teacher-nav';
 import { withAuth } from '@/lib/auth';
 import { createClientFromContext } from '@/lib/supabase/server-props';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -97,11 +98,7 @@ export const getServerSideProps = withAuth(
 );
 
 // ── Constants ────────────────────────────────────────────────────────────────
-const NAV_ITEMS: NavItem[] = [
-  { href: '/teacher/dashboard', label: 'Dashboard', icon: Database },
-  { href: '/teacher/datasets', label: 'Datasets', icon: FolderPlus },
-  { href: '/teacher/visualisations', label: 'Visualisations', icon: BarChart3 },
-];
+const NAV_ITEMS = TEACHER_NAV;
 
 const TYPE_META: Record<ColumnType, { icon: React.ElementType; label: string; colour: string }> = {
   number:  { icon: Hash,       label: 'Number',  colour: 'text-blue-400 bg-blue-500/10 ring-blue-500/20' },
