@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, Plus, Copy, Trash2, Database, FolderPlus, BarChart3,
   CheckCircle, Clock, FileQuestion, AlertTriangle, Pencil,
-  Crown, UserCheck, Users, LayoutDashboard, TrendingUp, UserCircle,
+  Crown, UserCheck, Users, LayoutDashboard, TrendingUp, UserCircle, Share2,
 } from 'lucide-react';
 import { GetServerSidePropsResult } from 'next';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -280,6 +280,12 @@ function QuizCard({
 
           {quiz.is_owner && (
             <>
+              <Link
+                href={`/teacher/quizzes/${quiz.id}#collaborators`}
+                className="flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-1.5 text-xs font-medium text-violet-400 transition hover:bg-violet-500/20"
+              >
+                <Share2 className="size-3" /> Share
+              </Link>
               <button
                 onClick={() => onDuplicate(quiz.id)}
                 disabled={duplicating === quiz.id}

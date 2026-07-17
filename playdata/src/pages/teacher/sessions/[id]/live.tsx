@@ -3,22 +3,30 @@ import { useRouter } from 'next/router'
 import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  LayoutDashboard, Database, BarChart3, BookOpen, Users,
-  TrendingUp, UserCircle, ChevronLeft, ChevronRight,
   Radio, CheckCircle2, XCircle, UserCheck, BarChart2,
-  StopCircle, Copy, AlertTriangle,
+  StopCircle, Copy, AlertTriangle, BookOpen,
+  ChevronLeft, ChevronRight, Clock, Trophy,
 } from 'lucide-react'
 import { GetServerSidePropsResult } from 'next'
 import { toast } from 'sonner'
 import { io as ioClient, Socket } from 'socket.io-client'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
-import { type NavItem } from '@/components/layout/Sidebar'
 import { TEACHER_NAV } from '@/lib/teacher-nav'
 import { withAuth } from '@/lib/auth'
 import { createClientFromContext } from '@/lib/supabase/server-props'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 const QRCodeSVG = dynamic(() => import('qrcode.react').then((m) => m.QRCodeSVG), { ssr: false })
+
+interface QuizQuestion {
+  id: string
+  text: string
+  type: string
+  options: string[] | null
+  correct_answer: string
+  time_limit_secs: number
+  order_index: number
+}
 
 interface SessionItem {
   id: string
@@ -29,6 +37,7 @@ interface SessionItem {
   subtitle: string
   options?: string[] | null
   correct_answer?: string
+  quizQuestions?: QuizQuestion[]
 }
 
 interface Participant {
@@ -105,7 +114,7 @@ export const getServerSideProps = withAuth(
     }
 
     if (session.status === 'ended') {
-      return { redirect: { destination: '/teacher/sessions', permanent: false } }
+      return { redirect: { destination: `/teacher/sessions/${sessionId}/results`, permanent: false } }
     }
 
     const [itemsRes, participantsRes, responsesRes] = await Promise.all([
@@ -116,17 +125,18 @@ export const getServerSideProps = withAuth(
 
     const rawItems = itemsRes.data ?? []
 
-    // Resolve reference names
     const quizIds = rawItems.filter((i: Record<string, unknown>) => i.type === 'quiz').map((i: Record<string, unknown>) => i.reference_id as string)
     const visIds = rawItems.filter((i: Record<string, unknown>) => i.type === 'visualisation').map((i: Record<string, unknown>) => i.reference_id as string)
     const questionIds = rawItems.filter((i: Record<string, unknown>) => i.type === 'question').map((i: Record<string, unknown>) => i.reference_id as string)
 
-    type QuizRow = { id: string; title: string; questions: unknown[] }
+    type QuizRow = { id: string; title: string; questions: QuizQuestion[] }
     type VisRow = { id: string; name: string; chart_type: string }
     type QRow = { id: string; text: string; type: string; options: unknown; correct_answer: string }
 
     const [qRes, vRes, qsRes] = await Promise.all([
-      quizIds.length > 0 ? admin.from('quizzes').select('id, title, questions(id)').in('id', quizIds) : { data: [] },
+      quizIds.length > 0
+        ? admin.from('quizzes').select('id, title, questions(id, text, type, options, correct_answer, time_limit_secs, order_index)').in('id', quizIds)
+        : { data: [] },
       visIds.length > 0 ? admin.from('visualisations').select('id, name, chart_type').in('id', visIds) : { data: [] },
       questionIds.length > 0 ? admin.from('questions').select('id, text, type, options, correct_answer').in('id', questionIds) : { data: [] },
     ])
@@ -139,7 +149,17 @@ export const getServerSideProps = withAuth(
       const ref = item.reference_id as string
       if (item.type === 'quiz') {
         const q = qMap.get(ref) as QuizRow | undefined
-        return { id: item.id as string, type: 'quiz' as const, reference_id: ref, order_index: item.order_index as number, title: q?.title ?? 'Quiz', subtitle: `${Array.isArray(q?.questions) ? q.questions.length : 0} questions` }
+        const quizQuestions = (Array.isArray(q?.questions) ? [...q!.questions] : [])
+          .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0)) as QuizQuestion[]
+        return {
+          id: item.id as string,
+          type: 'quiz' as const,
+          reference_id: ref,
+          order_index: item.order_index as number,
+          title: q?.title ?? 'Quiz',
+          subtitle: `${quizQuestions.length} questions`,
+          quizQuestions,
+        }
       }
       if (item.type === 'visualisation') {
         const v = vMap.get(ref) as VisRow | undefined
@@ -162,35 +182,119 @@ export const getServerSideProps = withAuth(
   { allowedRoles: ['teacher'] }
 )
 
+// ── Timer display ──────────────────────────────────────────────────────────────
+function TimerBar({ timeLeft, total }: { timeLeft: number; total: number }) {
+  const pct = total > 0 ? Math.max(0, timeLeft / total) : 0
+  const isLow = pct < 0.25
+  const isMid = pct < 0.5
+
+  return (
+    <div className="flex items-center gap-3">
+      <Clock className={`size-4 shrink-0 ${isLow ? 'text-red-400 animate-pulse' : isMid ? 'text-amber-400' : 'text-emerald-400'}`} />
+      <div className="flex-1">
+        <div className="h-2.5 rounded-full bg-[#1a1a2e] overflow-hidden ring-1 ring-[#35354a]/40">
+          <motion.div
+            className={`h-full rounded-full transition-colors duration-300 ${
+              isLow
+                ? 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.8)]'
+                : isMid
+                  ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]'
+                  : 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]'
+            }`}
+            style={{ width: `${pct * 100}%` }}
+            transition={{ duration: 0.5 }}
+          />
+        </div>
+      </div>
+      <span
+        className={`text-sm font-mono font-bold tabular-nums w-8 text-right ${isLow ? 'text-red-400' : isMid ? 'text-amber-400' : 'text-emerald-400'}`}
+        style={isLow ? { filter: 'drop-shadow(0 0 6px rgba(239,68,68,0.8))' } : undefined}
+      >
+        {timeLeft}s
+      </span>
+    </div>
+  )
+}
+
 const NAV_ITEMS = TEACHER_NAV
 
 export default function LiveSession({ profile, session: initialSession, items, participants: initialParticipants, responses: initialResponses }: Props) {
   const router = useRouter()
   const socketRef = useRef<Socket | null>(null)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const [session, setSession] = useState(initialSession)
   const [currentItem, setCurrentItem] = useState<number>(initialSession.current_item ?? 0)
   const [participants, setParticipants] = useState<Participant[]>(initialParticipants)
   const [responses, setResponses] = useState<Response[]>(initialResponses)
-  const [starting, setStarting] = useState(false)
   const [ending, setEnding] = useState(false)
   const [advancing, setAdvancing] = useState(false)
   const [showEndConfirm, setShowEndConfirm] = useState(false)
   const [copied, setCopied] = useState(false)
 
+  // Within-quiz question navigation
+  const [quizQuestionIndex, setQuizQuestionIndex] = useState(0)
+
+  // Timer
+  const [timeLeft, setTimeLeft] = useState<number | null>(null)
+
   const sortedItems = [...items].sort((a, b) => a.order_index - b.order_index)
   const activeItem = sortedItems[currentItem] ?? null
   const joinUrl = typeof window !== 'undefined' ? `${window.location.origin}/student/join?code=${session.join_code}` : `https://playdata.app/student/join?code=${session.join_code}`
 
-  // Current item responses (for question items)
-  const activeResponses = activeItem?.type === 'question'
-    ? responses.filter((r) => r.question_id === activeItem.reference_id)
+  const activeQuizQuestion = activeItem?.type === 'quiz' && activeItem.quizQuestions
+    ? activeItem.quizQuestions[quizQuestionIndex] ?? null
+    : null
+
+  // Get responses for the active question
+  const activeQuestionId = activeItem?.type === 'question'
+    ? activeItem.reference_id
+    : activeQuizQuestion?.id ?? null
+
+  const activeResponses = activeQuestionId
+    ? responses.filter((r) => r.question_id === activeQuestionId)
     : activeItem?.type === 'quiz'
-      ? responses // show all responses for quiz context
+      ? responses
       : []
 
   const correctCount = activeResponses.filter((r) => r.is_correct === true).length
   const incorrectCount = activeResponses.filter((r) => r.is_correct === false).length
+
+  // Start countdown timer for a question
+  const startTimer = useCallback((secs: number) => {
+    if (timerRef.current) clearInterval(timerRef.current)
+    if (secs <= 0) { setTimeLeft(null); return }
+    setTimeLeft(secs)
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev === null || prev <= 1) {
+          clearInterval(timerRef.current!)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+  }, [])
+
+  // Reset quiz question index when session item changes
+  useEffect(() => {
+    setQuizQuestionIndex(0)
+    if (activeItem?.type === 'quiz' && activeItem.quizQuestions?.[0]) {
+      startTimer(activeItem.quizQuestions[0].time_limit_secs)
+    } else if (activeItem?.type !== 'quiz') {
+      if (timerRef.current) clearInterval(timerRef.current)
+      setTimeLeft(null)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentItem])
+
+  // Start timer when quiz question changes
+  useEffect(() => {
+    if (activeQuizQuestion) {
+      startTimer(activeQuizQuestion.time_limit_secs)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quizQuestionIndex, currentItem])
 
   const poll = useCallback(async () => {
     const res = await fetch(`/api/teacher/sessions/${session.id}`)
@@ -204,21 +308,18 @@ export default function LiveSession({ profile, session: initialSession, items, p
   }, [session.id])
 
   useEffect(() => {
-    // Initialize Socket.IO
     fetch('/api/socket').then(() => {
       const socket = ioClient({ path: '/api/socket', transports: ['websocket', 'polling'] })
       socketRef.current = socket
       socket.emit('join-session', session.id)
-
       socket.on('session:advance', ({ currentItem: idx }: { currentItem: number }) => {
         setCurrentItem(idx)
       })
       socket.on('session:end', () => {
-        router.push('/teacher/sessions')
+        router.push(`/teacher/sessions/${session.id}/results`)
       })
     })
 
-    // Start session if still in waiting state
     if (session.status === 'waiting') {
       fetch(`/api/teacher/sessions/${session.id}`, {
         method: 'PATCH',
@@ -229,11 +330,11 @@ export default function LiveSession({ profile, session: initialSession, items, p
       })
     }
 
-    // Poll for live data every 3 seconds
     const interval = setInterval(poll, 3000)
 
     return () => {
       clearInterval(interval)
+      if (timerRef.current) clearInterval(timerRef.current)
       if (socketRef.current) {
         socketRef.current.emit('leave-session', session.id)
         socketRef.current.disconnect()
@@ -267,7 +368,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
     setShowEndConfirm(false)
     if (res.ok) {
       toast.success('Session ended')
-      router.push('/teacher/sessions')
+      router.push(`/teacher/sessions/${session.id}/results`)
     } else {
       const d = await res.json()
       toast.error(d.error ?? 'Failed to end session')
@@ -280,6 +381,12 @@ export default function LiveSession({ profile, session: initialSession, items, p
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const navigateQuizQuestion = (idx: number) => {
+    if (!activeItem?.quizQuestions) return
+    const clamped = Math.max(0, Math.min(activeItem.quizQuestions.length - 1, idx))
+    setQuizQuestionIndex(clamped)
+  }
+
   const activeParticipants = participants.filter((p) => !p.left_at)
 
   return (
@@ -289,8 +396,14 @@ export default function LiveSession({ profile, session: initialSession, items, p
         {/* Top bar */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-400">
-              <Radio className="size-3" /> Live
+            <span
+              className="flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold tracking-wider text-emerald-300 ring-1 ring-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.25)]"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+              </span>
+              <Radio className="size-3" /> LIVE
             </span>
             <h1 className="text-lg font-bold text-white truncate">{session.title}</h1>
           </div>
@@ -308,20 +421,18 @@ export default function LiveSession({ profile, session: initialSession, items, p
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }} className="col-span-3 space-y-4">
 
             {/* Join code + QR */}
-            <div className="rounded-2xl border border-violet-500/20 bg-gradient-to-b from-violet-600/10 to-transparent p-5 text-center">
+            <div className="rounded-2xl border border-violet-500/30 bg-linear-to-b from-violet-600/15 to-transparent p-5 text-center shadow-[0_0_30px_rgba(139,92,246,0.12)]">
               <p className="text-xs font-semibold uppercase tracking-widest text-[#6a6a80] mb-1">Join Code</p>
-              <button
-                onClick={copyCode}
-                className="flex items-center justify-center gap-2 mx-auto"
-                title="Click to copy"
-              >
-                <span className="font-mono text-3xl font-bold tracking-[0.2em] text-violet-300">
+              <button onClick={copyCode} className="flex items-center justify-center gap-2 mx-auto" title="Click to copy">
+                <span
+                  className="font-mono text-4xl font-black tracking-[0.25em] text-violet-300"
+                  style={{ filter: 'drop-shadow(0 0 12px rgba(167,139,250,0.7))' }}
+                >
                   {session.join_code}
                 </span>
                 <Copy className="size-4 text-[#6a6a80]" />
               </button>
               {copied && <p className="text-xs text-emerald-400 mt-1">Copied!</p>}
-
               <div className="mt-4 flex justify-center">
                 <div className="rounded-xl bg-white p-3">
                   <QRCodeSVG value={joinUrl} size={120} bgColor="#ffffff" fgColor="#1a1a2e" level="M" />
@@ -338,19 +449,22 @@ export default function LiveSession({ profile, session: initialSession, items, p
                   {activeParticipants.length}
                 </span>
               </div>
-              <div className="divide-y divide-[#35354a]/30 max-h-64 overflow-y-auto">
+              <div className="divide-y divide-[#35354a]/30 max-h-72 overflow-y-auto">
                 {activeParticipants.length === 0 ? (
                   <p className="py-6 text-center text-xs text-[#4a4a5a]">Waiting for students…</p>
                 ) : (
-                  activeParticipants.map((p) => (
+                  [...activeParticipants].sort((a, b) => b.score - a.score).map((p, rank) => (
                     <div key={p.id} className="flex items-center gap-2.5 px-4 py-2.5">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#252538]">
-                        <UserCheck className="size-3 text-[#6a6a80]" />
+                      <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                        rank === 0 ? 'bg-amber-500/20 text-amber-400' :
+                        rank === 1 ? 'bg-slate-500/20 text-slate-300' :
+                        rank === 2 ? 'bg-orange-700/20 text-orange-500' :
+                        'bg-[#252538] text-[#6a6a80]'
+                      }`}>
+                        {rank < 3 ? <Trophy className="size-3" /> : rank + 1}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-medium text-white">
-                          {profileName(p)}
-                        </p>
+                        <p className="truncate text-xs font-medium text-white">{profileName(p)}</p>
                         <p className="truncate text-xs text-[#4a4a5a]">Score: {p.score}</p>
                       </div>
                     </div>
@@ -380,7 +494,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
 
               <AnimatePresence mode="wait">
                 <motion.div
-                  key={currentItem}
+                  key={`${currentItem}-${quizQuestionIndex}`}
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
@@ -392,17 +506,102 @@ export default function LiveSession({ profile, session: initialSession, items, p
                       <p className="text-[#4a4a5a]">No items in this session</p>
                     </div>
                   ) : activeItem.type === 'quiz' ? (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
+                      {/* Quiz header */}
                       <div className="flex items-center gap-3">
                         <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10 ring-1 ring-violet-500/20">
                           <BookOpen className="size-5 text-violet-400" />
                         </span>
                         <div>
-                          <p className="text-lg font-bold text-white">{activeItem.title}</p>
-                          <p className="text-sm text-[#6a6a80]">{activeItem.subtitle}</p>
+                          <p className="text-base font-bold text-white">{activeItem.title}</p>
+                          <p className="text-xs text-[#6a6a80]">{activeItem.quizQuestions?.length ?? 0} questions</p>
                         </div>
                       </div>
-                      <p className="text-sm text-[#8d8da0] mt-4">Students are working through this quiz in real time. Response progress is shown on the right.</p>
+
+                      {activeItem.quizQuestions && activeItem.quizQuestions.length > 0 ? (
+                        <>
+                          {/* Question dots */}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {activeItem.quizQuestions.map((_, i) => (
+                              <button
+                                key={i}
+                                onClick={() => navigateQuizQuestion(i)}
+                                className={`rounded-full transition-all duration-200 ${
+                                  i === quizQuestionIndex
+                                    ? 'h-2.5 w-6 bg-violet-500'
+                                    : i < quizQuestionIndex
+                                      ? 'h-2 w-2 bg-[#4a4a6a]'
+                                      : 'h-2 w-2 bg-[#35354a]'
+                                }`}
+                              />
+                            ))}
+                            <span className="ml-2 text-xs text-[#6a6a80]">
+                              Q{quizQuestionIndex + 1} / {activeItem.quizQuestions.length}
+                            </span>
+                          </div>
+
+                          {/* Timer */}
+                          {activeQuizQuestion && activeQuizQuestion.time_limit_secs > 0 && timeLeft !== null && (
+                            <TimerBar timeLeft={timeLeft} total={activeQuizQuestion.time_limit_secs} />
+                          )}
+                          {activeQuizQuestion && activeQuizQuestion.time_limit_secs <= 0 && (
+                            <div className="flex items-center gap-2 text-xs text-[#6a6a80]">
+                              <Clock className="size-3" /> Untimed question
+                            </div>
+                          )}
+
+                          {/* Current question */}
+                          {activeQuizQuestion && (
+                            <div className="space-y-3">
+                              <p className="text-sm font-semibold text-white leading-relaxed">
+                                {activeQuizQuestion.text}
+                              </p>
+                              {activeQuizQuestion.type === 'mcq' && Array.isArray(activeQuizQuestion.options) && (
+                                <div className="grid grid-cols-2 gap-2">
+                                  {(activeQuizQuestion.options as string[]).map((opt) => (
+                                    <div
+                                      key={opt}
+                                      className={`rounded-xl border px-3 py-2.5 text-sm transition ${
+                                        opt === activeQuizQuestion.correct_answer
+                                          ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                                          : 'border-[#35354a]/60 bg-[#1a1a2e]/40 text-[#c9c9d4]'
+                                      }`}
+                                    >
+                                      {opt}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {activeQuizQuestion.type !== 'mcq' && (
+                                <p className="text-xs text-[#6a6a80]">
+                                  Answer: <span className="text-emerald-400 font-medium">{activeQuizQuestion.correct_answer}</span>
+                                </p>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Within-quiz navigation */}
+                          <div className="flex items-center gap-2 pt-2 border-t border-[#35354a]/40">
+                            <button
+                              onClick={() => navigateQuizQuestion(quizQuestionIndex - 1)}
+                              disabled={quizQuestionIndex === 0}
+                              className="flex items-center gap-1 rounded-lg border border-[#35354a] px-3 py-1.5 text-xs text-[#8d8da0] transition hover:border-violet-500/40 hover:text-violet-400 disabled:opacity-30"
+                            >
+                              <ChevronLeft className="size-3" /> Prev Q
+                            </button>
+                            <span className="flex-1 text-center text-xs text-[#4a4a5a]">preview only — students navigate independently</span>
+                            <button
+                              onClick={() => navigateQuizQuestion(quizQuestionIndex + 1)}
+                              disabled={quizQuestionIndex >= (activeItem.quizQuestions.length - 1)}
+                              className="flex items-center gap-1 rounded-lg border border-[#35354a] px-3 py-1.5 text-xs text-[#8d8da0] transition hover:border-violet-500/40 hover:text-violet-400 disabled:opacity-30"
+                            >
+                              Next Q <ChevronRight className="size-3" />
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-sm text-[#8d8da0]">No questions in this quiz.</p>
+                      )}
                     </div>
                   ) : activeItem.type === 'visualisation' ? (
                     <div className="space-y-3">
@@ -419,6 +618,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
                     </div>
                   ) : (
                     <div className="space-y-4">
+                      {/* Standalone question */}
                       <p className="text-base font-semibold text-white leading-relaxed">{activeItem.title}</p>
                       {Array.isArray(activeItem.options) && activeItem.options.length > 0 && (
                         <div className="grid grid-cols-2 gap-2">
@@ -447,7 +647,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
               </AnimatePresence>
             </div>
 
-            {/* Navigation */}
+            {/* Session navigation */}
             <div className="flex items-center justify-between gap-3">
               <button
                 onClick={() => advance(currentItem - 1)}
@@ -457,7 +657,6 @@ export default function LiveSession({ profile, session: initialSession, items, p
                 <ChevronLeft className="size-4" /> Previous
               </button>
 
-              {/* Progress dots */}
               {sortedItems.length > 0 && (
                 <div className="flex items-center gap-1.5">
                   {sortedItems.map((_, i) => (
@@ -491,15 +690,15 @@ export default function LiveSession({ profile, session: initialSession, items, p
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="col-span-3 space-y-4">
 
             {/* Tally */}
-            {(activeItem?.type === 'question' || activeItem?.type === 'quiz') && (
+            {activeItem?.type !== 'visualisation' && (
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-center">
-                  <p className="text-2xl font-bold text-emerald-400">{correctCount}</p>
-                  <p className="text-xs text-emerald-600">Correct</p>
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-center shadow-[0_0_20px_rgba(16,185,129,0.1)]">
+                  <p className="text-2xl font-bold text-emerald-400" style={{ filter: 'drop-shadow(0 0 8px rgba(16,185,129,0.6))' }}>{correctCount}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600">Correct</p>
                 </div>
-                <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-center">
-                  <p className="text-2xl font-bold text-red-400">{incorrectCount}</p>
-                  <p className="text-xs text-red-600">Incorrect</p>
+                <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-center shadow-[0_0_20px_rgba(239,68,68,0.1)]">
+                  <p className="text-2xl font-bold text-red-400" style={{ filter: 'drop-shadow(0 0 8px rgba(239,68,68,0.6))' }}>{incorrectCount}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-red-600">Wrong</p>
                 </div>
               </div>
             )}
@@ -507,7 +706,9 @@ export default function LiveSession({ profile, session: initialSession, items, p
             {/* Response list */}
             <div className="rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80 overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-[#35354a]/40">
-                <span className="text-xs font-semibold uppercase tracking-widest text-[#6a6a80]">Responses</span>
+                <span className="text-xs font-semibold uppercase tracking-widest text-[#6a6a80]">
+                  {activeQuizQuestion ? `Q${quizQuestionIndex + 1} Responses` : 'Responses'}
+                </span>
                 <span className="rounded-full bg-[#252538] px-2 py-0.5 text-xs font-bold text-[#8d8da0]">
                   {activeResponses.length}
                 </span>
@@ -552,6 +753,30 @@ export default function LiveSession({ profile, session: initialSession, items, p
                 </div>
               </div>
             )}
+
+            {/* Quick leaderboard */}
+            {activeParticipants.length > 0 && (
+              <div className="rounded-xl border border-[#35354a]/40 bg-[#0f0f1a]/60 px-4 py-3">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Trophy className="size-3 text-amber-400" style={{ filter: 'drop-shadow(0 0 4px rgba(251,191,36,0.7))' }} />
+                  <span className="text-xs font-bold text-[#8d8da0] uppercase tracking-widest">Leaderboard</span>
+                </div>
+                {[...activeParticipants].sort((a, b) => b.score - a.score).slice(0, 3).map((p, i) => (
+                  <div key={p.id} className="flex items-center justify-between py-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm leading-none">{(['🥇', '🥈', '🥉'] as const)[i]}</span>
+                      <span className="text-xs text-[#c9c9d4] truncate max-w-[80px]">{profileName(p)}</span>
+                    </div>
+                    <span
+                      className={`text-xs font-mono font-bold ${i === 0 ? 'text-amber-400' : i === 1 ? 'text-slate-300' : 'text-orange-400'}`}
+                      style={i === 0 ? { filter: 'drop-shadow(0 0 6px rgba(251,191,36,0.7))' } : undefined}
+                    >
+                      {p.score}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </motion.div>
         </div>
       </div>
@@ -578,7 +803,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
                 <div>
                   <h2 className="text-sm font-bold text-white">End session?</h2>
                   <p className="text-xs text-[#8d8da0] mt-0.5">
-                    This disconnects all {activeParticipants.length} connected student{activeParticipants.length !== 1 ? 's' : ''} and locks the session.
+                    This disconnects all {activeParticipants.length} connected student{activeParticipants.length !== 1 ? 's' : ''} and opens the results page.
                   </p>
                 </div>
               </div>

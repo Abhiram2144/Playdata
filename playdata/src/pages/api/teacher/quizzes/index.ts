@@ -14,7 +14,7 @@ interface QuestionInput {
   correct_answer: string;
   answer_tolerance?: number | string | null;
   dataset_column?: string | null;
-  visualisation_id?: string | null;
+  visualisation_ids?: string[] | null;
   explanation?: string | null;
   time_limit_secs?: number;
 }
@@ -60,7 +60,7 @@ function buildQuestionRow(q: QuestionInput, quizId: string, idx: number) {
       ? (q.answer_tolerance != null ? Number(q.answer_tolerance) : null)
       : null,
     dataset_column: q.dataset_column || null,
-    visualisation_id: q.visualisation_id || null,
+    visualisation_ids: q.visualisation_ids ?? [],
     explanation: q.explanation || null,
     time_limit_secs: q.time_limit_secs ?? 30,
   };

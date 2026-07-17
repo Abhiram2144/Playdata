@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import {
   Database, FolderPlus, BarChart3,
   UploadCloud, HardDrive, Cloud, CloudDownload,
-  CheckCircle2, AlertCircle,
+  CheckCircle2, AlertCircle, RefreshCw,
 } from 'lucide-react';
 import Link from 'next/link';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -116,6 +116,7 @@ export default function TeacherDatasets({ profile, googleConnected: initGoogle, 
   const [datasets, setDatasets] = useState<DatasetItem[]>([]);
   const [loadingDatasets, setLoadingDatasets] = useState(false);
   const [googleConnected, setGoogleConnected] = useState(initGoogle);
+  const [googleNeedsReconnect, setGoogleNeedsReconnect] = useState(false);
   const [dropboxConnected, setDropboxConnected] = useState(initDropbox);
   const [importing, setImporting] = useState<'google' | 'dropbox' | null>(null);
   const [importMsg, setImportMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -128,7 +129,8 @@ export default function TeacherDatasets({ profile, googleConnected: initGoogle, 
     const { success, error } = router.query;
     if (success === 'google-connected') {
       setGoogleConnected(true);
-      setImportMsg({ type: 'success', text: 'Google Drive connected! Click "Open Google Picker" to import a file.' });
+      setGoogleNeedsReconnect(false);
+      setImportMsg({ type: 'success', text: 'Google Drive connected! Click "Open Picker" to import a file.' });
     } else if (success === 'dropbox-connected') {
       setDropboxConnected(true);
       setImportMsg({ type: 'success', text: 'Dropbox connected! Click "Open Dropbox Chooser" to import a file.' });
@@ -172,6 +174,7 @@ export default function TeacherDatasets({ profile, googleConnected: initGoogle, 
 
       if (!tokenRes.ok) {
         setImportMsg({ type: 'error', text: tokenData.error ?? 'Failed to retrieve access token — try again or reconnect.' });
+        if (tokenData.needs_reconnect) setGoogleNeedsReconnect(true);
         setImporting(null);
         return;
       }
@@ -374,8 +377,12 @@ export default function TeacherDatasets({ profile, googleConnected: initGoogle, 
               </span>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-white">Google Drive</p>
-                <p className="mt-0.5 text-xs text-[#6a6a80]">
-                  {googleConnected ? (
+                <p className="mt-0.5 text-xs">
+                  {googleNeedsReconnect ? (
+                    <span className="inline-flex items-center gap-1 text-amber-400">
+                      <AlertCircle className="size-3" /> Token expired
+                    </span>
+                  ) : googleConnected ? (
                     <span className="inline-flex items-center gap-1 text-emerald-400">
                       <CheckCircle2 className="size-3" /> Connected
                     </span>
@@ -386,7 +393,14 @@ export default function TeacherDatasets({ profile, googleConnected: initGoogle, 
                   )}
                 </p>
               </div>
-              {googleConnected ? (
+              {googleNeedsReconnect ? (
+                <a
+                  href="/api/teacher/drive/connect?returnTo=/teacher/datasets"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-400 transition hover:bg-amber-500/20"
+                >
+                  <RefreshCw className="size-3.5" /> Reconnect
+                </a>
+              ) : googleConnected ? (
                 <button
                   onClick={openGooglePicker}
                   disabled={importing !== null}
@@ -397,7 +411,7 @@ export default function TeacherDatasets({ profile, googleConnected: initGoogle, 
                 </button>
               ) : (
                 <a
-                  href="/api/teacher/drive/connect"
+                  href="/api/teacher/drive/connect?returnTo=/teacher/datasets"
                   className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#35354a] px-3 py-2 text-xs font-semibold text-[#c9c9d4] transition hover:border-blue-500/50 hover:text-white"
                 >
                   Connect Google Drive

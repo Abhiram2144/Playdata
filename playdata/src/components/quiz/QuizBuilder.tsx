@@ -24,7 +24,7 @@ export interface QuestionDraft {
   correct_answer: string;
   answer_tolerance: string;
   dataset_column: string;
-  visualisation_id: string;
+  visualisation_ids: string[];
   explanation: string;
   time_limit_secs: number;
 }
@@ -37,6 +37,7 @@ export interface QuizBuilderProps {
   initialDatasetId?: string;
   initialQuestions?: QuestionDraft[];
   initialStatus?: QuizStatus;
+  initialIsTimed?: boolean;
   datasets: DatasetOption[];
   visualisations?: VisualisationOption[];
   /** Label shown on primary save button */
@@ -59,7 +60,7 @@ function emptyQuestion(): QuestionDraft {
     correct_answer: '',
     answer_tolerance: '',
     dataset_column: '',
-    visualisation_id: '',
+    visualisation_ids: [],
     explanation: '',
     time_limit_secs: 30,
   };
@@ -219,24 +220,48 @@ function QuestionCard({
                 />
               </div>
 
-              {/* Visualisation attachment */}
+              {/* Visualisation attachments (multi-select) */}
               {visualisations.length > 0 && (
                 <div>
                   <label className="mb-1.5 flex items-center gap-1 text-xs font-semibold text-[#8d8da0] uppercase tracking-wide">
-                    <BarChart2 className="size-3" /> Linked visualisation
+                    <BarChart2 className="size-3" /> Linked charts
+                    <span className="normal-case font-normal ml-1 text-[#4a4a60]">(select one or more)</span>
                   </label>
-                  <select
-                    value={q.visualisation_id}
-                    onChange={(e) => onUpdate({ visualisation_id: e.target.value })}
-                    className="w-full rounded-xl border border-[#35354a] bg-[#0d0d18] px-3 py-2 text-sm text-white focus:border-violet-500/60 focus:outline-none"
-                  >
-                    <option value="">— none —</option>
-                    {visualisations.map((v) => (
-                      <option key={v.id} value={v.id}>{v.name} ({v.chart_type})</option>
-                    ))}
-                  </select>
-                  {q.visualisation_id && (
-                    <p className="mt-1 text-xs text-[#6a6a80]">Students will see this chart alongside the question.</p>
+                  <div className="grid gap-1.5 sm:grid-cols-2">
+                    {visualisations.map((v) => {
+                      const checked = q.visualisation_ids.includes(v.id);
+                      return (
+                        <label
+                          key={v.id}
+                          className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2.5 transition ${
+                            checked
+                              ? 'border-violet-500/40 bg-violet-500/10'
+                              : 'border-[#35354a]/60 hover:border-[#4a4a60]'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => {
+                              const ids = e.target.checked
+                                ? [...q.visualisation_ids, v.id]
+                                : q.visualisation_ids.filter((id) => id !== v.id);
+                              onUpdate({ visualisation_ids: ids });
+                            }}
+                            className="accent-violet-500 shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-white truncate">{v.name}</p>
+                            <p className="text-xs text-[#6a6a80] capitalize">{v.chart_type}</p>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  {q.visualisation_ids.length > 0 && (
+                    <p className="mt-1 text-xs text-[#6a6a80]">
+                      {q.visualisation_ids.length} chart{q.visualisation_ids.length !== 1 ? 's' : ''} will be shown alongside this question.
+                    </p>
                   )}
                 </div>
               )}
@@ -447,6 +472,7 @@ export default function QuizBuilder({
   initialDatasetId = '',
   initialQuestions = [],
   initialStatus = 'draft',
+  initialIsTimed = true,
   datasets,
   visualisations = [],
   saveLabel = 'Save',
@@ -457,6 +483,7 @@ export default function QuizBuilder({
   const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState(initialDescription);
   const [datasetId, setDatasetId] = useState(initialDatasetId);
+  const [isTimed, setIsTimed] = useState(initialIsTimed);
 
   // Questions
   const [questions, setQuestions] = useState<QuestionDraft[]>(
@@ -536,6 +563,7 @@ export default function QuizBuilder({
     description: description.trim() || undefined,
     dataset_id: datasetId || undefined,
     status,
+    is_timed: isTimed,
     questions: questions.map((q, idx) => ({
       order_index: idx,
       text: q.text.trim(),
@@ -544,9 +572,9 @@ export default function QuizBuilder({
       correct_answer: q.correct_answer.trim(),
       answer_tolerance: q.type === 'numerical' ? (q.answer_tolerance ? Number(q.answer_tolerance) : null) : null,
       dataset_column: q.dataset_column || null,
-      visualisation_id: q.visualisation_id || null,
+      visualisation_ids: q.visualisation_ids,
       explanation: q.explanation.trim() || null,
-      time_limit_secs: q.time_limit_secs,
+      time_limit_secs: isTimed ? q.time_limit_secs : 0,
     })),
   });
 
@@ -652,6 +680,27 @@ export default function QuizBuilder({
             ))}
           </select>
         </div>
+
+        {/* Timed toggle */}
+        <label className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition ${isTimed ? 'border-violet-500/30 bg-violet-500/5' : 'border-[#35354a]/40 bg-[#0f0f1d]'}`}>
+          <input
+            type="checkbox"
+            checked={isTimed}
+            onChange={(e) => setIsTimed(e.target.checked)}
+            className="accent-violet-500 shrink-0"
+          />
+          <div>
+            <div className="flex items-center gap-2">
+              <Clock className="size-3.5 text-violet-400" />
+              <p className="text-sm font-medium text-white">Timed quiz</p>
+            </div>
+            <p className="text-xs text-[#6a6a80] mt-0.5">
+              {isTimed
+                ? 'Each question has a countdown timer. Set time limits per question in Advanced options.'
+                : 'No time limits — students can answer at their own pace.'}
+            </p>
+          </div>
+        </label>
       </motion.div>
 
       {/* Questions */}

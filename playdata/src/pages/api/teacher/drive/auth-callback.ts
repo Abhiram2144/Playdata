@@ -69,6 +69,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (error) return res.redirect(`/teacher/datasets?error=${encodeURIComponent(error)}`);
   if (!code) return res.redirect('/teacher/datasets?error=missing-code');
 
+  // Extract connectionId and returnTo from OAuth state if present
+  let connectionId: string | null = null;
+  let returnTo: string | null = null;
+  const stateParam = req.query.state as string | undefined;
+  if (stateParam) {
+    try {
+      const parsed = JSON.parse(Buffer.from(stateParam, 'base64').toString());
+      connectionId = parsed.connectionId ?? null;
+      returnTo = parsed.returnTo ?? null;
+    } catch { /* ignore malformed state */ }
+  }
+
   try {
     const origin = `${req.headers['x-forwarded-proto'] ?? 'http'}://${req.headers.host}`;
     const redirectUri = `${origin}/api/teacher/drive/auth-callback`;
@@ -80,52 +92,72 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const admin = createAdminClient();
 
-    const { data: existing } = await admin
-      .from('drive_connections')
-      .select('id')
-      .eq('teacher_id', user.id)
-      .eq('provider', 'google_drive')
-      .maybeSingle();
-
-    if (existing) {
+    if (connectionId) {
+      // Update the specific connection row (reconnect or connect different account)
       const patch: Record<string, unknown> = {
         access_token: tokens.access_token,
         expires_at: expiresAt,
       };
-      // Only overwrite refresh_token when Google actually returns a new one;
-      // Google omits it on re-auth if the existing one is still valid.
       if (tokens.refresh_token) patch.refresh_token = tokens.refresh_token;
 
       const { error: updateError } = await admin
         .from('drive_connections')
         .update(patch)
-        .eq('id', existing.id);
+        .eq('id', connectionId)
+        .eq('teacher_id', user.id); // safety: only own connections
 
       if (updateError) {
-        return res.redirect(`/teacher/datasets?error=${encodeURIComponent(updateError.message)}`);
+        return res.redirect(`/teacher/connections?error=${encodeURIComponent(updateError.message)}`);
       }
     } else {
-      const { error: insertError } = await admin
+      // Legacy path: find existing connection by teacher+provider or insert new
+      const { data: existing } = await admin
         .from('drive_connections')
-        .insert({
-          teacher_id: user.id,
-          name: 'Google Drive',
-          provider: 'google_drive',
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token ?? null,
-          expires_at: expiresAt,
-          external_folder_id: null,
-          is_approved: true,
-        });
+        .select('id')
+        .eq('teacher_id', user.id)
+        .eq('provider', 'google_drive')
+        .maybeSingle();
 
-      if (insertError) {
-        return res.redirect(`/teacher/datasets?error=${encodeURIComponent(insertError.message)}`);
+      if (existing) {
+        const patch: Record<string, unknown> = {
+          access_token: tokens.access_token,
+          expires_at: expiresAt,
+        };
+        if (tokens.refresh_token) patch.refresh_token = tokens.refresh_token;
+
+        const { error: updateError } = await admin
+          .from('drive_connections')
+          .update(patch)
+          .eq('id', existing.id);
+
+        if (updateError) {
+          return res.redirect(`/teacher/connections?error=${encodeURIComponent(updateError.message)}`);
+        }
+      } else {
+        const { error: insertError } = await admin
+          .from('drive_connections')
+          .insert({
+            teacher_id: user.id,
+            name: 'Google Drive',
+            provider: 'google_drive',
+            access_token: tokens.access_token,
+            refresh_token: tokens.refresh_token ?? null,
+            expires_at: expiresAt,
+            external_folder_id: null,
+            is_approved: true,
+          });
+
+        if (insertError) {
+          return res.redirect(`/teacher/connections?error=${encodeURIComponent(insertError.message)}`);
+        }
       }
     }
 
-    return res.redirect('/teacher/datasets?success=google-connected');
+    const successDest = returnTo ? `${returnTo}?success=google-connected` : '/teacher/connections?success=google-connected';
+    return res.redirect(successDest);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
-    return res.redirect(`/teacher/datasets?error=${encodeURIComponent(message)}`);
+    const errorDest = returnTo ? `${returnTo}?error=${encodeURIComponent(message)}` : `/teacher/connections?error=${encodeURIComponent(message)}`;
+    return res.redirect(errorDest);
   }
 }

@@ -29,6 +29,7 @@ interface QuizRow {
   status: QuizStatus;
   dataset_id: string | null;
   assigned_to: string | null;
+  is_timed: boolean;
   questions: {
     id: string;
     order_index: number;
@@ -38,7 +39,7 @@ interface QuizRow {
     correct_answer: string;
     answer_tolerance: number | null;
     dataset_column: string | null;
-    visualisation_id: string | null;
+    visualisation_ids: string[] | null;
     explanation: string | null;
     time_limit_secs: number;
   }[];
@@ -160,6 +161,7 @@ export const getServerSideProps = withAuth(
       status: rawQuiz.status as QuizStatus,
       dataset_id: rawQuiz.dataset_id as string | null,
       assigned_to: assignedTo,
+      is_timed: ((rawQuiz as Record<string, unknown>).is_timed as boolean) ?? true,
       questions: questions.map((q) => ({
         id: q.id as string,
         order_index: q.order_index as number,
@@ -169,7 +171,7 @@ export const getServerSideProps = withAuth(
         correct_answer: q.correct_answer as string,
         answer_tolerance: q.answer_tolerance as number | null,
         dataset_column: q.dataset_column as string | null,
-        visualisation_id: q.visualisation_id as string | null,
+        visualisation_ids: (q.visualisation_ids as string[] | null) ?? [],
         explanation: q.explanation as string | null,
         time_limit_secs: (q.time_limit_secs as number) ?? 30,
       })),
@@ -216,7 +218,7 @@ export default function EditQuizPage({
     correct_answer: q.correct_answer,
     answer_tolerance: q.answer_tolerance != null ? String(q.answer_tolerance) : '',
     dataset_column: q.dataset_column ?? '',
-    visualisation_id: q.visualisation_id ?? '',
+    visualisation_ids: q.visualisation_ids ?? [],
     explanation: q.explanation ?? '',
     time_limit_secs: q.time_limit_secs,
   }));
@@ -249,13 +251,14 @@ export default function EditQuizPage({
           initialDatasetId={quiz.dataset_id ?? ''}
           initialQuestions={initialQuestions}
           initialStatus={quiz.status}
+          initialIsTimed={quiz.is_timed}
           datasets={datasets}
           visualisations={visualisations}
           saveLabel="Update"
         />
 
         {/* Collaborators panel */}
-        <div className="pt-2">
+        <div id="collaborators" className="pt-2 scroll-mt-20">
           <CollaboratorsPanel
             quizId={quiz.id}
             currentUserId={profile.id}

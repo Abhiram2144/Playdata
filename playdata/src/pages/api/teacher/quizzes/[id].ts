@@ -13,7 +13,7 @@ interface QuestionInput {
   correct_answer: string;
   answer_tolerance?: number | string | null;
   dataset_column?: string | null;
-  visualisation_id?: string | null;
+  visualisation_ids?: string[] | null;
   explanation?: string | null;
   time_limit_secs?: number;
 }
@@ -99,11 +99,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data, error } = await admin
       .from('quizzes')
       .select(`
-        id, title, description, status, dataset_id, teacher_id,
+        id, title, description, status, dataset_id, teacher_id, is_timed,
         assigned_to, last_edited_by, last_edited_at, created_at, updated_at,
         datasets(id, name, schema),
         questions(id, order_index, text, type, options, correct_answer,
-                  answer_tolerance, dataset_column, visualisation_id, explanation, time_limit_secs)
+                  answer_tolerance, dataset_column, visualisation_ids, explanation, time_limit_secs)
       `)
       .eq('id', id)
       .single();
@@ -133,12 +133,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     description,
     dataset_id,
     status,
+    is_timed,
     questions = [],
   } = req.body as {
     title?: string;
     description?: string;
     dataset_id?: string | null;
     status?: string;
+    is_timed?: boolean;
     questions?: QuestionInput[];
   };
 
@@ -168,6 +170,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       description: description?.trim() || null,
       dataset_id: dataset_id || null,
       ...(status ? { status } : {}),
+      ...(is_timed !== undefined ? { is_timed } : {}),
       last_edited_by: user.id,
       last_edited_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -191,7 +194,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ? (q.answer_tolerance != null ? Number(q.answer_tolerance) : null)
         : null,
       dataset_column: q.dataset_column || null,
-      visualisation_id: q.visualisation_id || null,
+      visualisation_ids: q.visualisation_ids ?? [],
       explanation: q.explanation || null,
       time_limit_secs: q.time_limit_secs ?? 30,
     }));

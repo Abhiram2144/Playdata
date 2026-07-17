@@ -52,7 +52,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (profile?.role !== 'teacher') return res.status(403).json({ error: 'Forbidden' });
 
-  const state = Buffer.from(JSON.stringify({ provider: 'google_drive' })).toString('base64');
+  const connectionId = req.query.connectionId as string | undefined;
+  const returnTo = req.query.returnTo as string | undefined;
+  const state = Buffer.from(JSON.stringify({ provider: 'google_drive', connectionId: connectionId ?? null, returnTo: returnTo ?? null })).toString('base64');
   const origin = `${req.headers['x-forwarded-proto'] ?? 'http'}://${req.headers.host}`;
 
   const params = new URLSearchParams({
@@ -60,7 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     redirect_uri: `${origin}/api/teacher/drive/auth-callback`,
     response_type: 'code',
     access_type: 'offline',
-    prompt: 'consent',
+    prompt: 'select_account consent',
     state,
     scope: [
       'https://www.googleapis.com/auth/drive.readonly',

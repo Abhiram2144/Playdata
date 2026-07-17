@@ -7,6 +7,7 @@ import {
   Hash, Type, Calendar, ToggleLeft, ArrowLeft, Rows,
   Pencil, Trash2, Check, X, AlertTriangle, Eye, EyeOff,
   ChevronLeft, ChevronRight, BarChart2, BookOpen, Wand2,
+  TrendingUp,
 } from 'lucide-react';
 import { GetServerSidePropsResult } from 'next';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -107,7 +108,7 @@ const TYPE_META: Record<ColumnType, { icon: React.ElementType; label: string; co
   boolean: { icon: ToggleLeft, label: 'Boolean', colour: 'text-amber-400 bg-amber-500/10 ring-amber-500/20' },
 };
 
-type Tab = 'preview' | 'validation' | 'columns' | 'clean';
+type Tab = 'preview' | 'statistics' | 'validation' | 'columns' | 'clean';
 
 // ── Clean tab helpers (module-level) ─────────────────────────────────────────
 function smartParseNumber(v: unknown): number {
@@ -516,7 +517,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
         >
           {/* Tab bar */}
           <div className="flex border-b border-[#35354a]/60 overflow-x-auto">
-            {(['preview', 'validation', 'columns', 'clean'] as Tab[]).map((tab) => (
+            {(['preview', 'statistics', 'validation', 'columns', 'clean'] as Tab[]).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -527,6 +528,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                 }`}
               >
                 {tab === 'clean' && <Wand2 className="size-3.5" />}
+                {tab === 'statistics' && <TrendingUp className="size-3.5" />}
                 {tab}
                 {activeTab === tab && (
                   <motion.span
@@ -628,6 +630,128 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                     </div>
                   </div>
                 </>
+              )}
+            </div>
+          )}
+
+          {/* Statistics tab */}
+          {activeTab === 'statistics' && (
+            <div className="p-6">
+              {loadingPreview ? (
+                <p className="text-sm text-[#8d8da0]">Loading statistics…</p>
+              ) : previewRows.length === 0 ? (
+                <p className="text-sm text-[#6a6a80]">No data available — load the Preview tab first.</p>
+              ) : (
+                <div className="space-y-6">
+                  <p className="text-xs text-[#6a6a80]">
+                    Computed from the first {previewRows.length} rows (page {previewPage + 1}).
+                    {previewTotal > previewRows.length && ` Full dataset has ${previewTotal.toLocaleString()} rows.`}
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {columns.map((col) => {
+                      const vals = previewRows.map((r) => r[col.name]).filter((v) => v !== null && v !== undefined && v !== '');
+                      if (col.type === 'number') {
+                        const nums = vals.map((v) => Number(v)).filter((n) => !isNaN(n));
+                        if (nums.length === 0) return null;
+                        const sorted = [...nums].sort((a, b) => a - b);
+                        const min = sorted[0];
+                        const max = sorted[sorted.length - 1];
+                        const mean = nums.reduce((s, n) => s + n, 0) / nums.length;
+                        const median = sorted.length % 2 === 0
+                          ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
+                          : sorted[Math.floor(sorted.length / 2)];
+                        const variance = nums.reduce((s, n) => s + (n - mean) ** 2, 0) / nums.length;
+                        const stddev = Math.sqrt(variance);
+                        const fmt = (n: number) => Number.isInteger(n) ? n.toString() : n.toFixed(3);
+                        return (
+                          <div key={col.name} className="rounded-xl border border-[#35354a]/40 bg-[#0f0f1d] p-4 space-y-3">
+                            <div className="flex items-center gap-2">
+                              <Hash className="size-3.5 text-blue-400" />
+                              <span className="text-sm font-semibold text-white">{col.name}</span>
+                              <span className="text-xs text-[#6a6a80] rounded-full bg-blue-500/10 px-1.5 py-0.5">number</span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                              {[
+                                { label: 'Min', val: fmt(min) },
+                                { label: 'Max', val: fmt(max) },
+                                { label: 'Mean', val: fmt(mean) },
+                                { label: 'Median', val: fmt(median) },
+                                { label: 'Std dev', val: fmt(stddev) },
+                                { label: 'Count', val: nums.length.toString() },
+                              ].map(({ label, val }) => (
+                                <div key={label} className="rounded-lg bg-[#151526] px-2 py-2 text-center">
+                                  <p className="text-xs text-[#6a6a80]">{label}</p>
+                                  <p className="text-sm font-mono font-semibold text-white mt-0.5 truncate">{val}</p>
+                                </div>
+                              ))}
+                            </div>
+                            {/* Mini bar showing distribution range */}
+                            <div className="mt-1">
+                              <div className="flex justify-between text-xs text-[#4a4a60] mb-1">
+                                <span>{fmt(min)}</span><span>{fmt(max)}</span>
+                              </div>
+                              <div className="h-1.5 rounded-full bg-[#252538] overflow-hidden relative">
+                                {(() => {
+                                  const range = max - min;
+                                  if (range === 0) return <div className="h-full bg-blue-500 w-full" />;
+                                  const medLeft = ((median - min) / range) * 100;
+                                  return (
+                                    <div className="h-full bg-linear-to-r from-blue-500/40 via-blue-500 to-blue-500/40" style={{ width: '100%' }}>
+                                      <div className="absolute top-0 bottom-0 w-0.5 bg-white/60" style={{ left: `${medLeft}%` }} />
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                              <p className="text-xs text-[#4a4a60] mt-1 text-center">Median at {fmt(median)}</p>
+                            </div>
+                          </div>
+                        );
+                      }
+                      if (col.type === 'string') {
+                        const strs = vals.map(String);
+                        const uniqueSet = new Set(strs);
+                        const freq: Record<string, number> = {};
+                        strs.forEach((s) => { freq[s] = (freq[s] ?? 0) + 1; });
+                        const top5 = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 5);
+                        return (
+                          <div key={col.name} className="rounded-xl border border-[#35354a]/40 bg-[#0f0f1d] p-4 space-y-3">
+                            <div className="flex items-center gap-2">
+                              <Type className="size-3.5 text-violet-400" />
+                              <span className="text-sm font-semibold text-white">{col.name}</span>
+                              <span className="text-xs text-[#6a6a80] rounded-full bg-violet-500/10 px-1.5 py-0.5">text</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 mb-2">
+                              <div className="rounded-lg bg-[#151526] px-2 py-2 text-center">
+                                <p className="text-xs text-[#6a6a80]">Unique</p>
+                                <p className="text-sm font-mono font-semibold text-white mt-0.5">{uniqueSet.size}</p>
+                              </div>
+                              <div className="rounded-lg bg-[#151526] px-2 py-2 text-center">
+                                <p className="text-xs text-[#6a6a80]">Total</p>
+                                <p className="text-sm font-mono font-semibold text-white mt-0.5">{strs.length}</p>
+                              </div>
+                            </div>
+                            <p className="text-xs text-[#6a6a80] font-semibold uppercase tracking-wide">Top values</p>
+                            <div className="space-y-1.5">
+                              {top5.map(([val, count]) => (
+                                <div key={val} className="flex items-center gap-2">
+                                  <div className="flex-1 h-1.5 rounded-full bg-[#252538] overflow-hidden">
+                                    <div
+                                      className="h-full rounded-full bg-violet-500/60"
+                                      style={{ width: `${(count / strs.length) * 100}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-xs text-[#c9c9d4] truncate max-w-[90px]">{val}</span>
+                                  <span className="text-xs text-[#6a6a80] tabular-nums">{count}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+                </div>
               )}
             </div>
           )}

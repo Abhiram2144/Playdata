@@ -4,8 +4,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  LayoutDashboard, Database, BarChart3, BookOpen, Users,
-  TrendingUp, UserCircle, Trophy, Loader2, CheckCircle2, AlertCircle,
+  Trophy, Loader2, CheckCircle2, AlertCircle,
+  LayoutDashboard, Users, UserCircle,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import { createClientFromContext } from '@/lib/supabase/server-props';
 import type { NavItem } from '@/components/layout/Sidebar';
+import { TEACHER_NAV } from '@/lib/teacher-nav';
 
 interface Profile {
   id: string;
@@ -51,15 +52,6 @@ const schema = z.object({
 });
 type FormData = z.infer<typeof schema>;
 
-const TEACHER_NAV: NavItem[] = [
-  { href: '/teacher/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/teacher/datasets', label: 'Datasets', icon: Database, disabled: true },
-  { href: '/teacher/visualisations', label: 'Visualisations', icon: BarChart3, disabled: true },
-  { href: '/teacher/quizzes', label: 'Quizzes', icon: BookOpen, disabled: true },
-  { href: '/teacher/sessions', label: 'Sessions', icon: Users, disabled: true },
-  { href: '/teacher/analytics', label: 'Analytics', icon: TrendingUp, disabled: true },
-  { href: '/profile', label: 'Profile', icon: UserCircle },
-];
 const STUDENT_NAV: NavItem[] = [
   { href: '/student/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/student/results', label: 'My Results', icon: Trophy, disabled: true },
