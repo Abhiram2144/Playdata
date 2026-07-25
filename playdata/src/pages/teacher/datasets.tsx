@@ -294,21 +294,21 @@ export default function TeacherDatasets({ profile, googleConnected: initGoogle, 
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-3xl border border-[#35354a]/60 bg-[#11111f]/80 p-8"
+          className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm"
         >
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-widest text-[#6a6a80]">Datasets</p>
-              <h1 className="mt-3 text-3xl font-bold text-white">My Datasets</h1>
+              <p className="text-sm font-semibold uppercase tracking-widest text-gray-400">Datasets</p>
+              <h1 className="mt-3 text-3xl font-bold text-gray-900">My Datasets</h1>
             </div>
           </div>
 
           {loadingDatasets ? (
-            <p className="text-sm text-[#8d8da0]">Loading datasets…</p>
+            <p className="text-sm text-gray-500">Loading datasets…</p>
           ) : datasets.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[#35354a]/40 bg-[#0f0f1d]/90 p-8 text-center">
-              <Database className="mx-auto size-8 text-[#35354a] mb-3" />
-              <p className="text-sm text-[#6a6a80]">No datasets yet. Import one below.</p>
+            <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-8 text-center">
+              <Database className="mx-auto size-8 text-gray-300 mb-3" />
+              <p className="text-sm text-gray-400">No datasets yet. Import one below.</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -316,16 +316,16 @@ export default function TeacherDatasets({ profile, googleConnected: initGoogle, 
                 <Link
                   key={ds.id}
                   href={`/teacher/datasets/${ds.id}`}
-                  className="flex items-center justify-between rounded-2xl border border-[#35354a]/40 bg-[#0f0f1d]/90 px-4 py-3 transition hover:border-violet-500/30"
+                  className="flex items-center justify-between rounded-2xl border border-gray-100 bg-white px-4 py-3 transition hover:border-violet-300 hover:shadow-sm"
                 >
                   <div className="min-w-0">
-                    <p className="font-medium text-white truncate">{ds.name}</p>
-                    <p className="text-xs text-[#6a6a80]">
+                    <p className="font-medium text-gray-900 truncate">{ds.name}</p>
+                    <p className="text-xs text-gray-400">
                       {ds.provider === 'google_drive' ? 'Google Drive' : ds.provider === 'dropbox' ? 'Dropbox' : 'Desktop upload'}
                       {' · '}{new Date(ds.created_at).toLocaleDateString('en-GB')}
                     </p>
                   </div>
-                  <span className="ml-4 shrink-0 text-xs text-[#6a6a80]">
+                  <span className="ml-4 shrink-0 text-xs text-gray-400">
                     {ds.row_count.toLocaleString()} rows
                   </span>
                 </Link>
@@ -339,16 +339,16 @@ export default function TeacherDatasets({ profile, googleConnected: initGoogle, 
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.06 }}
-          className="rounded-3xl border border-[#35354a]/60 bg-[#11111f]/80 p-8"
+          className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm"
         >
-          <p className="text-sm font-semibold uppercase tracking-widest text-[#6a6a80] mb-1">Import</p>
-          <h2 className="text-xl font-bold text-white mb-6">Add a dataset</h2>
+          <p className="text-sm font-semibold uppercase tracking-widest text-gray-400 mb-1">Import</p>
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Add a dataset</h2>
 
           {importMsg && (
             <div className={`mb-6 rounded-2xl border px-4 py-3 text-sm ${
               importMsg.type === 'success'
-                ? 'border-emerald-500/30 bg-emerald-600/10 text-emerald-300'
-                : 'border-red-500/30 bg-red-600/10 text-red-300'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                : 'border-red-200 bg-red-50 text-red-700'
             }`}>
               {importMsg.text}
             </div>
@@ -359,35 +359,35 @@ export default function TeacherDatasets({ profile, googleConnected: initGoogle, 
             {/* Desktop upload */}
             <Link
               href="/teacher/datasets/new"
-              className="group flex flex-col gap-3 rounded-2xl border border-[#35354a]/60 bg-[#0f0f1d]/90 p-5 transition hover:border-violet-500/40"
+              className="group flex flex-col gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-5 transition hover:border-violet-300 hover:bg-white"
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10 ring-1 ring-violet-500/20">
-                <HardDrive className="size-5 text-violet-400" />
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 ring-1 ring-violet-200">
+                <HardDrive className="size-5 text-violet-600" />
               </span>
               <div>
-                <p className="text-sm font-semibold text-white">Upload from desktop</p>
-                <p className="mt-0.5 text-xs text-[#6a6a80]">CSV or XLSX up to 50 MB</p>
+                <p className="text-sm font-semibold text-gray-800">Upload from desktop</p>
+                <p className="mt-0.5 text-xs text-gray-400">CSV or XLSX up to 50 MB</p>
               </div>
             </Link>
 
             {/* Google Drive */}
-            <div className="flex flex-col gap-3 rounded-2xl border border-[#35354a]/60 bg-[#0f0f1d]/90 p-5 transition hover:border-blue-500/40">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 ring-1 ring-blue-500/20">
-                <Cloud className="size-5 text-blue-400" />
+            <div className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-5 transition hover:border-blue-300 hover:bg-white">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 ring-1 ring-blue-200">
+                <Cloud className="size-5 text-blue-600" />
               </span>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-white">Google Drive</p>
+                <p className="text-sm font-semibold text-gray-800">Google Drive</p>
                 <p className="mt-0.5 text-xs">
                   {googleNeedsReconnect ? (
-                    <span className="inline-flex items-center gap-1 text-amber-400">
+                    <span className="inline-flex items-center gap-1 text-amber-600">
                       <AlertCircle className="size-3" /> Token expired
                     </span>
                   ) : googleConnected ? (
-                    <span className="inline-flex items-center gap-1 text-emerald-400">
+                    <span className="inline-flex items-center gap-1 text-emerald-600">
                       <CheckCircle2 className="size-3" /> Connected
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-[#6a6a80]">
+                    <span className="inline-flex items-center gap-1 text-gray-400">
                       <AlertCircle className="size-3" /> Not connected
                     </span>
                   )}
@@ -396,7 +396,7 @@ export default function TeacherDatasets({ profile, googleConnected: initGoogle, 
               {googleNeedsReconnect ? (
                 <a
                   href="/api/teacher/drive/connect?returnTo=/teacher/datasets"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-400 transition hover:bg-amber-500/20"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 transition hover:bg-amber-100"
                 >
                   <RefreshCw className="size-3.5" /> Reconnect
                 </a>
@@ -404,7 +404,7 @@ export default function TeacherDatasets({ profile, googleConnected: initGoogle, 
                 <button
                   onClick={openGooglePicker}
                   disabled={importing !== null}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <CloudDownload className="size-3.5" />
                   {importing === 'google' ? 'Working…' : 'Open Picker'}
@@ -412,7 +412,7 @@ export default function TeacherDatasets({ profile, googleConnected: initGoogle, 
               ) : (
                 <a
                   href="/api/teacher/drive/connect?returnTo=/teacher/datasets"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#35354a] px-3 py-2 text-xs font-semibold text-[#c9c9d4] transition hover:border-blue-500/50 hover:text-white"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 transition hover:border-blue-300 hover:text-blue-700"
                 >
                   Connect Google Drive
                 </a>
@@ -420,19 +420,19 @@ export default function TeacherDatasets({ profile, googleConnected: initGoogle, 
             </div>
 
             {/* Dropbox */}
-            <div className="flex flex-col gap-3 rounded-2xl border border-[#35354a]/60 bg-[#0f0f1d]/90 p-5 transition hover:border-sky-500/40">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/10 ring-1 ring-sky-500/20">
-                <UploadCloud className="size-5 text-sky-400" />
+            <div className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-5 transition hover:border-sky-300 hover:bg-white">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 ring-1 ring-sky-200">
+                <UploadCloud className="size-5 text-sky-600" />
               </span>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-white">Dropbox</p>
-                <p className="mt-0.5 text-xs text-[#6a6a80]">
+                <p className="text-sm font-semibold text-gray-800">Dropbox</p>
+                <p className="mt-0.5 text-xs">
                   {dropboxConnected ? (
-                    <span className="inline-flex items-center gap-1 text-emerald-400">
+                    <span className="inline-flex items-center gap-1 text-emerald-600">
                       <CheckCircle2 className="size-3" /> Connected
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-[#6a6a80]">
+                    <span className="inline-flex items-center gap-1 text-gray-400">
                       <AlertCircle className="size-3" /> Not connected
                     </span>
                   )}
@@ -442,7 +442,7 @@ export default function TeacherDatasets({ profile, googleConnected: initGoogle, 
                 <button
                   onClick={openDropboxChooser}
                   disabled={importing !== null}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-sky-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-sky-700 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <CloudDownload className="size-3.5" />
                   {importing === 'dropbox' ? 'Working…' : 'Open Chooser'}
@@ -450,7 +450,7 @@ export default function TeacherDatasets({ profile, googleConnected: initGoogle, 
               ) : (
                 <a
                   href="/api/teacher/drive/dropbox-connect"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#35354a] px-3 py-2 text-xs font-semibold text-[#c9c9d4] transition hover:border-sky-500/50 hover:text-white"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 transition hover:border-sky-300 hover:text-sky-700"
                 >
                   Connect Dropbox
                 </a>

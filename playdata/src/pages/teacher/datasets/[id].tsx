@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Database, FolderPlus, BarChart3,
+  Database, BarChart3,
   Hash, Type, Calendar, ToggleLeft, ArrowLeft, Rows,
   Pencil, Trash2, Check, X, AlertTriangle, Eye, EyeOff,
   ChevronLeft, ChevronRight, BarChart2, BookOpen, Wand2,
@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { GetServerSidePropsResult } from 'next';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { type NavItem } from '@/components/layout/Sidebar';
 import { TEACHER_NAV } from '@/lib/teacher-nav';
 import { withAuth } from '@/lib/auth';
 import { createClientFromContext } from '@/lib/supabase/server-props';
@@ -99,18 +98,16 @@ export const getServerSideProps = withAuth(
 );
 
 // ── Constants ────────────────────────────────────────────────────────────────
-const NAV_ITEMS = TEACHER_NAV;
-
 const TYPE_META: Record<ColumnType, { icon: React.ElementType; label: string; colour: string }> = {
-  number:  { icon: Hash,       label: 'Number',  colour: 'text-blue-400 bg-blue-500/10 ring-blue-500/20' },
-  string:  { icon: Type,       label: 'Text',    colour: 'text-violet-400 bg-violet-500/10 ring-violet-500/20' },
-  date:    { icon: Calendar,   label: 'Date',    colour: 'text-emerald-400 bg-emerald-500/10 ring-emerald-500/20' },
-  boolean: { icon: ToggleLeft, label: 'Boolean', colour: 'text-amber-400 bg-amber-500/10 ring-amber-500/20' },
+  number:  { icon: Hash,       label: 'Number',  colour: 'text-blue-600 bg-blue-50 ring-blue-200' },
+  string:  { icon: Type,       label: 'Text',    colour: 'text-violet-600 bg-violet-50 ring-violet-200' },
+  date:    { icon: Calendar,   label: 'Date',    colour: 'text-emerald-600 bg-emerald-50 ring-emerald-200' },
+  boolean: { icon: ToggleLeft, label: 'Boolean', colour: 'text-amber-600 bg-amber-50 ring-amber-200' },
 };
 
 type Tab = 'preview' | 'statistics' | 'validation' | 'columns' | 'clean';
 
-// ── Clean tab helpers (module-level) ─────────────────────────────────────────
+// ── Clean tab helpers ────────────────────────────────────────────────────────
 function smartParseNumber(v: unknown): number {
   if (typeof v === 'number') return v;
   const s = String(v ?? '').trim().replace(/[$£€%,\s]/g, '');
@@ -222,7 +219,10 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
     setPreviewPage(pg);
   }, [dataset.id]);
 
-  useEffect(() => { if (activeTab === 'preview') fetchPreview(0); }, [activeTab, fetchPreview]);
+  // Bug fix: also fetch preview data when entering the statistics tab
+  useEffect(() => {
+    if (activeTab === 'preview' || activeTab === 'statistics') fetchPreview(0);
+  }, [activeTab, fetchPreview]);
 
   const totalPages = Math.ceil(previewTotal / PAGE_SIZE);
 
@@ -303,9 +303,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
 
       if (rows.length > 0) {
         const preview: string[] = [];
-        columns.forEach((col, index) => {
-          preview[index] = String(rows[0][col.name] ?? '');
-        });
+        columns.forEach((col, index) => { preview[index] = String(rows[0][col.name] ?? ''); });
         setFirstRowValues(preview);
       }
 
@@ -324,14 +322,11 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
 
       const fIsHeader = generic.length > 0 && rows.length > 0 && firstRowLooksLikeHeaders(rows[0], columns);
       setFirstRowIsHeader(fIsHeader);
-
       setPendingPromote(fIsHeader);
       setPendingCoerce(new Set(coercible));
 
       const initialRenames = columns.map((col) => {
-        if (!col.name.trim() && rows.length > 0) {
-          return String(rows[0][col.name] ?? '').trim();
-        }
+        if (!col.name.trim() && rows.length > 0) return String(rows[0][col.name] ?? '').trim();
         return col.name;
       });
       setPendingRenames(initialRenames);
@@ -344,9 +339,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
     const filteredRenames: Record<string, string> = {};
     pendingRenames.forEach((newName, index) => {
       const trimmed = newName.trim();
-      if (trimmed && trimmed !== (columns[index]?.name ?? '')) {
-        filteredRenames[String(index)] = trimmed;
-      }
+      if (trimmed && trimmed !== (columns[index]?.name ?? '')) filteredRenames[String(index)] = trimmed;
     });
     const body = {
       promoteFirstRow: pendingPromote,
@@ -368,42 +361,29 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
   };
 
   // ── Validation helpers ────────────────────────────────────────────────────
-  const totalMissing = validation
-    ? Object.values(validation.missingPerColumn).reduce((a, b) => a + b, 0)
-    : 0;
-  const totalTypeErrors = validation
-    ? Object.values(validation.typeErrorsPerColumn).reduce((a, e) => a + e.count, 0)
-    : 0;
+  const totalMissing = validation ? Object.values(validation.missingPerColumn).reduce((a, b) => a + b, 0) : 0;
+  const totalTypeErrors = validation ? Object.values(validation.typeErrorsPerColumn).reduce((a, e) => a + e.count, 0) : 0;
 
   const hasStructuralIssues =
-    coercibleCols.length > 0 ||
-    genericHeaderCols.length > 0 ||
-    firstRowIsHeader ||
+    coercibleCols.length > 0 || genericHeaderCols.length > 0 || firstRowIsHeader ||
     (validation !== null && (validation.duplicateRowCount > 0 || totalMissing > 0));
 
   const hasAnyPending =
-    pendingPromote ||
-    pendingCoerce.size > 0 ||
-    pendingDropDuplicates ||
-    pendingDropMissingRows ||
+    pendingPromote || pendingCoerce.size > 0 || pendingDropDuplicates || pendingDropMissingRows ||
     pendingRenames.some((newName, index) => newName.trim() && newName.trim() !== (columns[index]?.name ?? ''));
 
   const colsWithIssues = validation
-    ? columns.filter(
-        (c) =>
-          (validation.missingPerColumn[c.name] ?? 0) > 0 ||
-          validation.typeErrorsPerColumn[c.name]
-      )
+    ? columns.filter(c => (validation.missingPerColumn[c.name] ?? 0) > 0 || validation.typeErrorsPerColumn[c.name])
     : [];
 
   return (
-    <DashboardLayout navItems={NAV_ITEMS} profile={profile}>
+    <DashboardLayout navItems={TEACHER_NAV} profile={profile}>
       <div className="max-w-6xl space-y-6">
 
         {/* Back */}
         <button
           onClick={() => router.push('/teacher/datasets')}
-          className="flex items-center gap-1.5 text-sm text-[#6a6a80] hover:text-violet-400 transition-colors"
+          className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-violet-600 transition-colors"
         >
           <ArrowLeft className="size-3.5" /> Back to Datasets
         </button>
@@ -412,11 +392,11 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80 p-6"
+          className="rounded-2xl border border-gray-100 bg-white shadow-sm p-6"
         >
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-widest text-[#6a6a80]">Dataset</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Dataset</p>
 
               {editingName ? (
                 <div className="mt-1 flex items-center gap-2">
@@ -425,29 +405,29 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                     value={nameInput}
                     onChange={(e) => setNameInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') commitRename(); if (e.key === 'Escape') cancelRename(); }}
-                    className="flex-1 min-w-0 rounded-xl border border-violet-500/60 bg-[#0f0f1d] px-3 py-1.5 text-xl font-bold text-white focus:outline-none"
+                    className="flex-1 min-w-0 rounded-xl border border-violet-300 bg-white px-3 py-1.5 text-xl font-bold text-gray-900 focus:outline-none focus:border-violet-500"
                   />
-                  <button onClick={commitRename} disabled={savingName} className="rounded-lg bg-emerald-600/20 border border-emerald-500/30 p-1.5 text-emerald-400 hover:bg-emerald-600/30">
+                  <button onClick={commitRename} disabled={savingName} className="rounded-lg bg-emerald-50 border border-emerald-200 p-1.5 text-emerald-600 hover:bg-emerald-100">
                     <Check className="size-4" />
                   </button>
-                  <button onClick={cancelRename} className="rounded-lg bg-[#1a1a2e] border border-[#35354a] p-1.5 text-[#6a6a80] hover:text-white">
+                  <button onClick={cancelRename} className="rounded-lg bg-gray-50 border border-gray-200 p-1.5 text-gray-500 hover:text-gray-700">
                     <X className="size-4" />
                   </button>
                 </div>
               ) : (
                 <div className="mt-1 flex items-center gap-2">
-                  <h1 className="text-2xl font-bold text-white truncate">{name}</h1>
-                  <button onClick={startRename} className="shrink-0 p-1 text-[#4a4a60] hover:text-violet-400 transition-colors">
+                  <h1 className="text-2xl font-bold text-gray-900 truncate">{name}</h1>
+                  <button onClick={startRename} className="shrink-0 p-1 text-gray-300 hover:text-violet-500 transition-colors">
                     <Pencil className="size-3.5" />
                   </button>
                 </div>
               )}
 
               {dataset.description && (
-                <p className="mt-1 text-sm text-[#8d8da0]">{dataset.description}</p>
+                <p className="mt-1 text-sm text-gray-500">{dataset.description}</p>
               )}
 
-              <p className="mt-2 text-xs text-[#4a4a60]">
+              <p className="mt-2 text-xs text-gray-400">
                 {dataset.provider
                   ? (dataset.provider === 'google_drive' ? 'Google Drive' : 'Dropbox')
                   : 'Direct upload'}
@@ -458,14 +438,14 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
             </div>
 
             <div className="flex items-center gap-3 shrink-0">
-              <div className="flex items-center gap-2 rounded-xl border border-[#35354a]/60 bg-[#151526] px-4 py-3">
-                <Rows className="size-4 text-violet-400" />
-                <span className="text-sm font-semibold text-white">{dataset.row_count.toLocaleString()}</span>
-                <span className="text-xs text-[#6a6a80]">rows</span>
+              <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+                <Rows className="size-4 text-violet-500" />
+                <span className="text-sm font-semibold text-gray-800">{dataset.row_count.toLocaleString()}</span>
+                <span className="text-xs text-gray-400">rows</span>
               </div>
               <button
                 onClick={openDelete}
-                className="flex items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-600/10 px-3 py-2.5 text-sm font-semibold text-red-400 transition hover:bg-red-600/20"
+                className="flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-500 transition hover:bg-red-100"
               >
                 <Trash2 className="size-4" /> Delete
               </button>
@@ -482,28 +462,28 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
         >
           <Link
             href={`/teacher/visualisations/new?dataset=${dataset.id}`}
-            className="flex items-center gap-3 rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80 p-5 text-left hover:border-blue-500/40 hover:bg-[#11111f] transition-colors"
+            className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white shadow-sm p-5 text-left hover:border-blue-200 hover:shadow-md transition-all"
           >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 ring-1 ring-blue-500/20">
-              <BarChart2 className="size-5 text-blue-400" />
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 ring-1 ring-blue-200">
+              <BarChart2 className="size-5 text-blue-600" />
             </span>
             <div>
-              <p className="text-sm font-semibold text-white">Create visualisation</p>
-              <p className="text-xs text-[#6a6a80]">Build a chart from this dataset</p>
+              <p className="text-sm font-semibold text-gray-800">Create visualisation</p>
+              <p className="text-xs text-gray-400">Build a chart from this dataset</p>
             </div>
           </Link>
 
           <button
             disabled
             title="Quiz builder coming soon"
-            className="flex items-center gap-3 rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80 p-5 text-left opacity-50 cursor-not-allowed"
+            className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white shadow-sm p-5 text-left opacity-40 cursor-not-allowed"
           >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/10 ring-1 ring-violet-500/20">
-              <BookOpen className="size-5 text-violet-400" />
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-100 ring-1 ring-violet-200">
+              <BookOpen className="size-5 text-violet-600" />
             </span>
             <div>
-              <p className="text-sm font-semibold text-white">Create quiz</p>
-              <p className="text-xs text-[#6a6a80]">Generate questions from this dataset — coming soon</p>
+              <p className="text-sm font-semibold text-gray-800">Create quiz</p>
+              <p className="text-xs text-gray-400">Generate questions from this dataset — coming soon</p>
             </div>
           </button>
         </motion.div>
@@ -513,18 +493,16 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80"
+          className="rounded-2xl border border-gray-100 bg-white shadow-sm"
         >
           {/* Tab bar */}
-          <div className="flex border-b border-[#35354a]/60 overflow-x-auto">
+          <div className="flex border-b border-gray-100 overflow-x-auto">
             {(['preview', 'statistics', 'validation', 'columns', 'clean'] as Tab[]).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`relative flex items-center gap-1.5 whitespace-nowrap px-6 py-4 text-sm font-semibold capitalize transition-colors ${
-                  activeTab === tab
-                    ? 'text-white'
-                    : 'text-[#6a6a80] hover:text-[#c9c9d4]'
+                  activeTab === tab ? 'text-gray-900' : 'text-gray-400 hover:text-gray-700'
                 }`}
               >
                 {tab === 'clean' && <Wand2 className="size-3.5" />}
@@ -544,28 +522,28 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
           {activeTab === 'preview' && (
             <div className="p-6">
               {!dataset.storage_path ? (
-                <p className="text-sm text-[#6a6a80]">No data file attached to this dataset.</p>
+                <p className="text-sm text-gray-400">No data file attached to this dataset.</p>
               ) : loadingPreview ? (
-                <p className="text-sm text-[#8d8da0]">Loading rows…</p>
+                <p className="text-sm text-gray-500">Loading rows…</p>
               ) : previewError ? (
-                <p className="text-sm text-red-400">{previewError}</p>
+                <p className="text-sm text-red-500">{previewError}</p>
               ) : previewRows.length === 0 ? (
-                <p className="text-sm text-[#6a6a80]">No rows found.</p>
+                <p className="text-sm text-gray-400">No rows found.</p>
               ) : (
                 <>
                   {visible.size > 0 && visible.size < columns.length && (
-                    <p className="mb-3 text-xs text-[#6a6a80]">
+                    <p className="mb-3 text-xs text-gray-400">
                       Showing {visible.size} of {columns.length} columns — student view.{' '}
-                      <button onClick={() => setActiveTab('columns')} className="text-violet-400 hover:text-violet-300 transition">
+                      <button onClick={() => setActiveTab('columns')} className="text-violet-600 hover:text-violet-500 transition">
                         Manage visibility
                       </button>
                     </p>
                   )}
-                  <div className="overflow-x-auto rounded-xl border border-[#35354a]/40">
+                  <div className="overflow-x-auto rounded-xl border border-gray-100">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-[#35354a]/40 bg-[#0f0f1d]">
-                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-[#6a6a80] w-10">#</th>
+                        <tr className="border-b border-gray-100 bg-gray-50">
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-400 w-10">#</th>
                           {(visible.size > 0 ? columns.filter(c => visible.has(c.name)) : columns).map((col) => {
                             const meta = TYPE_META[col.type] ?? TYPE_META.string;
                             const Icon = meta.icon;
@@ -573,7 +551,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                               <th key={col.name} className="px-3 py-2.5 text-left">
                                 <div className="flex items-center gap-1.5">
                                   <Icon className={`size-3 shrink-0 ${meta.colour.split(' ')[0]}`} />
-                                  <span className="text-xs font-semibold text-[#c9c9d4] whitespace-nowrap">{col.name}</span>
+                                  <span className="text-xs font-semibold text-gray-700 whitespace-nowrap">{col.name}</span>
                                 </div>
                               </th>
                             );
@@ -582,18 +560,15 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                       </thead>
                       <tbody>
                         {previewRows.map((row, i) => (
-                          <tr
-                            key={i}
-                            className="border-b border-[#35354a]/20 last:border-0 hover:bg-[#151526]/50"
-                          >
-                            <td className="px-3 py-2 text-xs text-[#4a4a60]">
+                          <tr key={i} className="border-b border-gray-50 last:border-0 hover:bg-violet-50/40 transition">
+                            <td className="px-3 py-2 text-xs text-gray-300">
                               {previewPage * PAGE_SIZE + i + 1}
                             </td>
                             {(visible.size > 0 ? columns.filter(c => visible.has(c.name)) : columns).map((col) => (
-                              <td key={col.name} className="px-3 py-2 text-xs text-[#c9c9d4] max-w-[200px]">
+                              <td key={col.name} className="px-3 py-2 text-xs text-gray-700 max-w-[200px]">
                                 <span className="block truncate">
                                   {row[col.name] === undefined || row[col.name] === null || row[col.name] === ''
-                                    ? <span className="text-[#4a4a60] italic">—</span>
+                                    ? <span className="text-gray-300 italic">—</span>
                                     : String(row[col.name])}
                                 </span>
                               </td>
@@ -606,24 +581,22 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
 
                   {/* Pagination */}
                   <div className="mt-4 flex items-center justify-between">
-                    <p className="text-xs text-[#6a6a80]">
+                    <p className="text-xs text-gray-400">
                       Rows {previewPage * PAGE_SIZE + 1}–{Math.min((previewPage + 1) * PAGE_SIZE, previewTotal)} of {previewTotal.toLocaleString()}
                     </p>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => fetchPreview(previewPage - 1)}
                         disabled={previewPage === 0 || loadingPreview}
-                        className="flex items-center gap-1 rounded-lg border border-[#35354a] px-3 py-1.5 text-xs text-[#8d8da0] transition hover:border-violet-500/40 disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-500 transition hover:border-violet-300 disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         <ChevronLeft className="size-3.5" /> Prev
                       </button>
-                      <span className="text-xs text-[#4a4a60]">
-                        {previewPage + 1} / {totalPages}
-                      </span>
+                      <span className="text-xs text-gray-400">{previewPage + 1} / {totalPages}</span>
                       <button
                         onClick={() => fetchPreview(previewPage + 1)}
                         disabled={previewPage >= totalPages - 1 || loadingPreview}
-                        className="flex items-center gap-1 rounded-lg border border-[#35354a] px-3 py-1.5 text-xs text-[#8d8da0] transition hover:border-violet-500/40 disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-500 transition hover:border-violet-300 disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         Next <ChevronRight className="size-3.5" />
                       </button>
@@ -638,12 +611,12 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
           {activeTab === 'statistics' && (
             <div className="p-6">
               {loadingPreview ? (
-                <p className="text-sm text-[#8d8da0]">Loading statistics…</p>
+                <p className="text-sm text-gray-500">Loading statistics…</p>
               ) : previewRows.length === 0 ? (
-                <p className="text-sm text-[#6a6a80]">No data available — load the Preview tab first.</p>
+                <p className="text-sm text-gray-400">No data available — visit the Preview tab first.</p>
               ) : (
                 <div className="space-y-6">
-                  <p className="text-xs text-[#6a6a80]">
+                  <p className="text-xs text-gray-400">
                     Computed from the first {previewRows.length} rows (page {previewPage + 1}).
                     {previewTotal > previewRows.length && ` Full dataset has ${previewTotal.toLocaleString()} rows.`}
                   </p>
@@ -654,8 +627,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                         const nums = vals.map((v) => Number(v)).filter((n) => !isNaN(n));
                         if (nums.length === 0) return null;
                         const sorted = [...nums].sort((a, b) => a - b);
-                        const min = sorted[0];
-                        const max = sorted[sorted.length - 1];
+                        const min = sorted[0], max = sorted[sorted.length - 1];
                         const mean = nums.reduce((s, n) => s + n, 0) / nums.length;
                         const median = sorted.length % 2 === 0
                           ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
@@ -664,11 +636,11 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                         const stddev = Math.sqrt(variance);
                         const fmt = (n: number) => Number.isInteger(n) ? n.toString() : n.toFixed(3);
                         return (
-                          <div key={col.name} className="rounded-xl border border-[#35354a]/40 bg-[#0f0f1d] p-4 space-y-3">
+                          <div key={col.name} className="rounded-xl border border-gray-100 bg-white shadow-sm p-4 space-y-3">
                             <div className="flex items-center gap-2">
-                              <Hash className="size-3.5 text-blue-400" />
-                              <span className="text-sm font-semibold text-white">{col.name}</span>
-                              <span className="text-xs text-[#6a6a80] rounded-full bg-blue-500/10 px-1.5 py-0.5">number</span>
+                              <Hash className="size-3.5 text-blue-500" />
+                              <span className="text-sm font-semibold text-gray-800">{col.name}</span>
+                              <span className="text-xs text-gray-400 rounded-full bg-blue-50 px-1.5 py-0.5">number</span>
                             </div>
                             <div className="grid grid-cols-3 gap-2">
                               {[
@@ -679,30 +651,29 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                                 { label: 'Std dev', val: fmt(stddev) },
                                 { label: 'Count', val: nums.length.toString() },
                               ].map(({ label, val }) => (
-                                <div key={label} className="rounded-lg bg-[#151526] px-2 py-2 text-center">
-                                  <p className="text-xs text-[#6a6a80]">{label}</p>
-                                  <p className="text-sm font-mono font-semibold text-white mt-0.5 truncate">{val}</p>
+                                <div key={label} className="rounded-lg bg-gray-50 px-2 py-2 text-center">
+                                  <p className="text-xs text-gray-400">{label}</p>
+                                  <p className="text-sm font-mono font-semibold text-gray-800 mt-0.5 truncate">{val}</p>
                                 </div>
                               ))}
                             </div>
-                            {/* Mini bar showing distribution range */}
                             <div className="mt-1">
-                              <div className="flex justify-between text-xs text-[#4a4a60] mb-1">
+                              <div className="flex justify-between text-xs text-gray-300 mb-1">
                                 <span>{fmt(min)}</span><span>{fmt(max)}</span>
                               </div>
-                              <div className="h-1.5 rounded-full bg-[#252538] overflow-hidden relative">
+                              <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden relative">
                                 {(() => {
                                   const range = max - min;
-                                  if (range === 0) return <div className="h-full bg-blue-500 w-full" />;
+                                  if (range === 0) return <div className="h-full bg-blue-400 w-full" />;
                                   const medLeft = ((median - min) / range) * 100;
                                   return (
-                                    <div className="h-full bg-linear-to-r from-blue-500/40 via-blue-500 to-blue-500/40" style={{ width: '100%' }}>
-                                      <div className="absolute top-0 bottom-0 w-0.5 bg-white/60" style={{ left: `${medLeft}%` }} />
+                                    <div className="h-full bg-gradient-to-r from-blue-200 via-blue-400 to-blue-200" style={{ width: '100%' }}>
+                                      <div className="absolute top-0 bottom-0 w-0.5 bg-blue-700/50" style={{ left: `${medLeft}%` }} />
                                     </div>
                                   );
                                 })()}
                               </div>
-                              <p className="text-xs text-[#4a4a60] mt-1 text-center">Median at {fmt(median)}</p>
+                              <p className="text-xs text-gray-300 mt-1 text-center">Median at {fmt(median)}</p>
                             </div>
                           </div>
                         );
@@ -714,34 +685,31 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                         strs.forEach((s) => { freq[s] = (freq[s] ?? 0) + 1; });
                         const top5 = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 5);
                         return (
-                          <div key={col.name} className="rounded-xl border border-[#35354a]/40 bg-[#0f0f1d] p-4 space-y-3">
+                          <div key={col.name} className="rounded-xl border border-gray-100 bg-white shadow-sm p-4 space-y-3">
                             <div className="flex items-center gap-2">
-                              <Type className="size-3.5 text-violet-400" />
-                              <span className="text-sm font-semibold text-white">{col.name}</span>
-                              <span className="text-xs text-[#6a6a80] rounded-full bg-violet-500/10 px-1.5 py-0.5">text</span>
+                              <Type className="size-3.5 text-violet-500" />
+                              <span className="text-sm font-semibold text-gray-800">{col.name}</span>
+                              <span className="text-xs text-gray-400 rounded-full bg-violet-50 px-1.5 py-0.5">text</span>
                             </div>
                             <div className="grid grid-cols-2 gap-2 mb-2">
-                              <div className="rounded-lg bg-[#151526] px-2 py-2 text-center">
-                                <p className="text-xs text-[#6a6a80]">Unique</p>
-                                <p className="text-sm font-mono font-semibold text-white mt-0.5">{uniqueSet.size}</p>
+                              <div className="rounded-lg bg-gray-50 px-2 py-2 text-center">
+                                <p className="text-xs text-gray-400">Unique</p>
+                                <p className="text-sm font-mono font-semibold text-gray-800 mt-0.5">{uniqueSet.size}</p>
                               </div>
-                              <div className="rounded-lg bg-[#151526] px-2 py-2 text-center">
-                                <p className="text-xs text-[#6a6a80]">Total</p>
-                                <p className="text-sm font-mono font-semibold text-white mt-0.5">{strs.length}</p>
+                              <div className="rounded-lg bg-gray-50 px-2 py-2 text-center">
+                                <p className="text-xs text-gray-400">Total</p>
+                                <p className="text-sm font-mono font-semibold text-gray-800 mt-0.5">{strs.length}</p>
                               </div>
                             </div>
-                            <p className="text-xs text-[#6a6a80] font-semibold uppercase tracking-wide">Top values</p>
+                            <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Top values</p>
                             <div className="space-y-1.5">
                               {top5.map(([val, count]) => (
                                 <div key={val} className="flex items-center gap-2">
-                                  <div className="flex-1 h-1.5 rounded-full bg-[#252538] overflow-hidden">
-                                    <div
-                                      className="h-full rounded-full bg-violet-500/60"
-                                      style={{ width: `${(count / strs.length) * 100}%` }}
-                                    />
+                                  <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                                    <div className="h-full rounded-full bg-violet-400" style={{ width: `${(count / strs.length) * 100}%` }} />
                                   </div>
-                                  <span className="text-xs text-[#c9c9d4] truncate max-w-[90px]">{val}</span>
-                                  <span className="text-xs text-[#6a6a80] tabular-nums">{count}</span>
+                                  <span className="text-xs text-gray-600 truncate max-w-[90px]">{val}</span>
+                                  <span className="text-xs text-gray-400 tabular-nums">{count}</span>
                                 </div>
                               ))}
                             </div>
@@ -760,9 +728,9 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
           {activeTab === 'validation' && (
             <div className="p-6">
               {loadingValidation ? (
-                <p className="text-sm text-[#8d8da0]">Analysing dataset…</p>
+                <p className="text-sm text-gray-500">Analysing dataset…</p>
               ) : validationError ? (
-                <p className="text-sm text-red-400">{validationError}</p>
+                <p className="text-sm text-red-500">{validationError}</p>
               ) : !validation ? null : (
                 <div className="space-y-6">
                   <div className="grid gap-3 sm:grid-cols-4">
@@ -772,20 +740,20 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                       { label: 'Type errors', value: totalTypeErrors.toLocaleString(), ok: totalTypeErrors === 0 },
                       { label: 'Duplicate rows', value: validation.duplicateRowCount.toLocaleString(), ok: validation.duplicateRowCount === 0 },
                     ].map(({ label, value, ok }) => (
-                      <div key={label} className={`rounded-xl border p-4 ${ok ? 'border-[#35354a]/40 bg-[#0f0f1d]' : 'border-amber-500/30 bg-amber-500/5'}`}>
-                        <p className="text-xs text-[#6a6a80]">{label}</p>
-                        <p className={`mt-1 text-2xl font-bold ${ok ? 'text-white' : 'text-amber-400'}`}>{value}</p>
+                      <div key={label} className={`rounded-xl border p-4 ${ok ? 'border-gray-100 bg-white shadow-sm' : 'border-amber-200 bg-amber-50'}`}>
+                        <p className="text-xs text-gray-400">{label}</p>
+                        <p className={`mt-1 text-2xl font-bold ${ok ? 'text-gray-800' : 'text-amber-600'}`}>{value}</p>
                       </div>
                     ))}
                   </div>
 
                   {colsWithIssues.length === 0 ? (
-                    <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-400">
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
                       No issues detected — all columns look clean.
                     </div>
                   ) : (
                     <div>
-                      <p className="mb-3 text-sm font-semibold text-[#c9c9d4]">Column issues</p>
+                      <p className="mb-3 text-sm font-semibold text-gray-700">Column issues</p>
                       <div className="space-y-2">
                         {colsWithIssues.map((col) => {
                           const missing = validation.missingPerColumn[col.name] ?? 0;
@@ -793,27 +761,27 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                           const meta = TYPE_META[col.type] ?? TYPE_META.string;
                           const Icon = meta.icon;
                           return (
-                            <div key={col.name} className="rounded-xl border border-[#35354a]/40 bg-[#0f0f1d] px-4 py-3">
+                            <div key={col.name} className="rounded-xl border border-gray-100 bg-white shadow-sm px-4 py-3">
                               <div className="flex items-center gap-2 mb-2">
                                 <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md ring-1 ${meta.colour}`}>
                                   <Icon className="size-3" />
                                 </span>
-                                <span className="text-sm font-semibold text-white">{col.name}</span>
-                                <span className="text-xs text-[#6a6a80]">({meta.label})</span>
+                                <span className="text-sm font-semibold text-gray-800">{col.name}</span>
+                                <span className="text-xs text-gray-400">({meta.label})</span>
                               </div>
                               <div className="flex flex-wrap gap-3 text-xs">
                                 {missing > 0 && (
-                                  <span className="text-amber-400">
+                                  <span className="text-amber-600">
                                     <AlertTriangle className="size-3 inline mr-1" />
                                     {missing} missing value{missing !== 1 ? 's' : ''}
                                   </span>
                                 )}
                                 {typeErr && (
-                                  <span className="text-red-400">
+                                  <span className="text-red-500">
                                     <AlertTriangle className="size-3 inline mr-1" />
                                     {typeErr.count} type mismatch{typeErr.count !== 1 ? 'es' : ''}
                                     {typeErr.examples.length > 0 && (
-                                      <span className="text-[#6a6a80] ml-1">
+                                      <span className="text-gray-400 ml-1">
                                         (e.g. {typeErr.examples.map((e) => `"${e}"`).join(', ')})
                                       </span>
                                     )}
@@ -828,10 +796,10 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                   )}
 
                   {validation.duplicateRowCount > 0 && (
-                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm">
-                      <AlertTriangle className="size-4 text-amber-400 inline mr-2" />
-                      <span className="text-amber-400 font-semibold">{validation.duplicateRowCount}</span>
-                      <span className="text-[#8d8da0]"> duplicate row{validation.duplicateRowCount !== 1 ? 's' : ''} detected (exact matches across all columns).</span>
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
+                      <AlertTriangle className="size-4 text-amber-500 inline mr-2" />
+                      <span className="text-amber-700 font-semibold">{validation.duplicateRowCount}</span>
+                      <span className="text-amber-600"> duplicate row{validation.duplicateRowCount !== 1 ? 's' : ''} detected.</span>
                     </div>
                   )}
                 </div>
@@ -844,21 +812,19 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
             <div className="p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-[#c9c9d4]">Student-visible columns</p>
-                  <p className="text-xs text-[#6a6a80] mt-0.5">
-                    Toggle which columns students can see. Hidden columns remain in the dataset for your use.
-                  </p>
+                  <p className="text-sm font-semibold text-gray-800">Student-visible columns</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Toggle which columns students can see.</p>
                 </div>
                 <div className="flex items-center gap-2">
                   {columnsSaved && (
-                    <span className="text-xs text-emerald-400 flex items-center gap-1">
+                    <span className="text-xs text-emerald-600 flex items-center gap-1">
                       <Check className="size-3" /> Saved
                     </span>
                   )}
                   <button
                     onClick={saveColumns}
                     disabled={savingColumns}
-                    className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:bg-violet-500/50 disabled:cursor-not-allowed"
+                    className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:opacity-50"
                   >
                     {savingColumns ? 'Saving…' : 'Save visibility'}
                   </button>
@@ -866,19 +832,9 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
               </div>
 
               <div className="flex gap-2 flex-wrap">
-                <button
-                  onClick={() => { setVisible(new Set(columns.map((c) => c.name))); setColumnsSaved(false); }}
-                  className="text-xs text-violet-400 hover:text-violet-300 transition"
-                >
-                  Show all
-                </button>
-                <span className="text-[#35354a]">·</span>
-                <button
-                  onClick={() => { setVisible(new Set()); setColumnsSaved(false); }}
-                  className="text-xs text-violet-400 hover:text-violet-300 transition"
-                >
-                  Hide all
-                </button>
+                <button onClick={() => { setVisible(new Set(columns.map(c => c.name))); setColumnsSaved(false); }} className="text-xs text-violet-600 hover:text-violet-500 transition">Show all</button>
+                <span className="text-gray-200">·</span>
+                <button onClick={() => { setVisible(new Set()); setColumnsSaved(false); }} className="text-xs text-violet-600 hover:text-violet-500 transition">Hide all</button>
               </div>
 
               <div className="grid gap-2 sm:grid-cols-2">
@@ -891,21 +847,19 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                       key={col.name}
                       onClick={() => toggleColumn(col.name)}
                       className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition ${
-                        isVisible
-                          ? 'border-violet-500/30 bg-violet-500/5 hover:bg-violet-500/10'
-                          : 'border-[#35354a]/40 bg-[#0f0f1d]/50 hover:border-[#35354a]/80'
+                        isVisible ? 'border-violet-200 bg-violet-50 hover:bg-violet-100' : 'border-gray-100 bg-white hover:border-gray-200'
                       }`}
                     >
                       <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ring-1 ${meta.colour}`}>
                         <Icon className="size-3.5" />
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-white truncate">{col.name}</p>
-                        <p className="text-xs text-[#6a6a80]">{meta.label}</p>
+                        <p className="text-sm font-medium text-gray-800 truncate">{col.name}</p>
+                        <p className="text-xs text-gray-400">{meta.label}</p>
                       </div>
                       {isVisible
-                        ? <Eye className="size-4 shrink-0 text-violet-400" />
-                        : <EyeOff className="size-4 shrink-0 text-[#35354a]" />}
+                        ? <Eye className="size-4 shrink-0 text-violet-500" />
+                        : <EyeOff className="size-4 shrink-0 text-gray-300" />}
                     </button>
                   );
                 })}
@@ -917,62 +871,45 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
           {activeTab === 'clean' && (
             <div className="p-6 space-y-6">
               {cleanDone && (
-                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-400">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
                   Dataset cleaned! Refreshing…
                 </div>
               )}
 
               {cleanLoading ? (
-                <p className="text-sm text-[#8d8da0]">Analysing dataset…</p>
+                <p className="text-sm text-gray-500">Analysing dataset…</p>
               ) : (
                 <>
                   {!hasStructuralIssues && (
-                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-400">
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
                       No structural issues detected — your data looks chart-ready.
                     </div>
                   )}
 
-                  {/* Section: Column Headers */}
+                  {/* Column Headers */}
                   {cleanRows.length > 0 && (
                     <div className="space-y-3">
-                      <p className="text-sm font-semibold text-[#c9c9d4]">Column Headers</p>
-
+                      <p className="text-sm font-semibold text-gray-700">Column Headers</p>
                       {(genericHeaderCols.length > 0 || firstRowIsHeader) && (
-                        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-amber-400">
-                          {genericHeaderCols.some((index) => !columns[index]?.name.trim())
-                            ? 'Some columns have no name. Row 1 may contain the actual column headers — enable the option below to use those values.'
-                            : firstRowIsHeader
-                            ? 'These columns have generic names and row 1 looks like real headers — promoting is recommended.'
-                            : 'Some columns have generic names. If row 1 contains your actual column headers, enable the option below.'}
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                          {firstRowIsHeader
+                            ? 'Row 1 looks like real headers — promoting is recommended.'
+                            : 'Some columns have generic names. Row 1 may contain the actual headers.'}
                         </div>
                       )}
-
-                      <label className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition ${
-                        pendingPromote ? 'border-violet-500/30 bg-violet-500/5' : 'border-[#35354a]/40 bg-[#0f0f1d]'
-                      }`}>
-                        <input
-                          type="checkbox"
-                          checked={pendingPromote}
-                          onChange={(e) => setPendingPromote(e.target.checked)}
-                          className="accent-violet-500"
-                        />
+                      <label className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition ${pendingPromote ? 'border-violet-200 bg-violet-50' : 'border-gray-100 bg-white'}`}>
+                        <input type="checkbox" checked={pendingPromote} onChange={(e) => setPendingPromote(e.target.checked)} className="accent-violet-600" />
                         <div>
-                          <p className="text-sm font-medium text-white">Use first row as column headers</p>
-                          <p className="text-xs text-[#6a6a80] mt-0.5">
-                            Row 1 values become the column names and that row is removed from the data
-                          </p>
+                          <p className="text-sm font-medium text-gray-800">Use first row as column headers</p>
+                          <p className="text-xs text-gray-400 mt-0.5">Row 1 values become column names and are removed from data</p>
                         </div>
                       </label>
-
-                      {/* Preview: all columns — current name vs row 1 value */}
-                      <div className="rounded-xl border border-[#35354a]/40 overflow-hidden">
+                      <div className="rounded-xl border border-gray-100 overflow-hidden">
                         <table className="w-full text-xs">
                           <thead>
-                            <tr className="border-b border-[#35354a]/40 bg-[#0f0f1d]">
-                              <th className="px-4 py-2 text-left font-semibold text-[#6a6a60]">Current header</th>
-                              <th className="px-4 py-2 text-left font-semibold text-[#6a6a60]">
-                                {pendingPromote ? 'New header (from row 1)' : 'Row 1 value'}
-                              </th>
+                            <tr className="border-b border-gray-100 bg-gray-50">
+                              <th className="px-4 py-2 text-left font-semibold text-gray-400">Current header</th>
+                              <th className="px-4 py-2 text-left font-semibold text-gray-400">{pendingPromote ? 'New header (from row 1)' : 'Row 1 value'}</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -981,16 +918,16 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                               const isGeneric = genericHeaderCols.includes(idx);
                               const rowVal = firstRowValues[idx];
                               return (
-                                <tr key={`${col.name}-${idx}`} className="border-b border-[#35354a]/20 last:border-0">
+                                <tr key={`${col.name}-${idx}`} className="border-b border-gray-50 last:border-0">
                                   <td className="px-4 py-2.5">
                                     {isEmpty
-                                      ? <span className="flex items-center gap-1 italic text-amber-400"><AlertTriangle className="size-3 shrink-0" />empty</span>
-                                      : <span className={isGeneric ? 'font-medium text-amber-400' : 'text-[#c9c9d4]'}>{col.name}</span>}
+                                      ? <span className="flex items-center gap-1 italic text-amber-600"><AlertTriangle className="size-3 shrink-0" />empty</span>
+                                      : <span className={isGeneric ? 'font-medium text-amber-600' : 'text-gray-600'}>{col.name}</span>}
                                   </td>
                                   <td className="px-4 py-2.5">
                                     {rowVal
-                                      ? <span className={pendingPromote ? 'font-medium text-emerald-400' : 'text-[#8888a0]'}>{rowVal}</span>
-                                      : <span className="italic text-[#4a4a60]">—</span>}
+                                      ? <span className={pendingPromote ? 'font-medium text-emerald-600' : 'text-gray-400'}>{rowVal}</span>
+                                      : <span className="italic text-gray-300">—</span>}
                                   </td>
                                 </tr>
                               );
@@ -1001,110 +938,69 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                     </div>
                   )}
 
-                  {/* Section: Row Cleanup */}
+                  {/* Row Cleanup */}
                   <div className="space-y-3">
-                    <p className="text-sm font-semibold text-[#c9c9d4]">Row Cleanup</p>
-
-                    {/* Drop duplicates */}
-                    <label className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition ${
-                      pendingDropDuplicates ? 'border-violet-500/30 bg-violet-500/5' : 'border-[#35354a]/40 bg-[#0f0f1d]'
-                    }`}>
-                      <input
-                        type="checkbox"
-                        checked={pendingDropDuplicates}
-                        onChange={(e) => setPendingDropDuplicates(e.target.checked)}
-                        className="accent-violet-500 shrink-0"
-                      />
+                    <p className="text-sm font-semibold text-gray-700">Row Cleanup</p>
+                    <label className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition ${pendingDropDuplicates ? 'border-violet-200 bg-violet-50' : 'border-gray-100 bg-white'}`}>
+                      <input type="checkbox" checked={pendingDropDuplicates} onChange={(e) => setPendingDropDuplicates(e.target.checked)} className="accent-violet-600 shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-medium text-white">Remove duplicate rows</p>
+                          <p className="text-sm font-medium text-gray-800">Remove duplicate rows</p>
                           {validation && (
-                            <span className={`text-xs rounded-full px-2 py-0.5 ring-1 ${
-                              validation.duplicateRowCount > 0
-                                ? 'bg-amber-500/10 text-amber-400 ring-amber-500/20'
-                                : 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20'
-                            }`}>
+                            <span className={`text-xs rounded-full px-2 py-0.5 ring-1 ${validation.duplicateRowCount > 0 ? 'bg-amber-50 text-amber-600 ring-amber-200' : 'bg-emerald-50 text-emerald-600 ring-emerald-200'}`}>
                               {validation.duplicateRowCount} duplicate{validation.duplicateRowCount !== 1 ? 's' : ''}
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-[#6a6a80] mt-0.5">Keep only the first occurrence of each exact duplicate row</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Keep only the first occurrence of each duplicate row</p>
                       </div>
                     </label>
-
-                    {/* Drop rows with missing values */}
-                    <label className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition ${
-                      pendingDropMissingRows ? 'border-violet-500/30 bg-violet-500/5' : 'border-[#35354a]/40 bg-[#0f0f1d]'
-                    }`}>
-                      <input
-                        type="checkbox"
-                        checked={pendingDropMissingRows}
-                        onChange={(e) => setPendingDropMissingRows(e.target.checked)}
-                        className="accent-violet-500 shrink-0"
-                      />
+                    <label className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition ${pendingDropMissingRows ? 'border-violet-200 bg-violet-50' : 'border-gray-100 bg-white'}`}>
+                      <input type="checkbox" checked={pendingDropMissingRows} onChange={(e) => setPendingDropMissingRows(e.target.checked)} className="accent-violet-600 shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-medium text-white">Remove rows with missing values</p>
+                          <p className="text-sm font-medium text-gray-800">Remove rows with missing values</p>
                           {validation && totalMissing > 0 && (
-                            <span className="text-xs rounded-full px-2 py-0.5 bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20">
-                              {totalMissing} missing cell{totalMissing !== 1 ? 's' : ''}
-                            </span>
+                            <span className="text-xs rounded-full px-2 py-0.5 bg-amber-50 text-amber-600 ring-1 ring-amber-200">{totalMissing} missing cell{totalMissing !== 1 ? 's' : ''}</span>
                           )}
                           {validation && totalMissing === 0 && (
-                            <span className="text-xs rounded-full px-2 py-0.5 bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20">
-                              no missing values
-                            </span>
+                            <span className="text-xs rounded-full px-2 py-0.5 bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200">no missing values</span>
                           )}
                         </div>
-                        <p className="text-xs text-[#6a6a80] mt-0.5">Drop any row that has an empty or null value in any column</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Drop any row that has an empty value in any column</p>
                       </div>
                     </label>
                   </div>
 
-                  {/* Section B: Numeric Columns */}
+                  {/* Numeric Columns */}
                   {coercibleCols.length > 0 && (
                     <div className="space-y-3">
-                      <p className="text-sm font-semibold text-[#c9c9d4]">Numeric Columns</p>
-                      <p className="text-xs text-[#8888a0]">
-                        These columns are stored as text but contain numeric values (e.g. &apos;$1,234&apos;, &apos;45.6%&apos;). Converting them enables charts.
-                      </p>
+                      <p className="text-sm font-semibold text-gray-700">Numeric Columns</p>
+                      <p className="text-xs text-gray-400">These columns are stored as text but contain numeric values. Converting enables charts.</p>
                       <div className="space-y-2">
                         {coercibleCols.map((colIndex) => {
                           const colName = columns[colIndex]?.name ?? '';
                           const sample = cleanRows[0]?.[colName];
                           const selected = pendingCoerce.has(colIndex);
                           return (
-                            <label
-                              key={colName}
-                              className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition ${
-                                selected
-                                  ? 'border-violet-500/30 bg-violet-500/5'
-                                  : 'border-[#35354a]/40 bg-[#0f0f1d]'
-                              }`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selected}
-                                onChange={(e) => {
-                                  setPendingCoerce(prev => {
-                                    const next = new Set(prev);
-                                    if (e.target.checked) next.add(colIndex);
-                                    else next.delete(colIndex);
-                                    return next;
-                                  });
-                                }}
-                                className="accent-violet-500 shrink-0"
-                              />
+                            <label key={colName} className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition ${selected ? 'border-violet-200 bg-violet-50' : 'border-gray-100 bg-white'}`}>
+                              <input type="checkbox" checked={selected} onChange={(e) => {
+                                setPendingCoerce(prev => {
+                                  const next = new Set(prev);
+                                  if (e.target.checked) next.add(colIndex); else next.delete(colIndex);
+                                  return next;
+                                });
+                              }} className="accent-violet-600 shrink-0" />
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-sm font-medium text-white">{colName}</span>
+                                  <span className="text-sm font-medium text-gray-800">{colName}</span>
                                   {sample !== undefined && sample !== null && sample !== '' && (
-                                    <span className="text-xs text-[#6a6a80]">e.g. &quot;{String(sample)}&quot;</span>
+                                    <span className="text-xs text-gray-400">e.g. &quot;{String(sample)}&quot;</span>
                                   )}
                                 </div>
-                                <p className="text-xs text-[#6a6a80] mt-0.5">
-                                  currently: <span className="text-[#8888a0]">Text</span>
-                                  {selected && <span className="text-violet-400 ml-1">→ will become: Number</span>}
+                                <p className="text-xs text-gray-400 mt-0.5">
+                                  currently: <span className="text-gray-500">Text</span>
+                                  {selected && <span className="text-violet-600 ml-1">→ will become: Number</span>}
                                 </p>
                               </div>
                             </label>
@@ -1114,37 +1010,26 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                     </div>
                   )}
 
-                  {/* Section C: Column Renames */}
+                  {/* Column Renames */}
                   <div className="space-y-3">
-                    <p className="text-sm font-semibold text-[#c9c9d4]">Column Renames</p>
-                    <p className="text-xs text-[#6a6a80]">Rename any column. Empty column names are pre-filled with the row 1 value as a suggestion.</p>
+                    <p className="text-sm font-semibold text-gray-700">Column Renames</p>
+                    <p className="text-xs text-gray-400">Rename any column. Empty names are pre-filled with row 1 values as suggestions.</p>
                     <div className="grid gap-2 sm:grid-cols-2">
                       {columns.map((col, idx) => {
                         const isEmpty = !col.name.trim();
                         const currentVal = pendingRenames[idx] ?? col.name;
                         const changed = currentVal.trim() && currentVal.trim() !== col.name;
                         return (
-                          <div
-                            key={`${col.name}-${idx}`}
-                            className={`flex items-center gap-2 rounded-xl border px-3 py-2 ${
-                              isEmpty ? 'border-amber-500/20 bg-amber-500/5' : 'border-[#35354a]/40 bg-[#0f0f1d]'
-                            }`}
-                          >
-                            <span className={`text-xs shrink-0 min-w-[80px] truncate flex items-center gap-1 ${isEmpty ? 'text-amber-400 italic' : 'text-[#8888a0]'}`}>
+                          <div key={`${col.name}-${idx}`} className={`flex items-center gap-2 rounded-xl border px-3 py-2 ${isEmpty ? 'border-amber-200 bg-amber-50' : 'border-gray-100 bg-white'}`}>
+                            <span className={`text-xs shrink-0 min-w-[80px] truncate flex items-center gap-1 ${isEmpty ? 'text-amber-600 italic' : 'text-gray-400'}`}>
                               {isEmpty ? <><AlertTriangle className="size-3 shrink-0" />empty</> : col.name}
                             </span>
-                            <span className="text-[#35354a] shrink-0 text-xs">→</span>
+                            <span className="text-gray-200 shrink-0 text-xs">→</span>
                             <input
                               value={currentVal}
-                              onChange={(e) => setPendingRenames(prev => {
-                                const next = [...prev];
-                                next[idx] = e.target.value;
-                                return next;
-                              })}
+                              onChange={(e) => setPendingRenames(prev => { const next = [...prev]; next[idx] = e.target.value; return next; })}
                               placeholder={isEmpty ? (firstRowValues[idx] || 'New name…') : 'Keep original'}
-                              className={`flex-1 min-w-0 rounded-lg border bg-[#0d0d18] px-2 py-1 text-xs text-white placeholder-[#4a4a60] focus:outline-none ${
-                                changed ? 'border-violet-500/50 focus:border-violet-500' : isEmpty ? 'border-amber-500/30 focus:border-violet-500/50' : 'border-[#35354a] focus:border-violet-500/50'
-                              }`}
+                              className={`flex-1 min-w-0 rounded-lg border bg-white px-2 py-1 text-xs text-gray-800 placeholder-gray-300 focus:outline-none ${changed ? 'border-violet-300 focus:border-violet-500' : isEmpty ? 'border-amber-200 focus:border-violet-300' : 'border-gray-200 focus:border-violet-300'}`}
                             />
                           </div>
                         );
@@ -1153,15 +1038,13 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                   </div>
 
                   {cleanError && (
-                    <div className="rounded-xl border border-red-500/30 bg-red-500/5 px-4 py-3 text-sm text-red-400">
-                      {cleanError}
-                    </div>
+                    <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-500">{cleanError}</div>
                   )}
 
                   <button
                     onClick={applyClean}
                     disabled={cleaning || !hasAnyPending || cleanDone}
-                    className="flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:bg-violet-500/40 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Wand2 className="size-4" />
                     {cleaning ? 'Applying…' : 'Apply Fixes'}
@@ -1180,55 +1063,46 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4"
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-md rounded-2xl border border-[#35354a]/60 bg-[#11111f] p-6 shadow-2xl"
+              className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl"
             >
               <div className="flex items-start gap-3 mb-4">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-500/10 ring-1 ring-red-500/20">
-                  <Trash2 className="size-4 text-red-400" />
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-100 ring-1 ring-red-200">
+                  <Trash2 className="size-4 text-red-500" />
                 </span>
                 <div>
-                  <h2 className="text-base font-bold text-white">Delete &quot;{name}&quot;?</h2>
-                  <p className="text-sm text-[#8d8da0] mt-0.5">This cannot be undone. The file will be removed from storage.</p>
+                  <h2 className="text-base font-bold text-gray-900">Delete &quot;{name}&quot;?</h2>
+                  <p className="text-sm text-gray-500 mt-0.5">This cannot be undone. The file will be removed from storage.</p>
                 </div>
               </div>
 
               {deleteRefs === null ? (
-                <p className="text-sm text-[#6a6a80] mb-4">Checking references…</p>
+                <p className="text-sm text-gray-400 mb-4">Checking references…</p>
               ) : (deleteRefs.visualisations.length > 0 || deleteRefs.quizzes.length > 0) && (
-                <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm">
-                  <p className="font-semibold text-amber-400 mb-1 flex items-center gap-1.5">
+                <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
+                  <p className="font-semibold text-amber-700 mb-1 flex items-center gap-1.5">
                     <AlertTriangle className="size-3.5" /> Dependent items will lose their dataset
                   </p>
                   {deleteRefs.visualisations.length > 0 && (
-                    <p className="text-[#8d8da0]">
-                      Visualisations: {deleteRefs.visualisations.map((v) => v.name).join(', ')}
-                    </p>
+                    <p className="text-amber-600">Visualisations: {deleteRefs.visualisations.map((v) => v.name).join(', ')}</p>
                   )}
                   {deleteRefs.quizzes.length > 0 && (
-                    <p className="text-[#8d8da0]">
-                      Quizzes: {deleteRefs.quizzes.map((q) => q.title).join(', ')}
-                    </p>
+                    <p className="text-amber-600">Quizzes: {deleteRefs.quizzes.map((q) => q.title).join(', ')}</p>
                   )}
                 </div>
               )}
 
               <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => setShowDeleteModal(false)}
-                  className="rounded-xl border border-[#35354a] px-4 py-2 text-sm text-[#8d8da0] transition hover:text-white"
-                >
-                  Cancel
-                </button>
+                <button onClick={() => setShowDeleteModal(false)} className="rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-500 transition hover:text-gray-700">Cancel</button>
                 <button
                   onClick={confirmDelete}
                   disabled={deleting || deleteRefs === null}
-                  className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500 disabled:bg-red-500/50 disabled:cursor-not-allowed"
+                  className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500 disabled:opacity-50"
                 >
                   {deleting ? 'Deleting…' : 'Delete dataset'}
                 </button>

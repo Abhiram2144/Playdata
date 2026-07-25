@@ -20,37 +20,37 @@
   --color-ring: var(--ring);
 }
 
-/* ── Dark purple theme (always dark) ───────────────────── */
+/* ── Light purple theme ─────────────────────────────────── */
 :root {
-  --background:              #0d0d18;
-  --foreground:              #f0f0f8;
+  --background:              #f5f3ff;
+  --foreground:              #1e1b4b;
 
-  --card:                    #1a1a2e;
-  --card-foreground:         #f0f0f8;
+  --card:                    #ffffff;
+  --card-foreground:         #1e1b4b;
 
   --primary:                 #7c3aed;
   --primary-foreground:      #ffffff;
 
-  --secondary:               #252538;
-  --secondary-foreground:    #f0f0f8;
+  --secondary:               #ede9fe;
+  --secondary-foreground:    #4c1d95;
 
-  --muted:                   #252538;
-  --muted-foreground:        #8d8da0;
+  --muted:                   #f0eeff;
+  --muted-foreground:        #6b7280;
 
-  --accent:                  #2d2d44;
-  --accent-foreground:       #f0f0f8;
+  --accent:                  #e9e3ff;
+  --accent-foreground:       #4c1d95;
 
   --destructive:             #dc2626;
   --destructive-foreground:  #ffffff;
 
-  --border:                  #35354a;
-  --input:                   #1e1e30;
+  --border:                  #e4e0f8;
+  --input:                   #ffffff;
   --ring:                    #7c3aed;
 }
 
 @layer base {
   * { box-sizing: border-box; }
-  html { color-scheme: dark; }
+  html { color-scheme: light; }
   body {
     background-color: var(--background);
     color: var(--foreground);

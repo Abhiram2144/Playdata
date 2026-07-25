@@ -108,18 +108,18 @@ export default function NewQuizPage({ profile, datasets, visualisations, prefill
         >
           <button
             onClick={() => router.push('/teacher/quizzes')}
-            className="flex items-center gap-1.5 text-sm text-[#6a6a80] hover:text-violet-400 transition-colors"
+            className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-violet-600 transition-colors"
           >
             <ArrowLeft className="size-3.5" /> Back to Quizzes
           </button>
-          <h1 className="text-2xl font-bold text-white">New Quiz</h1>
+          <h1 className="text-2xl font-bold text-gray-900">New Quiz</h1>
           {prefilledFrom && prefilledDatasetId && (
-            <p className="text-xs text-[#6a6a80]">
+            <p className="text-xs text-gray-400">
               Pre-linked from {prefilledFrom}
               {' '}·{' '}
               <button
                 onClick={() => router.replace('/teacher/quizzes/new')}
-                className="text-violet-400 hover:text-violet-300 transition"
+                className="text-violet-600 hover:text-violet-700 transition"
               >
                 remove link
               </button>

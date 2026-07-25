@@ -50,9 +50,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { data: original, error: fetchErr } = await admin
     .from('quizzes')
     .select(`
-      id, title, description, dataset_id, teacher_id,
+      id, title, description, dataset_id, teacher_id, is_timed,
       questions(order_index, text, type, options, correct_answer,
-                answer_tolerance, dataset_column, explanation, time_limit_secs)
+                answer_tolerance, dataset_column, visualisation_ids, explanation, time_limit_secs)
     `)
     .eq('id', id)
     .single();
@@ -77,6 +77,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       title: `(Copy) ${original.title}`,
       description: original.description,
       dataset_id: original.dataset_id,
+      is_timed: (original as Record<string, unknown>).is_timed ?? true,
       status: 'draft',
     })
     .select('id')
@@ -104,6 +105,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       correct_answer: q.correct_answer,
       answer_tolerance: q.answer_tolerance ?? null,
       dataset_column: q.dataset_column ?? null,
+      visualisation_ids: q.visualisation_ids ?? [],
       explanation: q.explanation ?? null,
       time_limit_secs: q.time_limit_secs ?? 30,
     }));

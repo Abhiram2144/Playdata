@@ -10,6 +10,6 @@ export const TEACHER_NAV: NavItem[] = [
   { href: '/teacher/visualisations', label: 'Visualisations', icon: BarChart3 },
   { href: '/teacher/quizzes',        label: 'Quizzes',        icon: BookOpen },
   { href: '/teacher/sessions',       label: 'Sessions',       icon: Users },
-  { href: '/teacher/analytics',      label: 'Analytics',      icon: TrendingUp, disabled: true },
+  { href: '/teacher/analytics',      label: 'Analytics',      icon: TrendingUp },
   { href: '/profile',                label: 'Profile',        icon: UserCircle },
 ];

@@ -57,27 +57,27 @@ const PROVIDER_LABELS: Record<string, string> = {
 function StatusBadge({ conn }: { conn: Connection }) {
   if (!conn.is_approved) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-400 ring-1 ring-inset ring-amber-500/20">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-200">
         <Clock className="size-3" /> Pending approval
       </span>
     );
   }
   if (!conn.has_token) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2.5 py-1 text-xs font-semibold text-blue-400 ring-1 ring-inset ring-blue-500/20">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-200">
         <AlertCircle className="size-3" /> Approved — not connected
       </span>
     );
   }
   if (conn.token_expired) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-400 ring-1 ring-inset ring-red-500/20">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-200">
         <AlertCircle className="size-3" /> Token expired
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-400 ring-1 ring-inset ring-emerald-500/20">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">
       <CheckCircle2 className="size-3" /> Connected
     </span>
   );
@@ -156,13 +156,13 @@ export default function TeacherConnections({ profile }: Props) {
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-3xl border border-[#35354a]/60 bg-[#11111f]/80 p-8"
+          className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm"
         >
           <div className="flex items-start justify-between gap-4 mb-6">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-widest text-[#6a6a80]">Drive connections</p>
-              <h1 className="mt-3 text-3xl font-bold text-white">Connections</h1>
-              <p className="mt-2 text-sm text-[#8d8da0]">
+              <p className="text-sm font-semibold uppercase tracking-widest text-gray-400">Drive connections</p>
+              <h1 className="mt-3 text-3xl font-bold text-gray-900">Connections</h1>
+              <p className="mt-2 text-sm text-gray-500">
                 Request a cloud storage connection. Once approved by an admin, connect via OAuth to import datasets.
               </p>
             </div>
@@ -179,8 +179,8 @@ export default function TeacherConnections({ profile }: Props) {
           {message ? (
             <div className={`mb-6 rounded-2xl border px-4 py-3 text-sm ${
               message.type === 'success'
-                ? 'border-emerald-500/30 bg-emerald-600/10 text-emerald-300'
-                : 'border-red-500/30 bg-red-600/10 text-red-300'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                : 'border-red-200 bg-red-50 text-red-700'
             }`}>
               {message.text}
             </div>
@@ -191,26 +191,26 @@ export default function TeacherConnections({ profile }: Props) {
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               onSubmit={handleCreate}
-              className="mb-6 rounded-2xl border border-[#35354a]/60 bg-[#151526]/80 p-5 space-y-4"
+              className="mb-6 rounded-2xl border border-gray-200 bg-gray-50 p-5 space-y-4"
             >
-              <p className="text-sm font-semibold text-[#c9c9d4]">Request a new connection</p>
+              <p className="text-sm font-semibold text-gray-700">Request a new connection</p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-[#8d8da0]">Connection name</label>
+                  <label className="mb-1.5 block text-xs font-medium text-gray-500">Connection name</label>
                   <input
                     value={formName}
                     onChange={(e) => setFormName(e.target.value)}
                     placeholder="e.g. Year 10 Science Drive"
                     required
-                    className="w-full rounded-xl border border-[#35354a] bg-[#0f0f1d] px-3 py-2 text-sm text-white placeholder-[#4a4a60] focus:border-violet-500 focus:outline-none"
+                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-violet-400 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-[#8d8da0]">Provider</label>
+                  <label className="mb-1.5 block text-xs font-medium text-gray-500">Provider</label>
                   <select
                     value={formProvider}
                     onChange={(e) => setFormProvider(e.target.value as 'google_drive' | 'dropbox')}
-                    className="w-full rounded-xl border border-[#35354a] bg-[#0f0f1d] px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
+                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-violet-400 focus:outline-none"
                   >
                     <option value="google_drive">Google Drive</option>
                     <option value="dropbox">Dropbox</option>
@@ -228,23 +228,23 @@ export default function TeacherConnections({ profile }: Props) {
           )}
 
           {loading ? (
-            <p className="text-sm text-[#8d8da0]">Loading connections…</p>
+            <p className="text-sm text-gray-500">Loading connections…</p>
           ) : connections.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[#35354a]/40 bg-[#0f0f1d]/90 p-8 text-center">
-              <Cable className="mx-auto size-8 text-[#35354a] mb-3" />
-              <p className="text-sm text-[#6a6a80]">No connections yet. Request one above.</p>
+            <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-8 text-center">
+              <Cable className="mx-auto size-8 text-gray-300 mb-3" />
+              <p className="text-sm text-gray-400">No connections yet. Request one above.</p>
             </div>
           ) : (
             <div className="space-y-3">
               {connections.map((conn) => (
                 <div
                   key={conn.id}
-                  className="rounded-2xl border border-[#35354a]/40 bg-[#0f0f1d]/90 p-4"
+                  className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="font-semibold text-white truncate">{conn.name}</p>
-                      <p className="text-xs text-[#6a6a80] mt-0.5">
+                      <p className="font-semibold text-gray-900 truncate">{conn.name}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
                         {PROVIDER_LABELS[conn.provider] ?? conn.provider}
                         {' · '}Requested {new Date(conn.created_at).toLocaleDateString('en-GB')}
                       </p>
@@ -256,12 +256,12 @@ export default function TeacherConnections({ profile }: Props) {
                   {conn.is_approved && (!conn.has_token || conn.token_expired) && (
                     <div className="mt-3 flex items-center gap-2">
                       {conn.token_expired && (
-                        <p className="text-xs text-red-400 mr-2">Your OAuth token expired.</p>
+                        <p className="text-xs text-red-600 mr-2">Your OAuth token expired.</p>
                       )}
                       <button
                         type="button"
                         onClick={() => handleConnect(conn)}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-violet-600/20 border border-violet-500/30 px-3 py-1.5 text-xs font-semibold text-violet-300 transition hover:bg-violet-600/30"
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-violet-50 border border-violet-200 px-3 py-1.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-100"
                       >
                         {conn.token_expired ? 'Reconnect' : 'Connect via OAuth'}
                       </button>
@@ -269,8 +269,8 @@ export default function TeacherConnections({ profile }: Props) {
                   )}
 
                   {conn.is_approved && conn.has_token && !conn.token_expired && conn.external_folder_id && (
-                    <p className="mt-2 text-xs text-[#4a4a60]">
-                      Folder: <span className="text-[#6a6a80] font-mono">{conn.external_folder_id}</span>
+                    <p className="mt-2 text-xs text-gray-400">
+                      Folder: <span className="text-gray-600 font-mono">{conn.external_folder_id}</span>
                     </p>
                   )}
                 </div>
@@ -279,8 +279,8 @@ export default function TeacherConnections({ profile }: Props) {
           )}
         </motion.div>
 
-        <div className="rounded-2xl border border-[#35354a]/30 bg-[#0d0d18]/60 px-5 py-4 text-xs text-[#4a4a60]">
-          <strong className="text-[#6a6a80]">How it works:</strong>{' '}
+        <div className="rounded-2xl border border-gray-100 bg-gray-50 px-5 py-4 text-xs text-gray-400">
+          <strong className="text-gray-500">How it works:</strong>{' '}
           Submit a connection request → an admin approves it and optionally pins a folder →
           you complete OAuth here → then import files from the Datasets page.
         </div>

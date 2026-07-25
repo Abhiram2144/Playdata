@@ -192,7 +192,7 @@ function TimerBar({ timeLeft, total }: { timeLeft: number; total: number }) {
     <div className="flex items-center gap-3">
       <Clock className={`size-4 shrink-0 ${isLow ? 'text-red-400 animate-pulse' : isMid ? 'text-amber-400' : 'text-emerald-400'}`} />
       <div className="flex-1">
-        <div className="h-2.5 rounded-full bg-[#1a1a2e] overflow-hidden ring-1 ring-[#35354a]/40">
+        <div className="h-2.5 rounded-full bg-gray-100 overflow-hidden ring-1 ring-gray-200">
           <motion.div
             className={`h-full rounded-full transition-colors duration-300 ${
               isLow
@@ -397,19 +397,19 @@ export default function LiveSession({ profile, session: initialSession, items, p
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <span
-              className="flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold tracking-wider text-emerald-300 ring-1 ring-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.25)]"
+              className="flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold tracking-wider text-emerald-700 ring-1 ring-emerald-200"
             >
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
               </span>
               <Radio className="size-3" /> LIVE
             </span>
-            <h1 className="text-lg font-bold text-white truncate">{session.title}</h1>
+            <h1 className="text-lg font-bold text-gray-900 truncate">{session.title}</h1>
           </div>
           <button
             onClick={() => setShowEndConfirm(true)}
-            className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-600/10 px-4 py-2 text-sm font-semibold text-red-400 transition hover:bg-red-600/20"
+            className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100"
           >
             <StopCircle className="size-4" /> End Session
           </button>
@@ -421,51 +421,48 @@ export default function LiveSession({ profile, session: initialSession, items, p
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }} className="col-span-3 space-y-4">
 
             {/* Join code + QR */}
-            <div className="rounded-2xl border border-violet-500/30 bg-linear-to-b from-violet-600/15 to-transparent p-5 text-center shadow-[0_0_30px_rgba(139,92,246,0.12)]">
-              <p className="text-xs font-semibold uppercase tracking-widest text-[#6a6a80] mb-1">Join Code</p>
+            <div className="rounded-2xl border border-violet-200 bg-violet-50 p-5 text-center shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-widest text-violet-500 mb-1">Join Code</p>
               <button onClick={copyCode} className="flex items-center justify-center gap-2 mx-auto" title="Click to copy">
-                <span
-                  className="font-mono text-4xl font-black tracking-[0.25em] text-violet-300"
-                  style={{ filter: 'drop-shadow(0 0 12px rgba(167,139,250,0.7))' }}
-                >
+                <span className="font-mono text-4xl font-black tracking-[0.25em] text-violet-700">
                   {session.join_code}
                 </span>
-                <Copy className="size-4 text-[#6a6a80]" />
+                <Copy className="size-4 text-violet-400" />
               </button>
-              {copied && <p className="text-xs text-emerald-400 mt-1">Copied!</p>}
+              {copied && <p className="text-xs text-emerald-600 mt-1">Copied!</p>}
               <div className="mt-4 flex justify-center">
-                <div className="rounded-xl bg-white p-3">
-                  <QRCodeSVG value={joinUrl} size={120} bgColor="#ffffff" fgColor="#1a1a2e" level="M" />
+                <div className="rounded-xl bg-white p-3 shadow-sm">
+                  <QRCodeSVG value={joinUrl} size={120} bgColor="#ffffff" fgColor="#1e1b4b" level="M" />
                 </div>
               </div>
-              <p className="mt-2 text-xs text-[#6a6a80]">Scan to join</p>
+              <p className="mt-2 text-xs text-violet-500">Scan to join</p>
             </div>
 
             {/* Participants */}
-            <div className="rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80 overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-[#35354a]/40">
-                <span className="text-xs font-semibold uppercase tracking-widest text-[#6a6a80]">Students</span>
-                <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-xs font-bold text-violet-400">
+            <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">Students</span>
+                <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-bold text-violet-700">
                   {activeParticipants.length}
                 </span>
               </div>
-              <div className="divide-y divide-[#35354a]/30 max-h-72 overflow-y-auto">
+              <div className="divide-y divide-gray-100 max-h-72 overflow-y-auto">
                 {activeParticipants.length === 0 ? (
-                  <p className="py-6 text-center text-xs text-[#4a4a5a]">Waiting for students…</p>
+                  <p className="py-6 text-center text-xs text-gray-400">Waiting for students…</p>
                 ) : (
                   [...activeParticipants].sort((a, b) => b.score - a.score).map((p, rank) => (
                     <div key={p.id} className="flex items-center gap-2.5 px-4 py-2.5">
                       <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                        rank === 0 ? 'bg-amber-500/20 text-amber-400' :
-                        rank === 1 ? 'bg-slate-500/20 text-slate-300' :
-                        rank === 2 ? 'bg-orange-700/20 text-orange-500' :
-                        'bg-[#252538] text-[#6a6a80]'
+                        rank === 0 ? 'bg-amber-100 text-amber-600' :
+                        rank === 1 ? 'bg-gray-100 text-gray-500' :
+                        rank === 2 ? 'bg-orange-100 text-orange-600' :
+                        'bg-gray-50 text-gray-400'
                       }`}>
                         {rank < 3 ? <Trophy className="size-3" /> : rank + 1}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-medium text-white">{profileName(p)}</p>
-                        <p className="truncate text-xs text-[#4a4a5a]">Score: {p.score}</p>
+                        <p className="truncate text-xs font-medium text-gray-900">{profileName(p)}</p>
+                        <p className="truncate text-xs text-gray-400">Score: {p.score}</p>
                       </div>
                     </div>
                   ))
@@ -478,15 +475,15 @@ export default function LiveSession({ profile, session: initialSession, items, p
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }} className="col-span-6 space-y-4">
 
             {/* Item display */}
-            <div className="rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80 min-h-64 overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#35354a]/40">
-                <span className="text-xs font-semibold uppercase tracking-widest text-[#6a6a80]">
+            <div className="rounded-2xl border border-gray-200 bg-white min-h-64 overflow-hidden shadow-sm">
+              <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
+                <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">
                   Item {sortedItems.length > 0 ? currentItem + 1 : 0} of {sortedItems.length}
                 </span>
                 <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                  activeItem?.type === 'quiz' ? 'bg-violet-500/15 text-violet-400' :
-                  activeItem?.type === 'visualisation' ? 'bg-sky-500/15 text-sky-400' :
-                  'bg-amber-500/15 text-amber-400'
+                  activeItem?.type === 'quiz' ? 'bg-violet-100 text-violet-700' :
+                  activeItem?.type === 'visualisation' ? 'bg-sky-100 text-sky-700' :
+                  'bg-amber-100 text-amber-700'
                 }`}>
                   {activeItem?.type ?? 'none'}
                 </span>
@@ -503,18 +500,18 @@ export default function LiveSession({ profile, session: initialSession, items, p
                 >
                   {!activeItem ? (
                     <div className="py-12 text-center">
-                      <p className="text-[#4a4a5a]">No items in this session</p>
+                      <p className="text-gray-400">No items in this session</p>
                     </div>
                   ) : activeItem.type === 'quiz' ? (
                     <div className="space-y-4">
                       {/* Quiz header */}
                       <div className="flex items-center gap-3">
-                        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10 ring-1 ring-violet-500/20">
-                          <BookOpen className="size-5 text-violet-400" />
+                        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 ring-1 ring-violet-200">
+                          <BookOpen className="size-5 text-violet-600" />
                         </span>
                         <div>
-                          <p className="text-base font-bold text-white">{activeItem.title}</p>
-                          <p className="text-xs text-[#6a6a80]">{activeItem.quizQuestions?.length ?? 0} questions</p>
+                          <p className="text-base font-bold text-gray-900">{activeItem.title}</p>
+                          <p className="text-xs text-gray-400">{activeItem.quizQuestions?.length ?? 0} questions</p>
                         </div>
                       </div>
 
@@ -530,12 +527,12 @@ export default function LiveSession({ profile, session: initialSession, items, p
                                   i === quizQuestionIndex
                                     ? 'h-2.5 w-6 bg-violet-500'
                                     : i < quizQuestionIndex
-                                      ? 'h-2 w-2 bg-[#4a4a6a]'
-                                      : 'h-2 w-2 bg-[#35354a]'
+                                      ? 'h-2 w-2 bg-violet-300'
+                                      : 'h-2 w-2 bg-gray-200'
                                 }`}
                               />
                             ))}
-                            <span className="ml-2 text-xs text-[#6a6a80]">
+                            <span className="ml-2 text-xs text-gray-400">
                               Q{quizQuestionIndex + 1} / {activeItem.quizQuestions.length}
                             </span>
                           </div>
@@ -545,7 +542,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
                             <TimerBar timeLeft={timeLeft} total={activeQuizQuestion.time_limit_secs} />
                           )}
                           {activeQuizQuestion && activeQuizQuestion.time_limit_secs <= 0 && (
-                            <div className="flex items-center gap-2 text-xs text-[#6a6a80]">
+                            <div className="flex items-center gap-2 text-xs text-gray-400">
                               <Clock className="size-3" /> Untimed question
                             </div>
                           )}
@@ -553,7 +550,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
                           {/* Current question */}
                           {activeQuizQuestion && (
                             <div className="space-y-3">
-                              <p className="text-sm font-semibold text-white leading-relaxed">
+                              <p className="text-sm font-semibold text-gray-900 leading-relaxed">
                                 {activeQuizQuestion.text}
                               </p>
                               {activeQuizQuestion.type === 'mcq' && Array.isArray(activeQuizQuestion.options) && (
@@ -563,8 +560,8 @@ export default function LiveSession({ profile, session: initialSession, items, p
                                       key={opt}
                                       className={`rounded-xl border px-3 py-2.5 text-sm transition ${
                                         opt === activeQuizQuestion.correct_answer
-                                          ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
-                                          : 'border-[#35354a]/60 bg-[#1a1a2e]/40 text-[#c9c9d4]'
+                                          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                          : 'border-gray-200 bg-gray-50 text-gray-700'
                                       }`}
                                     >
                                       {opt}
@@ -573,53 +570,53 @@ export default function LiveSession({ profile, session: initialSession, items, p
                                 </div>
                               )}
                               {activeQuizQuestion.type !== 'mcq' && (
-                                <p className="text-xs text-[#6a6a80]">
-                                  Answer: <span className="text-emerald-400 font-medium">{activeQuizQuestion.correct_answer}</span>
+                                <p className="text-xs text-gray-400">
+                                  Answer: <span className="text-emerald-600 font-medium">{activeQuizQuestion.correct_answer}</span>
                                 </p>
                               )}
                             </div>
                           )}
 
                           {/* Within-quiz navigation */}
-                          <div className="flex items-center gap-2 pt-2 border-t border-[#35354a]/40">
+                          <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
                             <button
                               onClick={() => navigateQuizQuestion(quizQuestionIndex - 1)}
                               disabled={quizQuestionIndex === 0}
-                              className="flex items-center gap-1 rounded-lg border border-[#35354a] px-3 py-1.5 text-xs text-[#8d8da0] transition hover:border-violet-500/40 hover:text-violet-400 disabled:opacity-30"
+                              className="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-500 transition hover:border-violet-300 hover:text-violet-600 disabled:opacity-30"
                             >
                               <ChevronLeft className="size-3" /> Prev Q
                             </button>
-                            <span className="flex-1 text-center text-xs text-[#4a4a5a]">preview only — students navigate independently</span>
+                            <span className="flex-1 text-center text-xs text-gray-400">preview only — students navigate independently</span>
                             <button
                               onClick={() => navigateQuizQuestion(quizQuestionIndex + 1)}
                               disabled={quizQuestionIndex >= (activeItem.quizQuestions.length - 1)}
-                              className="flex items-center gap-1 rounded-lg border border-[#35354a] px-3 py-1.5 text-xs text-[#8d8da0] transition hover:border-violet-500/40 hover:text-violet-400 disabled:opacity-30"
+                              className="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-500 transition hover:border-violet-300 hover:text-violet-600 disabled:opacity-30"
                             >
                               Next Q <ChevronRight className="size-3" />
                             </button>
                           </div>
                         </>
                       ) : (
-                        <p className="text-sm text-[#8d8da0]">No questions in this quiz.</p>
+                        <p className="text-sm text-gray-500">No questions in this quiz.</p>
                       )}
                     </div>
                   ) : activeItem.type === 'visualisation' ? (
                     <div className="space-y-3">
                       <div className="flex items-center gap-3">
-                        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/10 ring-1 ring-sky-500/20">
-                          <BarChart2 className="size-5 text-sky-400" />
+                        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 ring-1 ring-sky-200">
+                          <BarChart2 className="size-5 text-sky-600" />
                         </span>
                         <div>
-                          <p className="text-lg font-bold text-white">{activeItem.title}</p>
-                          <p className="text-sm text-[#6a6a80] capitalize">{activeItem.subtitle} chart</p>
+                          <p className="text-lg font-bold text-gray-900">{activeItem.title}</p>
+                          <p className="text-sm text-gray-400 capitalize">{activeItem.subtitle} chart</p>
                         </div>
                       </div>
-                      <p className="text-sm text-[#8d8da0] mt-4">This visualisation is now displayed on student screens.</p>
+                      <p className="text-sm text-gray-500 mt-4">This visualisation is now displayed on student screens.</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
                       {/* Standalone question */}
-                      <p className="text-base font-semibold text-white leading-relaxed">{activeItem.title}</p>
+                      <p className="text-base font-semibold text-gray-900 leading-relaxed">{activeItem.title}</p>
                       {Array.isArray(activeItem.options) && activeItem.options.length > 0 && (
                         <div className="grid grid-cols-2 gap-2">
                           {(activeItem.options as string[]).map((opt) => (
@@ -627,8 +624,8 @@ export default function LiveSession({ profile, session: initialSession, items, p
                               key={opt}
                               className={`rounded-xl border px-4 py-2.5 text-sm transition ${
                                 opt === activeItem.correct_answer
-                                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
-                                  : 'border-[#35354a]/60 bg-[#1a1a2e]/40 text-[#c9c9d4]'
+                                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                  : 'border-gray-200 bg-gray-50 text-gray-700'
                               }`}
                             >
                               {opt}
@@ -637,8 +634,8 @@ export default function LiveSession({ profile, session: initialSession, items, p
                         </div>
                       )}
                       {activeItem.correct_answer && !Array.isArray(activeItem.options) && (
-                        <p className="text-xs text-[#6a6a80]">
-                          Answer: <span className="text-emerald-400 font-medium">{activeItem.correct_answer}</span>
+                        <p className="text-xs text-gray-400">
+                          Answer: <span className="text-emerald-600 font-medium">{activeItem.correct_answer}</span>
                         </p>
                       )}
                     </div>
@@ -652,7 +649,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
               <button
                 onClick={() => advance(currentItem - 1)}
                 disabled={currentItem === 0 || advancing || sortedItems.length === 0}
-                className="flex items-center gap-2 rounded-xl border border-[#35354a] px-5 py-2.5 text-sm font-medium text-[#c9c9d4] transition hover:border-violet-500/40 hover:text-violet-400 disabled:opacity-30"
+                className="flex items-center gap-2 rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition hover:border-violet-300 hover:text-violet-600 disabled:opacity-30"
               >
                 <ChevronLeft className="size-4" /> Previous
               </button>
@@ -668,8 +665,8 @@ export default function LiveSession({ profile, session: initialSession, items, p
                         i === currentItem
                           ? 'h-2.5 w-6 bg-violet-500'
                           : i < currentItem
-                            ? 'h-2 w-2 bg-[#4a4a6a]'
-                            : 'h-2 w-2 bg-[#35354a]'
+                            ? 'h-2 w-2 bg-violet-300'
+                            : 'h-2 w-2 bg-gray-200'
                       }`}
                     />
                   ))}
@@ -679,7 +676,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
               <button
                 onClick={() => advance(currentItem + 1)}
                 disabled={currentItem >= sortedItems.length - 1 || advancing || sortedItems.length === 0}
-                className="flex items-center gap-2 rounded-xl border border-[#35354a] px-5 py-2.5 text-sm font-medium text-[#c9c9d4] transition hover:border-violet-500/40 hover:text-violet-400 disabled:opacity-30"
+                className="flex items-center gap-2 rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition hover:border-violet-300 hover:text-violet-600 disabled:opacity-30"
               >
                 Next <ChevronRight className="size-4" />
               </button>
@@ -692,45 +689,45 @@ export default function LiveSession({ profile, session: initialSession, items, p
             {/* Tally */}
             {activeItem?.type !== 'visualisation' && (
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-center shadow-[0_0_20px_rgba(16,185,129,0.1)]">
-                  <p className="text-2xl font-bold text-emerald-400" style={{ filter: 'drop-shadow(0 0 8px rgba(16,185,129,0.6))' }}>{correctCount}</p>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600">Correct</p>
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-center">
+                  <p className="text-2xl font-bold text-emerald-600">{correctCount}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">Correct</p>
                 </div>
-                <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-center shadow-[0_0_20px_rgba(239,68,68,0.1)]">
-                  <p className="text-2xl font-bold text-red-400" style={{ filter: 'drop-shadow(0 0 8px rgba(239,68,68,0.6))' }}>{incorrectCount}</p>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-red-600">Wrong</p>
+                <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-center">
+                  <p className="text-2xl font-bold text-red-600">{incorrectCount}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-red-700">Wrong</p>
                 </div>
               </div>
             )}
 
             {/* Response list */}
-            <div className="rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80 overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-[#35354a]/40">
-                <span className="text-xs font-semibold uppercase tracking-widest text-[#6a6a80]">
+            <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">
                   {activeQuizQuestion ? `Q${quizQuestionIndex + 1} Responses` : 'Responses'}
                 </span>
-                <span className="rounded-full bg-[#252538] px-2 py-0.5 text-xs font-bold text-[#8d8da0]">
+                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-bold text-gray-500">
                   {activeResponses.length}
                 </span>
               </div>
-              <div className="divide-y divide-[#35354a]/30 max-h-80 overflow-y-auto">
+              <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto">
                 {activeResponses.length === 0 ? (
-                  <p className="py-6 text-center text-xs text-[#4a4a5a]">
+                  <p className="py-6 text-center text-xs text-gray-400">
                     {activeItem?.type === 'visualisation' ? 'No responses for charts' : 'No responses yet'}
                   </p>
                 ) : (
                   [...activeResponses].sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()).map((r) => (
                     <div key={r.id} className="flex items-start gap-2.5 px-4 py-2.5">
                       {r.is_correct === true ? (
-                        <CheckCircle2 className="size-4 shrink-0 mt-0.5 text-emerald-400" />
+                        <CheckCircle2 className="size-4 shrink-0 mt-0.5 text-emerald-500" />
                       ) : r.is_correct === false ? (
-                        <XCircle className="size-4 shrink-0 mt-0.5 text-red-400" />
+                        <XCircle className="size-4 shrink-0 mt-0.5 text-red-500" />
                       ) : (
-                        <span className="h-4 w-4 shrink-0 mt-0.5 rounded-full border border-[#35354a]" />
+                        <span className="h-4 w-4 shrink-0 mt-0.5 rounded-full border border-gray-200" />
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-medium text-[#c9c9d4]">{r.answer}</p>
-                        <p className="text-xs text-[#4a4a5a]">{new Date(r.submitted_at).toLocaleTimeString()}</p>
+                        <p className="truncate text-xs font-medium text-gray-700">{r.answer}</p>
+                        <p className="text-xs text-gray-400">{new Date(r.submitted_at).toLocaleTimeString()}</p>
                       </div>
                     </div>
                   ))
@@ -740,12 +737,12 @@ export default function LiveSession({ profile, session: initialSession, items, p
 
             {/* Answered / total */}
             {activeItem?.type !== 'visualisation' && activeParticipants.length > 0 && (
-              <div className="rounded-xl border border-[#35354a]/40 bg-[#0f0f1a]/60 px-4 py-3">
+              <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
                 <div className="flex items-center justify-between text-xs mb-1.5">
-                  <span className="text-[#6a6a80]">Answered</span>
-                  <span className="text-[#8d8da0] font-medium">{activeResponses.length} / {activeParticipants.length}</span>
+                  <span className="text-gray-400">Answered</span>
+                  <span className="text-gray-600 font-medium">{activeResponses.length} / {activeParticipants.length}</span>
                 </div>
-                <div className="h-1.5 rounded-full bg-[#252538] overflow-hidden">
+                <div className="h-1.5 rounded-full bg-gray-200 overflow-hidden">
                   <div
                     className="h-full rounded-full bg-violet-500 transition-all duration-500"
                     style={{ width: `${activeParticipants.length > 0 ? (activeResponses.length / activeParticipants.length) * 100 : 0}%` }}
@@ -756,20 +753,19 @@ export default function LiveSession({ profile, session: initialSession, items, p
 
             {/* Quick leaderboard */}
             {activeParticipants.length > 0 && (
-              <div className="rounded-xl border border-[#35354a]/40 bg-[#0f0f1a]/60 px-4 py-3">
+              <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
                 <div className="flex items-center gap-1.5 mb-2">
-                  <Trophy className="size-3 text-amber-400" style={{ filter: 'drop-shadow(0 0 4px rgba(251,191,36,0.7))' }} />
-                  <span className="text-xs font-bold text-[#8d8da0] uppercase tracking-widest">Leaderboard</span>
+                  <Trophy className="size-3 text-amber-500" />
+                  <span className="text-xs font-bold text-amber-700 uppercase tracking-widest">Leaderboard</span>
                 </div>
                 {[...activeParticipants].sort((a, b) => b.score - a.score).slice(0, 3).map((p, i) => (
                   <div key={p.id} className="flex items-center justify-between py-1">
                     <div className="flex items-center gap-2">
                       <span className="text-sm leading-none">{(['🥇', '🥈', '🥉'] as const)[i]}</span>
-                      <span className="text-xs text-[#c9c9d4] truncate max-w-[80px]">{profileName(p)}</span>
+                      <span className="text-xs text-gray-700 truncate max-w-[80px]">{profileName(p)}</span>
                     </div>
                     <span
-                      className={`text-xs font-mono font-bold ${i === 0 ? 'text-amber-400' : i === 1 ? 'text-slate-300' : 'text-orange-400'}`}
-                      style={i === 0 ? { filter: 'drop-shadow(0 0 6px rgba(251,191,36,0.7))' } : undefined}
+                      className={`text-xs font-mono font-bold ${i === 0 ? 'text-amber-600' : i === 1 ? 'text-gray-500' : 'text-orange-600'}`}
                     >
                       {p.score}
                     </span>
@@ -788,21 +784,21 @@ export default function LiveSession({ profile, session: initialSession, items, p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4"
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-sm rounded-2xl border border-[#35354a]/60 bg-[#11111f] p-6 shadow-2xl"
+              className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-xl"
             >
               <div className="flex items-start gap-3 mb-5">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-500/10 ring-1 ring-red-500/20">
-                  <AlertTriangle className="size-4 text-red-400" />
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-100 ring-1 ring-red-200">
+                  <AlertTriangle className="size-4 text-red-500" />
                 </span>
                 <div>
-                  <h2 className="text-sm font-bold text-white">End session?</h2>
-                  <p className="text-xs text-[#8d8da0] mt-0.5">
+                  <h2 className="text-sm font-bold text-gray-900">End session?</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
                     This disconnects all {activeParticipants.length} connected student{activeParticipants.length !== 1 ? 's' : ''} and opens the results page.
                   </p>
                 </div>
@@ -810,7 +806,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setShowEndConfirm(false)}
-                  className="rounded-xl border border-[#35354a] px-4 py-2 text-sm text-[#8d8da0] transition hover:text-white"
+                  className="rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-500 transition hover:text-gray-700"
                 >
                   Cancel
                 </button>

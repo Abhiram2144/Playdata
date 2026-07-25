@@ -1,17 +1,70 @@
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/router'
+import { useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
-  Trophy, Users, BookOpen,
-  BarChart2, ArrowLeft, Clock, Target, MessageSquare,
+  ArrowLeft, Users, BookOpen, BarChart2, Clock, Trophy,
+  CheckCircle2, XCircle, Minus, Download, MessageSquare,
+  Target, AlertTriangle,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { GetServerSidePropsResult } from 'next'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { TEACHER_NAV } from '@/lib/teacher-nav'
 import { withAuth } from '@/lib/auth'
 import { createClientFromContext } from '@/lib/supabase/server-props'
-import { GetServerSidePropsResult } from 'next'
+import { createAdminClient } from '@/lib/supabase/admin'
+
+// ── Types ──────────────────────────────────────────────────────────────────────
+
+interface SessionMeta {
+  id: string
+  title: string
+  join_code: string
+  status: string
+  started_at: string | null
+  ended_at: string | null
+}
+
+interface Analytics {
+  avg_score: number | null
+  participation_rate: number | null
+  completion_rate: number | null
+  total_questions: number
+  participant_count: number
+  computed_at: string | null
+}
+
+interface QuestionResult {
+  id: string
+  quiz_id: string
+  quiz_title: string
+  label: string
+  text: string
+  type: string
+  correct_answer: string
+  correct_count: number
+  incorrect_count: number
+  no_answer_count: number
+  pct_correct: number
+}
+
+interface ParticipantResult {
+  id: string
+  student_id: string | null
+  display_name: string
+  email: string
+  score: number
+  correct_count: number
+  incorrect_count: number
+  answered_count: number
+  pct_correct: number
+  responses: Record<string, { answer: string; is_correct: boolean | null }>
+}
+
+interface VisItem {
+  id: string
+  title: string
+}
 
 interface Profile {
   id: string
@@ -22,328 +75,514 @@ interface Profile {
 
 interface Props {
   profile: Profile
-  sessionId: string
+  session: SessionMeta
+  analytics: Analytics
+  questions: QuestionResult[]
+  participants: ParticipantResult[]
+  visItems: VisItem[]
 }
 
-interface QuizQuestion {
-  id: string
-  text: string
-  type: string
-  options: string[] | null
-  correct_answer: string
-  order_index: number
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function resolveParticipantName(raw: {
+  student_id: string | null
+  display_name: string | null
+  profiles: unknown
+}): [string, string] {
+  if (raw.profiles) {
+    const p = Array.isArray(raw.profiles) ? raw.profiles[0] : raw.profiles
+    if (p && typeof p === 'object') {
+      const name = (p as { full_name?: string }).full_name ?? ''
+      const email = (p as { email?: string }).email ?? ''
+      if (name) return [name, email]
+    }
+  }
+  return [raw.display_name ?? 'Guest', '']
 }
 
-interface SessionItemResult {
-  id: string
-  type: string
-  order_index: number
-  title: string
-  questions: QuizQuestion[]
+function formatDuration(start: string | null, end: string | null): string {
+  if (!start || !end) return '—'
+  const mins = Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000)
+  if (mins < 60) return `${mins} min${mins !== 1 ? 's' : ''}`
+  const h = Math.floor(mins / 60), m = mins % 60
+  return `${h}h ${m}m`
 }
 
-interface Participant {
-  id: string
-  student_id: string
-  score: number
-  joined_at: string
-  left_at: string | null
-  profiles: { full_name: string; email: string } | { full_name: string; email: string }[] | null
+function fmtPct(n: number | null): string {
+  if (n == null) return '—'
+  return `${Math.round(n * 100)}%`
 }
 
-interface Response {
-  id: string
-  question_id: string
-  student_id: string
-  answer: string
-  is_correct: boolean | null
-  submitted_at: string
-}
-
-interface SessionData {
-  id: string
-  title: string
-  join_code: string
-  status: string
-  started_at: string | null
-  ended_at: string | null
-}
-
-function profileName(p: Participant): string {
-  if (!p.profiles) return 'Student'
-  if (Array.isArray(p.profiles)) return p.profiles[0]?.full_name ?? 'Student'
-  return (p.profiles as { full_name: string }).full_name ?? 'Student'
-}
+// ── Server-side ───────────────────────────────────────────────────────────────
 
 export const getServerSideProps = withAuth(
   async (context, userId): Promise<GetServerSidePropsResult<Props>> => {
+    const { id: sessionId } = context.params as { id: string }
     const supabase = createClientFromContext(context)
+
     const { data: profile } = await supabase
       .from('profiles')
       .select('id, full_name, email, role')
       .eq('id', userId)
       .single()
-
     if (!profile) return { redirect: { destination: '/auth/login', permanent: false } }
 
-    const sessionId = context.params?.id as string
-    return { props: { profile, sessionId } }
+    const admin = createAdminClient()
+
+    const { data: session } = await admin
+      .from('sessions')
+      .select('id, title, join_code, status, started_at, ended_at, teacher_id')
+      .eq('id', sessionId)
+      .single()
+
+    if (!session || session.teacher_id !== userId) {
+      return { redirect: { destination: '/teacher/sessions', permanent: false } }
+    }
+    if (session.status === 'active') {
+      return { redirect: { destination: `/teacher/sessions/${sessionId}/live`, permanent: false } }
+    }
+
+    const [analyticsRes, itemsRes, participantsRes, responsesRes] = await Promise.all([
+      admin
+        .from('session_analytics')
+        .select('avg_score, participation_rate, completion_rate, total_questions, participant_count, computed_at')
+        .eq('session_id', sessionId)
+        .maybeSingle(),
+      admin.from('session_items').select('type, reference_id, order_index').eq('session_id', sessionId).order('order_index'),
+      admin.from('session_participants').select('id, student_id, display_name, score, profiles(full_name, email)').eq('session_id', sessionId).order('joined_at'),
+      admin.from('student_responses').select('student_id, question_id, answer, is_correct').eq('session_id', sessionId),
+    ])
+
+    const items = itemsRes.data ?? []
+
+    const quizIds = items
+      .filter((i: Record<string, unknown>) => i.type === 'quiz')
+      .sort((a: Record<string, unknown>, b: Record<string, unknown>) => (a.order_index as number) - (b.order_index as number))
+      .map((i: Record<string, unknown>) => i.reference_id as string)
+
+    const visRefs = items
+      .filter((i: Record<string, unknown>) => i.type === 'visualisation')
+      .map((i: Record<string, unknown>) => i.reference_id as string)
+
+    type QuizRow = {
+      id: string; title: string
+      questions: { id: string; order_index: number; text: string; type: string; correct_answer: string }[]
+    }
+    type VisRow = { id: string; name: string }
+
+    const [quizzesRes, visRes] = await Promise.all([
+      quizIds.length > 0
+        ? admin.from('quizzes').select('id, title, questions(id, order_index, text, type, correct_answer)').in('id', quizIds)
+        : { data: [] },
+      visRefs.length > 0
+        ? admin.from('visualisations').select('id, name').in('id', visRefs)
+        : { data: [] },
+    ])
+
+    const quizMap = new Map((quizzesRes.data ?? []).map((q: QuizRow) => [q.id, q]))
+    const visMap = new Map((visRes.data ?? []).map((v: VisRow) => [v.id, v]))
+
+    type QEntry = Omit<QuestionResult, 'correct_count' | 'incorrect_count' | 'no_answer_count' | 'pct_correct'>
+    const orderedQuestions: QEntry[] = []
+    quizIds.forEach((qid) => {
+      const quiz = quizMap.get(qid) as QuizRow | undefined
+      if (!quiz) return
+      ;[...(quiz.questions ?? [])].sort((a, b) => a.order_index - b.order_index).forEach((q) => {
+        orderedQuestions.push({
+          id: q.id, quiz_id: quiz.id, quiz_title: quiz.title,
+          label: `Q${orderedQuestions.length + 1}`,
+          text: q.text, type: q.type, correct_answer: q.correct_answer,
+        })
+      })
+    })
+
+    const participantCount = (participantsRes.data ?? []).length
+
+    type RespEntry = { answer: string; is_correct: boolean | null }
+    const byStudent = new Map<string, Map<string, RespEntry>>()
+    ;(responsesRes.data ?? []).forEach((r: { student_id: string | null; question_id: string; answer: string; is_correct: boolean | null }) => {
+      if (!r.student_id) return
+      const m = byStudent.get(r.student_id) ?? new Map<string, RespEntry>()
+      m.set(r.question_id, { answer: r.answer, is_correct: r.is_correct })
+      byStudent.set(r.student_id, m)
+    })
+
+    const questions: QuestionResult[] = orderedQuestions.map((q) => {
+      let correct = 0, incorrect = 0
+      ;(responsesRes.data ?? []).forEach((r: { question_id: string; is_correct: boolean | null }) => {
+        if (r.question_id !== q.id) return
+        if (r.is_correct === true) correct++
+        else if (r.is_correct === false) incorrect++
+      })
+      return {
+        ...q, correct_count: correct, incorrect_count: incorrect,
+        no_answer_count: Math.max(0, participantCount - correct - incorrect),
+        pct_correct: participantCount > 0 ? Math.round((correct / participantCount) * 100) : 0,
+      }
+    })
+
+    const participants: ParticipantResult[] = (participantsRes.data ?? []).map((p: {
+      id: string; student_id: string | null; display_name: string | null; score: number; profiles: unknown
+    }) => {
+      const [name, email] = resolveParticipantName(p)
+      const respMap = p.student_id ? (byStudent.get(p.student_id) ?? new Map()) : new Map()
+      const responses: ParticipantResult['responses'] = {}
+      respMap.forEach((v: RespEntry, k: string) => { responses[k] = v })
+      const correctCount = Array.from(respMap.values()).filter((r: RespEntry) => r.is_correct === true).length
+      const incorrectCount = Array.from(respMap.values()).filter((r: RespEntry) => r.is_correct === false).length
+      return {
+        id: p.id, student_id: p.student_id, display_name: name, email,
+        score: p.score ?? 0, correct_count: correctCount, incorrect_count: incorrectCount,
+        answered_count: respMap.size,
+        pct_correct: questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 0,
+        responses,
+      }
+    })
+
+    const rawA = analyticsRes.data
+    const analytics: Analytics = {
+      avg_score: rawA?.avg_score ?? null,
+      participation_rate: rawA?.participation_rate ?? null,
+      completion_rate: rawA?.completion_rate ?? null,
+      total_questions: rawA?.total_questions ?? questions.length,
+      participant_count: rawA?.participant_count ?? participantCount,
+      computed_at: rawA?.computed_at ?? null,
+    }
+
+    const visItems: VisItem[] = visRefs.map((vid) => {
+      const v = visMap.get(vid) as VisRow | undefined
+      return { id: vid, title: v?.name ?? 'Chart' }
+    })
+
+    return {
+      props: {
+        profile,
+        session: { id: session.id, title: session.title, join_code: session.join_code, status: session.status, started_at: session.started_at, ended_at: session.ended_at },
+        analytics, questions, participants, visItems,
+      },
+    }
   },
   { allowedRoles: ['teacher'] }
 )
 
-// ── Bar chart for question responses ──────────────────────────────────────────
-function ResponseBar({ label, correct, total }: { label: string; correct: number; total: number }) {
-  const pct = total > 0 ? (correct / total) * 100 : 0
-  const isGood = pct >= 70
-  const isMid = pct >= 40
+// ── Sub-components ────────────────────────────────────────────────────────────
 
+function StatCard({ label, value, sub, colour }: {
+  label: string; value: string | number; sub?: string
+  colour: 'violet' | 'emerald' | 'sky' | 'amber'
+}) {
+  const cls: Record<string, string> = {
+    violet: 'text-violet-700 ring-violet-200 bg-violet-50',
+    emerald: 'text-emerald-700 ring-emerald-200 bg-emerald-50',
+    sky: 'text-sky-700 ring-sky-200 bg-sky-50',
+    amber: 'text-amber-700 ring-amber-200 bg-amber-50',
+  }
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-[#8d8da0] truncate max-w-[70%]">{label}</span>
-        <span className={`font-semibold ${isGood ? 'text-emerald-400' : isMid ? 'text-amber-400' : 'text-red-400'}`}>
-          {Math.round(pct)}%
-        </span>
-      </div>
-      <div className="h-2 rounded-full bg-[#252538] overflow-hidden">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.8, ease: 'easeOut' }}
-          className={`h-full rounded-full ${isGood ? 'bg-emerald-500' : isMid ? 'bg-amber-500' : 'bg-red-500'}`}
-        />
-      </div>
-      <p className="text-xs text-[#4a4a5a]">{correct} / {total} correct</p>
+    <div className={`rounded-2xl border border-gray-100 bg-white shadow-sm p-5 ring-1 ${cls[colour]}`}>
+      <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">{label}</p>
+      <p className={`mt-1 text-3xl font-bold ${cls[colour].split(' ')[0]}`}>{value}</p>
+      {sub && <p className="mt-0.5 text-xs text-gray-400">{sub}</p>}
     </div>
   )
 }
 
-const NAV_ITEMS = TEACHER_NAV
+function HorizBar({ value, total, cls }: { value: number; total: number; cls: string }) {
+  const pct = total > 0 ? Math.max(0, Math.min(1, value / total)) : 0
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
+        <div className={`h-full rounded-full ${cls}`} style={{ width: `${pct * 100}%` }} />
+      </div>
+      <span className="w-6 text-right text-xs font-mono text-gray-500 shrink-0">{value}</span>
+    </div>
+  )
+}
 
-export default function SessionResults({ profile, sessionId }: Props) {
-  const router = useRouter()
-  const [loading, setLoading] = useState(true)
-  const [session, setSession] = useState<SessionData | null>(null)
-  const [items, setItems] = useState<SessionItemResult[]>([])
-  const [participants, setParticipants] = useState<Participant[]>([])
-  const [responses, setResponses] = useState<Response[]>([])
-  const [discussionNotes, setDiscussionNotes] = useState('')
+// ── Page ──────────────────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    fetch(`/api/teacher/sessions/${sessionId}/results`)
-      .then((r) => r.json())
-      .then((data) => {
-        setSession(data.session)
-        setItems(data.items ?? [])
-        setParticipants(data.participants ?? [])
-        setResponses(data.responses ?? [])
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
-  }, [sessionId])
+export default function SessionResults({ profile, session, analytics, questions, participants, visItems }: Props) {
+  const [activeTab, setActiveTab] = useState<'questions' | 'students'>('questions')
+  const [exporting, setExporting] = useState(false)
+  const [notes, setNotes] = useState('')
 
-  if (loading) {
-    return (
-      <DashboardLayout navItems={NAV_ITEMS} profile={profile}>
-        <div className="flex items-center justify-center h-64">
-          <p className="text-[#8d8da0]">Loading results…</p>
-        </div>
-      </DashboardLayout>
-    )
-  }
-
-  if (!session) {
-    return (
-      <DashboardLayout navItems={NAV_ITEMS} profile={profile}>
-        <div className="flex flex-col items-center justify-center h-64 gap-4">
-          <p className="text-[#8d8da0]">Session not found.</p>
-          <Link href="/teacher/sessions" className="text-violet-400 hover:text-violet-300 text-sm">Back to sessions</Link>
-        </div>
-      </DashboardLayout>
-    )
-  }
-
-  // Compute stats
-  const totalParticipants = participants.length
-  const avgScore = totalParticipants > 0
-    ? Math.round(participants.reduce((s, p) => s + p.score, 0) / totalParticipants)
-    : 0
-  const totalResponses = responses.length
-  const totalCorrect = responses.filter((r) => r.is_correct === true).length
-  const overallAccuracy = totalResponses > 0 ? Math.round((totalCorrect / totalResponses) * 100) : 0
-
-  const durationMs = session.started_at && session.ended_at
-    ? new Date(session.ended_at).getTime() - new Date(session.started_at).getTime()
+  const sorted = [...participants].sort((a, b) => b.score - a.score)
+  const avgScorePct = analytics.total_questions > 0 && analytics.avg_score != null
+    ? Math.round((analytics.avg_score / analytics.total_questions) * 100)
     : null
-  const durationMins = durationMs ? Math.round(durationMs / 60000) : null
+  const struggling = participants.filter((p) => p.score === 0 && p.answered_count > 0)
 
-  // Build question-level stats from all quiz items
-  const allQuestions: (QuizQuestion & { quizTitle: string })[] = []
-  items.forEach((item) => {
-    if (item.type === 'quiz') {
-      item.questions.forEach((q) => allQuestions.push({ ...q, quizTitle: item.title }))
-    }
-  })
+  const handleExport = () => {
+    setExporting(true)
+    const a = document.createElement('a')
+    a.href = `/api/teacher/sessions/${session.id}/export`
+    a.download = `session-${session.join_code}.csv`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    setTimeout(() => setExporting(false), 1500)
+  }
 
-  const questionStats = allQuestions.map((q) => {
-    const qResponses = responses.filter((r) => r.question_id === q.id)
-    const correct = qResponses.filter((r) => r.is_correct === true).length
-    return { ...q, total: qResponses.length, correct }
+  const byQuiz = new Map<string, { title: string; qs: QuestionResult[] }>()
+  questions.forEach((q) => {
+    const g = byQuiz.get(q.quiz_id) ?? { title: q.quiz_title, qs: [] }
+    g.qs.push(q)
+    byQuiz.set(q.quiz_id, g)
   })
 
   return (
-    <DashboardLayout navItems={NAV_ITEMS} profile={profile}>
+    <DashboardLayout navItems={TEACHER_NAV} profile={profile}>
       <div className="max-w-6xl space-y-8">
 
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex items-start gap-4">
-          <Link href="/teacher/sessions" className="mt-1 rounded-lg border border-[#35354a] p-1.5 text-[#6a6a80] hover:text-white transition">
-            <ArrowLeft className="size-4" />
-          </Link>
-          <div className="flex-1">
-            <p className="text-xs font-semibold uppercase tracking-widest text-[#6a6a80]">Session Results</p>
-            <h1 className="mt-0.5 text-2xl font-bold text-white">{session.title}</h1>
-            <div className="flex items-center gap-3 mt-1.5 text-xs text-[#6a6a80]">
-              <span className="flex items-center gap-1">
-                <Clock className="size-3" />
-                {session.ended_at ? new Date(session.ended_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'In progress'}
-              </span>
-              {durationMins !== null && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <Link href="/teacher/sessions" className="mt-1 rounded-lg border border-gray-200 p-1.5 text-gray-400 transition hover:text-gray-700 hover:border-gray-300">
+              <ArrowLeft className="size-4" />
+            </Link>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Session Results</p>
+              <h1 className="mt-0.5 text-2xl font-bold text-gray-900">{session.title}</h1>
+              <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-gray-400">
+                <span className="font-mono font-bold tracking-widest text-violet-600">{session.join_code}</span>
+                {session.ended_at && (
+                  <span className="flex items-center gap-1">
+                    <Clock className="size-3" />
+                    {new Date(session.ended_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
                 <span className="flex items-center gap-1">
                   <Target className="size-3" />
-                  {durationMins} min{durationMins !== 1 ? 's' : ''}
+                  {formatDuration(session.started_at, session.ended_at)}
                 </span>
-              )}
+              </div>
             </div>
           </div>
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="flex shrink-0 items-center gap-2 rounded-xl border border-gray-200 bg-white shadow-sm px-4 py-2.5 text-sm font-medium text-gray-600 transition hover:border-violet-300 hover:text-violet-600 disabled:opacity-40"
+          >
+            <Download className="size-4" />
+            {exporting ? 'Preparing…' : 'Export CSV'}
+          </button>
         </motion.div>
 
-        {/* Summary stats */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }}>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {[
-              { label: 'Students', value: totalParticipants, icon: Users, colour: 'text-violet-400 bg-violet-500/10 ring-violet-500/20' },
-              { label: 'Avg score', value: avgScore, icon: Trophy, colour: 'text-amber-400 bg-amber-500/10 ring-amber-500/20' },
-              { label: 'Accuracy', value: `${overallAccuracy}%`, icon: Target, colour: 'text-emerald-400 bg-emerald-500/10 ring-emerald-500/20' },
-              { label: 'Responses', value: totalResponses, icon: MessageSquare, colour: 'text-sky-400 bg-sky-500/10 ring-sky-500/20' },
-            ].map(({ label, value, icon: Icon, colour }) => (
-              <div key={label} className="rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80 p-5">
-                <div className={`flex h-9 w-9 items-center justify-center rounded-xl ring-1 mb-4 ${colour}`}>
-                  <Icon className="size-4" />
-                </div>
-                <p className="text-2xl font-bold text-white">{value}</p>
-                <p className="text-sm text-[#6a6a80] mt-0.5">{label}</p>
-              </div>
-            ))}
-          </div>
+        {/* Stats */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }}
+          className="grid grid-cols-2 gap-4 sm:grid-cols-4"
+        >
+          <StatCard label="Participants" value={analytics.participant_count}
+            sub={`${analytics.total_questions} question${analytics.total_questions !== 1 ? 's' : ''}`} colour="violet" />
+          <StatCard label="Avg Score"
+            value={avgScorePct != null ? `${avgScorePct}%` : '—'}
+            sub={analytics.avg_score != null ? `${analytics.avg_score.toFixed(1)} / ${analytics.total_questions}` : 'No data'} colour="emerald" />
+          <StatCard label="Participation" value={fmtPct(analytics.participation_rate)}
+            sub="Answered ≥1 question" colour="sky" />
+          <StatCard label="Completion" value={fmtPct(analytics.completion_rate)}
+            sub="Avg % of questions" colour="amber" />
         </motion.div>
 
-        <div className="grid grid-cols-5 gap-6">
-
-          {/* Leaderboard */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }} className="col-span-2 space-y-4">
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-[#6a6a80] flex items-center gap-2">
-              <Trophy className="size-3.5 text-amber-400" /> Leaderboard
-            </h2>
-            <div className="rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80 overflow-hidden divide-y divide-[#35354a]/30">
-              {participants.length === 0 ? (
-                <p className="py-8 text-center text-xs text-[#4a4a5a]">No students joined this session.</p>
-              ) : (
-                [...participants].sort((a, b) => b.score - a.score).map((p, rank) => (
-                  <motion.div
-                    key={p.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.1 + rank * 0.05 }}
-                    className={`flex items-center gap-3 px-4 py-3 ${rank === 0 ? 'bg-amber-500/5' : ''}`}
-                  >
-                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
-                      rank === 0 ? 'bg-amber-500/20 text-amber-400 ring-1 ring-amber-500/30' :
-                      rank === 1 ? 'bg-slate-500/20 text-slate-300 ring-1 ring-slate-500/30' :
-                      rank === 2 ? 'bg-orange-700/20 text-orange-500 ring-1 ring-orange-700/30' :
-                      'bg-[#252538] text-[#6a6a80]'
-                    }`}>
-                      {rank < 3 ? ['🥇', '🥈', '🥉'][rank] : rank + 1}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-white truncate">{profileName(p)}</p>
-                    </div>
-                    <span className={`text-base font-mono font-bold ${rank === 0 ? 'text-amber-400' : 'text-[#c9c9d4]'}`}>
-                      {p.score}
-                    </span>
-                  </motion.div>
-                ))
-              )}
+        {/* Struggling students banner */}
+        {struggling.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+            className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+            <AlertTriangle className="size-4 shrink-0 mt-0.5 text-amber-500" />
+            <div>
+              <p className="text-sm font-semibold text-amber-800">
+                {struggling.length} student{struggling.length !== 1 ? 's' : ''} scored 0 — may need support
+              </p>
+              <p className="mt-0.5 text-xs text-amber-600">
+                {struggling.map((p) => p.display_name).join(', ')}
+              </p>
             </div>
           </motion.div>
+        )}
 
-          {/* Question breakdown */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="col-span-3 space-y-4">
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-[#6a6a80] flex items-center gap-2">
-              <BookOpen className="size-3.5" /> Question Breakdown
-            </h2>
-            <div className="rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80 p-5 space-y-5">
-              {questionStats.length === 0 ? (
-                <p className="text-sm text-[#6a6a80]">No quiz questions were included in this session.</p>
+        {/* Tabs */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }}>
+          <div className="flex gap-1 rounded-xl border border-gray-200 bg-gray-50 p-1 w-fit mb-6">
+            {(['questions', 'students'] as const).map((tab) => (
+              <button key={tab} onClick={() => setActiveTab(tab)}
+                className={`rounded-lg px-5 py-2 text-sm font-semibold transition ${activeTab === tab ? 'bg-white text-violet-700 shadow-sm border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}>
+                {tab === 'questions'
+                  ? <span className="flex items-center gap-1.5"><BookOpen className="size-3.5" /> Questions</span>
+                  : <span className="flex items-center gap-1.5"><Users className="size-3.5" /> Students</span>}
+              </button>
+            ))}
+          </div>
+
+          {/* ── Questions tab ─────────────────────────────────── */}
+          {activeTab === 'questions' && (
+            <div className="space-y-5">
+              {questions.length === 0 ? (
+                <div className="rounded-2xl border border-gray-100 bg-white shadow-sm py-16 text-center">
+                  <BookOpen className="mx-auto size-8 text-gray-200 mb-3" />
+                  <p className="text-sm text-gray-400">No questions in this session</p>
+                </div>
               ) : (
-                questionStats.map((q, i) => (
-                  <div key={q.id} className="space-y-1.5">
-                    <div className="flex items-start gap-2">
-                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-[#252538] text-xs font-bold text-[#6a6a80] mt-0.5">
-                        {i + 1}
+                Array.from(byQuiz.entries()).map(([qid, group]) => (
+                  <div key={qid} className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+                    <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 bg-gray-50">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-100 ring-1 ring-violet-200">
+                        <BookOpen className="size-4 text-violet-600" />
                       </span>
-                      <p className="text-xs font-medium text-[#c9c9d4] flex-1 leading-relaxed">{q.text}</p>
+                      <p className="text-sm font-semibold text-gray-800">{group.title}</p>
+                      <span className="ml-auto text-xs text-gray-400">{group.qs.length} q</span>
                     </div>
-                    <div className="ml-7">
-                      <ResponseBar
-                        label={`${q.quizTitle}`}
-                        correct={q.correct}
-                        total={q.total}
-                      />
+                    <div className="divide-y divide-gray-50">
+                      {group.qs.map((q) => (
+                        <div key={q.id} className="px-5 py-4 space-y-3">
+                          <div className="flex items-start gap-3">
+                            <span className="shrink-0 mt-0.5 flex h-6 w-8 items-center justify-center rounded-md bg-gray-100 text-xs font-bold text-gray-500">
+                              {q.label}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-800 leading-relaxed">{q.text}</p>
+                              <p className="mt-0.5 text-xs text-gray-400">
+                                Answer: <span className="text-emerald-600 font-medium">{q.correct_answer}</span>
+                              </p>
+                            </div>
+                            <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                              q.pct_correct >= 75 ? 'bg-emerald-100 text-emerald-700' :
+                              q.pct_correct >= 50 ? 'bg-amber-100 text-amber-700' :
+                              'bg-red-100 text-red-700'
+                            }`}>{q.pct_correct}%</span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-3 pl-11">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1 text-xs text-emerald-600"><CheckCircle2 className="size-3" /> Correct</div>
+                              <HorizBar value={q.correct_count} total={analytics.participant_count} cls="bg-emerald-500" />
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1 text-xs text-red-500"><XCircle className="size-3" /> Wrong</div>
+                              <HorizBar value={q.incorrect_count} total={analytics.participant_count} cls="bg-red-500" />
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1 text-xs text-gray-400"><Minus className="size-3" /> No answer</div>
+                              <HorizBar value={q.no_answer_count} total={analytics.participant_count} cls="bg-gray-300" />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))
               )}
 
-              {/* Visualisation items summary */}
-              {items.filter((i) => i.type === 'visualisation').length > 0 && (
-                <div className="border-t border-[#35354a]/40 pt-4 mt-4">
-                  <p className="text-xs text-[#6a6a80] mb-3 uppercase tracking-wider font-semibold">Charts shown</p>
-                  {items.filter((i) => i.type === 'visualisation').map((item) => (
-                    <div key={item.id} className="flex items-center gap-2 py-1.5">
-                      <BarChart2 className="size-3.5 text-sky-400" />
-                      <span className="text-xs text-[#c9c9d4]">{item.title}</span>
-                    </div>
-                  ))}
+              {visItems.length > 0 && (
+                <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-400">Charts shown</p>
+                  <div className="space-y-2">
+                    {visItems.map((v) => (
+                      <div key={v.id} className="flex items-center gap-2.5 text-sm text-gray-600">
+                        <BarChart2 className="size-3.5 text-sky-500 shrink-0" />
+                        {v.title}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
-          </motion.div>
-        </div>
+          )}
 
-        {/* Discussion / Teacher notes */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-[#6a6a80] flex items-center gap-2">
+          {/* ── Students tab ──────────────────────────────────── */}
+          {activeTab === 'students' && (
+            <div className="space-y-5">
+              <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+                {sorted.length === 0 ? (
+                  <div className="py-16 text-center">
+                    <Users className="mx-auto size-8 text-gray-200 mb-3" />
+                    <p className="text-sm text-gray-400">No students joined</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-100 bg-gray-50">
+                          <th className="py-3 pl-5 pr-2 text-left text-xs font-semibold uppercase tracking-widest text-gray-400 w-10">#</th>
+                          <th className="py-3 px-3 text-left text-xs font-semibold uppercase tracking-widest text-gray-400">Student</th>
+                          {questions.map((q) => (
+                            <th key={q.id} title={q.text}
+                              className="py-3 px-2 text-center text-xs font-semibold uppercase tracking-widest text-gray-400 min-w-[2.5rem]">
+                              {q.label}
+                            </th>
+                          ))}
+                          <th className="py-3 px-3 text-right text-xs font-semibold uppercase tracking-widest text-gray-400">Score</th>
+                          <th className="py-3 pl-3 pr-5 text-right text-xs font-semibold uppercase tracking-widest text-gray-400">%</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {sorted.map((p, rank) => (
+                          <tr key={p.id} className="hover:bg-violet-50/40 transition">
+                            <td className="py-3 pl-5 pr-2">
+                              <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
+                                rank === 0 ? 'bg-amber-100 text-amber-600' :
+                                rank === 1 ? 'bg-gray-100 text-gray-500' :
+                                rank === 2 ? 'bg-orange-100 text-orange-600' :
+                                'bg-gray-100 text-gray-400'
+                              }`}>
+                                {rank < 3 ? <Trophy className="size-3" /> : rank + 1}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3">
+                              <p className="font-medium text-gray-800">{p.display_name}</p>
+                              {p.email && <p className="text-xs text-gray-400">{p.email}</p>}
+                            </td>
+                            {questions.map((q) => {
+                              const r = p.responses[q.id]
+                              return (
+                                <td key={q.id} className="py-3 px-2 text-center" title={r?.answer ?? 'No answer'}>
+                                  {!r ? (
+                                    <Minus className="size-3.5 text-gray-300 mx-auto" />
+                                  ) : r.is_correct === true ? (
+                                    <CheckCircle2 className="size-3.5 text-emerald-500 mx-auto" />
+                                  ) : r.is_correct === false ? (
+                                    <XCircle className="size-3.5 text-red-500 mx-auto" />
+                                  ) : (
+                                    <span className="text-xs text-gray-400">?</span>
+                                  )}
+                                </td>
+                              )
+                            })}
+                            <td className="py-3 px-3 text-right font-mono font-bold text-gray-800">
+                              {p.correct_count}/{questions.length}
+                            </td>
+                            <td className="py-3 pl-3 pr-5 text-right">
+                              <span className={`font-bold ${p.pct_correct >= 75 ? 'text-emerald-600' : p.pct_correct >= 50 ? 'text-amber-600' : 'text-red-500'}`}>
+                                {p.pct_correct}%
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </motion.div>
+
+        {/* Discussion notes */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-400 flex items-center gap-2">
             <MessageSquare className="size-3.5" /> Discussion Notes
           </h2>
-          <div className="rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80 p-5 space-y-3">
-            <p className="text-xs text-[#6a6a80]">
-              Capture talking points, student observations, or follow-up actions from this session.
-            </p>
+          <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5 space-y-3">
+            <p className="text-xs text-gray-400">Capture talking points or follow-up actions from this session.</p>
             <textarea
-              value={discussionNotes}
-              onChange={(e) => setDiscussionNotes(e.target.value)}
-              placeholder="e.g. Most students struggled with Q3 — revisit scatter plot interpretation next lesson. Top scorer was 95 — consider enrichment tasks…"
-              rows={5}
-              className="w-full resize-none rounded-xl border border-[#35354a] bg-[#0d0d18] px-4 py-3 text-sm text-white placeholder-[#4a4a60] focus:border-violet-500/60 focus:outline-none"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={4}
+              placeholder="e.g. Most students struggled with Q3 — revisit scatter plots next lesson…"
+              className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:border-violet-400 focus:outline-none focus:bg-white transition"
             />
             <div className="flex items-center gap-3">
               <button
                 onClick={() => {
-                  if (discussionNotes.trim()) {
-                    const key = `playdata_discussion_${sessionId}`
-                    localStorage.setItem(key, discussionNotes)
+                  if (notes.trim()) {
+                    localStorage.setItem(`playdata_notes_${session.id}`, notes)
                     toast.success('Notes saved locally')
                   }
                 }}
@@ -351,49 +590,27 @@ export default function SessionResults({ profile, sessionId }: Props) {
               >
                 Save notes
               </button>
-              <p className="text-xs text-[#4a4a60]">Notes are saved in your browser.</p>
+              <p className="text-xs text-gray-400">Saved in your browser only.</p>
             </div>
           </div>
         </motion.div>
 
-        {/* Struggling students */}
-        {participants.filter((p) => p.score === 0).length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }}>
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-[#6a6a80]">
-              Students who may need support
-            </h2>
-            <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5">
-              <div className="flex flex-wrap gap-2">
-                {participants.filter((p) => p.score === 0).map((p) => (
-                  <span key={p.id} className="flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs text-amber-300">
-                    {profileName(p)}
-                  </span>
-                ))}
-              </div>
-              <p className="mt-3 text-xs text-[#8d8da0]">These students scored 0 — consider individual follow-up or additional practice.</p>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Navigation */}
+        {/* Footer */}
         <div className="flex items-center justify-between pb-8">
-          <Link
-            href="/teacher/sessions"
-            className="flex items-center gap-2 rounded-xl border border-[#35354a] px-5 py-2.5 text-sm font-medium text-[#c9c9d4] transition hover:border-violet-500/40 hover:text-white"
-          >
+          <Link href="/teacher/sessions" className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white shadow-sm px-5 py-2.5 text-sm font-medium text-gray-600 transition hover:border-violet-300 hover:text-violet-600">
             <ArrowLeft className="size-4" /> All sessions
           </Link>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/teacher/sessions/new"
-              className="flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500"
-            >
-              New session
-            </Link>
-          </div>
+          <Link href="/teacher/analytics" className="flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500">
+            View analytics
+          </Link>
         </div>
+
+        {analytics.computed_at && (
+          <p className="text-xs text-gray-300">
+            Analytics computed {new Date(analytics.computed_at).toLocaleString('en-GB')}
+          </p>
+        )}
       </div>
     </DashboardLayout>
   )
 }
-

@@ -87,20 +87,31 @@ export const getServerSideProps = withAuth(
     if (!collabRow) return { notFound: true };
     const isOwner = collabRow.role === 'owner';
 
-    const [{ data: rawQuiz }, { data: rawDatasets }, { data: rawCollabs }, { data: rawVisualisations }] = await Promise.all([
-      admin
-        .from('quizzes')
-        .select(`
-          id, title, description, status, dataset_id, assigned_to,
-          questions(id, order_index, text, type, options, correct_answer,
-                    answer_tolerance, dataset_column, visualisation_id, explanation, time_limit_secs)
-        `)
-        .eq('id', id)
-        .single(),
+    // Fetch the quiz (phase 1) so we can identify the owner before loading
+    // datasets/visualisations — collaborators need access to the owner's resources.
+    const { data: rawQuiz } = await admin
+      .from('quizzes')
+      .select(`
+        id, title, description, status, dataset_id, assigned_to, teacher_id, is_timed,
+        questions(id, order_index, text, type, options, correct_answer,
+                  answer_tolerance, dataset_column, visualisation_ids, explanation, time_limit_secs)
+      `)
+      .eq('id', id)
+      .single();
+
+    if (!rawQuiz) return { notFound: true };
+
+    const quizRecord = rawQuiz as Record<string, unknown>;
+    const quizOwnerId = quizRecord.teacher_id as string;
+    // Load resources for both the logged-in user and the quiz owner so that
+    // contributors can see whichever datasets/charts the owner linked.
+    const teacherIds = userId === quizOwnerId ? [userId] : [userId, quizOwnerId];
+
+    const [{ data: rawDatasets }, { data: rawCollabs }, { data: rawVisualisations }] = await Promise.all([
       admin
         .from('datasets')
         .select('id, name, schema')
-        .eq('teacher_id', userId)
+        .in('teacher_id', teacherIds)
         .order('name'),
       admin
         .from('quiz_collaborators')
@@ -110,16 +121,13 @@ export const getServerSideProps = withAuth(
       admin
         .from('visualisations')
         .select('id, name, chart_type')
-        .eq('teacher_id', userId)
+        .in('teacher_id', teacherIds)
         .order('name'),
     ]);
-
-    if (!rawQuiz) return { notFound: true };
 
     // Resolve collaborator profile names
     const collabTeacherIds = (rawCollabs ?? []).map((c: { teacher_id: string }) => c.teacher_id);
     const idsToFetch = new Set<string>(collabTeacherIds);
-    const quizRecord = rawQuiz as Record<string, unknown>;
     if (quizRecord.assigned_to) idsToFetch.add(quizRecord.assigned_to as string);
 
     const { data: profileRows } = idsToFetch.size > 0
@@ -161,7 +169,7 @@ export const getServerSideProps = withAuth(
       status: rawQuiz.status as QuizStatus,
       dataset_id: rawQuiz.dataset_id as string | null,
       assigned_to: assignedTo,
-      is_timed: ((rawQuiz as Record<string, unknown>).is_timed as boolean) ?? true,
+      is_timed: (quizRecord.is_timed as boolean) ?? true,
       questions: questions.map((q) => ({
         id: q.id as string,
         order_index: q.order_index as number,
@@ -235,12 +243,12 @@ export default function EditQuizPage({
         >
           <button
             onClick={() => router.push('/teacher/quizzes')}
-            className="flex items-center gap-1.5 text-sm text-[#6a6a80] hover:text-violet-400 transition-colors"
+            className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-violet-600 transition-colors"
           >
             <ArrowLeft className="size-3.5" /> Back to Quizzes
           </button>
-          <h1 className="text-2xl font-bold text-white">Edit Quiz</h1>
-          <p className="text-xs text-[#6a6a80]">Changes replace all questions atomically on save.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Edit Quiz</h1>
+          <p className="text-xs text-gray-400">Changes replace all questions atomically on save.</p>
         </motion.div>
 
         {/* Builder */}

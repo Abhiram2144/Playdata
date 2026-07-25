@@ -1,15 +1,13 @@
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GetServerSidePropsResult } from 'next';
 import {
-  Database, FolderPlus, BarChart3,
+  FolderPlus, BarChart3,
   BarChart2, TrendingUp, PieChart as PieIcon, Maximize2, AlignLeft,
-  Plus, Trash2, ExternalLink, BookTemplate, Filter,
+  Plus, Trash2, Eye, BookTemplate, Filter,
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { type NavItem } from '@/components/layout/Sidebar';
 import { TEACHER_NAV } from '@/lib/teacher-nav';
 import { withAuth } from '@/lib/auth';
 import { createClientFromContext } from '@/lib/supabase/server-props';
@@ -87,9 +85,6 @@ export const getServerSideProps = withAuth(
   { allowedRoles: ['teacher'] }
 );
 
-// ── Nav ──────────────────────────────────────────────────────────────────────
-const NAV_ITEMS = TEACHER_NAV;
-
 // ── Chart type helpers ───────────────────────────────────────────────────────
 const CHART_ICONS: Record<ChartType, React.ReactNode> = {
   bar: <BarChart2 className="size-4" />,
@@ -108,11 +103,11 @@ const CHART_LABELS: Record<ChartType, string> = {
 };
 
 const CHART_COLORS: Record<ChartType, string> = {
-  bar: 'text-violet-400 bg-violet-500/10 ring-violet-500/20',
-  line: 'text-blue-400 bg-blue-500/10 ring-blue-500/20',
-  pie: 'text-emerald-400 bg-emerald-500/10 ring-emerald-500/20',
-  scatter: 'text-amber-400 bg-amber-500/10 ring-amber-500/20',
-  histogram: 'text-rose-400 bg-rose-500/10 ring-rose-500/20',
+  bar: 'text-violet-700 bg-violet-100 ring-violet-200',
+  line: 'text-blue-700 bg-blue-100 ring-blue-200',
+  pie: 'text-emerald-700 bg-emerald-100 ring-emerald-200',
+  scatter: 'text-amber-700 bg-amber-100 ring-amber-200',
+  histogram: 'text-rose-700 bg-rose-100 ring-rose-200',
 };
 
 // ── Delete confirmation modal ─────────────────────────────────────────────────
@@ -128,23 +123,23 @@ function DeleteModal({
   deleting: boolean;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="w-full max-w-sm rounded-2xl border border-[#35354a] bg-[#11111f] p-6 shadow-xl"
+        className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-xl"
       >
-        <h3 className="text-base font-semibold text-white mb-2">Delete visualisation?</h3>
-        <p className="text-sm text-[#8888a0] mb-6">
-          <span className="text-white font-medium">{name}</span> will be permanently deleted.
+        <h3 className="text-base font-semibold text-gray-900 mb-2">Delete visualisation?</h3>
+        <p className="text-sm text-gray-500 mb-6">
+          <span className="text-gray-800 font-medium">{name}</span> will be permanently deleted.
           This action cannot be undone.
         </p>
         <div className="flex gap-3 justify-end">
           <button
             onClick={onCancel}
             disabled={deleting}
-            className="px-4 py-2 rounded-lg text-sm font-medium text-[#8888a0] hover:text-white transition-colors"
+            className="px-4 py-2 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
           >
             Cancel
           </button>
@@ -163,8 +158,6 @@ function DeleteModal({
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function VisualisationsPage({ profile, visualisations: initial, datasets }: Props) {
-  const router = useRouter();
-
   const [list, setList] = useState<Visualisation[]>(initial);
   const [datasetFilter, setDatasetFilter] = useState('');
   const [chartFilter, setChartFilter] = useState('');
@@ -194,7 +187,7 @@ export default function VisualisationsPage({ profile, visualisations: initial, d
   const hasFilters = datasetFilter !== '' || chartFilter !== '';
 
   return (
-    <DashboardLayout profile={profile} navItems={NAV_ITEMS}>
+    <DashboardLayout profile={profile} navItems={TEACHER_NAV}>
       <AnimatePresence>
         {pendingDelete && (
           <DeleteModal
@@ -210,8 +203,9 @@ export default function VisualisationsPage({ profile, visualisations: initial, d
         {/* Header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold text-white">Visualisations</h1>
-            <p className="mt-0.5 text-sm text-[#8888a0]">
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Visualisations</p>
+            <h1 className="mt-0.5 text-2xl font-bold text-gray-900">Visualisations</h1>
+            <p className="mt-0.5 text-sm text-gray-500">
               {list.length} saved {list.length === 1 ? 'visualisation' : 'visualisations'}
             </p>
           </div>
@@ -227,11 +221,11 @@ export default function VisualisationsPage({ profile, visualisations: initial, d
         {/* Filters */}
         {(datasets.length > 0 || list.length > 0) && (
           <div className="flex items-center gap-3 flex-wrap">
-            <Filter className="size-4 text-[#6a6a80] shrink-0" />
+            <Filter className="size-4 text-gray-400 shrink-0" />
             <select
               value={datasetFilter}
               onChange={(e) => setDatasetFilter(e.target.value)}
-              className="rounded-lg border border-[#35354a] bg-[#0d0d18] px-3 py-1.5 text-sm text-[#c9c9d4] focus:outline-none focus:ring-2 focus:ring-violet-500/40 min-w-[160px]"
+              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-400/40 min-w-[160px]"
             >
               <option value="">All datasets</option>
               {datasets.map((d) => (
@@ -241,7 +235,7 @@ export default function VisualisationsPage({ profile, visualisations: initial, d
             <select
               value={chartFilter}
               onChange={(e) => setChartFilter(e.target.value)}
-              className="rounded-lg border border-[#35354a] bg-[#0d0d18] px-3 py-1.5 text-sm text-[#c9c9d4] focus:outline-none focus:ring-2 focus:ring-violet-500/40 min-w-[140px]"
+              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-400/40 min-w-[140px]"
             >
               <option value="">All chart types</option>
               {(['bar', 'line', 'pie', 'scatter', 'histogram'] as ChartType[]).map((ct) => (
@@ -251,7 +245,7 @@ export default function VisualisationsPage({ profile, visualisations: initial, d
             {hasFilters && (
               <button
                 onClick={() => { setDatasetFilter(''); setChartFilter(''); }}
-                className="text-sm text-[#6a6a80] hover:text-[#c9c9d4] transition-colors"
+                className="text-sm text-gray-400 hover:text-gray-700 transition-colors"
               >
                 Clear filters
               </button>
@@ -262,18 +256,18 @@ export default function VisualisationsPage({ profile, visualisations: initial, d
         {/* Grid */}
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="mb-4 rounded-full bg-[#1a1a2e] p-4">
-              <BarChart3 className="size-8 text-[#35354a]" />
+            <div className="mb-4 rounded-full bg-gray-100 p-4">
+              <BarChart3 className="size-8 text-gray-300" />
             </div>
             {list.length === 0 ? (
               <>
-                <p className="text-base font-medium text-[#c9c9d4]">No visualisations yet</p>
-                <p className="mt-1 text-sm text-[#6a6a80]">
+                <p className="text-base font-medium text-gray-700">No visualisations yet</p>
+                <p className="mt-1 text-sm text-gray-400">
                   Open a dataset and click &ldquo;Create visualisation&rdquo; to get started.
                 </p>
                 <Link
                   href="/teacher/datasets"
-                  className="mt-4 inline-flex items-center gap-2 rounded-xl border border-[#35354a] px-4 py-2.5 text-sm font-medium text-[#c9c9d4] hover:border-violet-500/50 hover:text-white transition-colors"
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 hover:border-violet-300 hover:text-violet-600 transition-colors"
                 >
                   <FolderPlus className="size-4" />
                   Go to Datasets
@@ -281,8 +275,8 @@ export default function VisualisationsPage({ profile, visualisations: initial, d
               </>
             ) : (
               <>
-                <p className="text-base font-medium text-[#c9c9d4]">No matches</p>
-                <p className="mt-1 text-sm text-[#6a6a80]">Try adjusting the filters above.</p>
+                <p className="text-base font-medium text-gray-700">No matches</p>
+                <p className="mt-1 text-sm text-gray-400">Try adjusting the filters above.</p>
               </>
             )}
           </div>
@@ -294,7 +288,7 @@ export default function VisualisationsPage({ profile, visualisations: initial, d
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.04 }}
-                className="group relative rounded-2xl border border-[#35354a] bg-[#11111f] p-5 flex flex-col gap-3 hover:border-violet-500/40 transition-colors"
+                className="group relative rounded-2xl border border-gray-100 bg-white shadow-sm p-5 flex flex-col gap-3 hover:border-violet-200 hover:shadow-md transition-all"
               >
                 {/* Top row */}
                 <div className="flex items-start justify-between gap-2">
@@ -305,7 +299,7 @@ export default function VisualisationsPage({ profile, visualisations: initial, d
                     {CHART_LABELS[vis.chart_type]}
                   </span>
                   {vis.is_template && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-purple-500/10 px-2 py-0.5 text-xs font-medium text-purple-300 ring-1 ring-inset ring-purple-500/20">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 ring-1 ring-inset ring-purple-200">
                       <BookTemplate className="size-3" />
                       Template
                     </span>
@@ -313,28 +307,28 @@ export default function VisualisationsPage({ profile, visualisations: initial, d
                 </div>
 
                 {/* Name */}
-                <p className="text-sm font-semibold text-white leading-snug line-clamp-2">
+                <p className="text-sm font-semibold text-gray-800 leading-snug line-clamp-2">
                   {vis.name}
                 </p>
 
                 {/* Dataset */}
                 {vis.datasets ? (
-                  <p className="text-xs text-[#6a6a80] truncate">
-                    <span className="text-[#8888a0]">Dataset: </span>
+                  <p className="text-xs text-gray-400 truncate">
+                    <span className="text-gray-400">Dataset: </span>
                     <Link
                       href={`/teacher/datasets/${vis.datasets.id}`}
-                      className="hover:text-violet-400 transition-colors"
+                      className="text-gray-600 hover:text-violet-600 transition-colors"
                     >
                       {vis.datasets.name}
                     </Link>
                   </p>
                 ) : (
-                  <p className="text-xs text-[#6a6a80]">No dataset linked</p>
+                  <p className="text-xs text-gray-400">No dataset linked</p>
                 )}
 
                 {/* Footer */}
-                <div className="mt-auto flex items-center justify-between pt-2 border-t border-[#1e1e30]">
-                  <time className="text-xs text-[#6a6a80]">
+                <div className="mt-auto flex items-center justify-between pt-2 border-t border-gray-100">
+                  <time className="text-xs text-gray-400">
                     {new Date(vis.created_at).toLocaleDateString('en-GB', {
                       day: 'numeric',
                       month: 'short',
@@ -343,15 +337,15 @@ export default function VisualisationsPage({ profile, visualisations: initial, d
                   </time>
                   <div className="flex items-center gap-1">
                     <Link
-                      href={`/teacher/visualisations/${vis.id}/edit`}
-                      className="rounded-lg p-1.5 text-[#6a6a80] hover:text-violet-400 hover:bg-violet-500/10 transition-colors"
-                      title="Edit visualisation"
+                      href={`/teacher/visualisations/${vis.id}`}
+                      className="rounded-lg p-1.5 text-gray-400 hover:text-violet-600 hover:bg-violet-50 transition-colors"
+                      title="View visualisation"
                     >
-                      <ExternalLink className="size-3.5" />
+                      <Eye className="size-3.5" />
                     </Link>
                     <button
                       onClick={() => setPendingDelete(vis)}
-                      className="rounded-lg p-1.5 text-[#6a6a80] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      className="rounded-lg p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                       title="Delete visualisation"
                     >
                       <Trash2 className="size-3.5" />

@@ -120,14 +120,15 @@ const CHART_TYPES: { type: ChartType; label: string; icon: React.ElementType }[]
 const VIZ_COLORS = ['#8b5cf6', '#a78bfa', '#6d28d9', '#c4b5fd', '#7c3aed', '#ede9fe', '#4c1d95'];
 
 const TOOLTIP_STYLE = {
-  backgroundColor: '#11111f',
-  border: '1px solid #35354a',
+  backgroundColor: '#ffffff',
+  border: '1px solid #e4e0f8',
   borderRadius: '12px',
-  color: '#c9c9d4',
+  color: '#374151',
   fontSize: 12,
+  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
 };
 
-const AXIS_STYLE = { fill: '#6a6a80', fontSize: 11 };
+const AXIS_STYLE = { fill: '#9ca3af', fontSize: 11 };
 
 // ── Smart number parser ──────────────────────────────────────────────────────
 function smartParseNumber(v: unknown): number {
@@ -218,8 +219,8 @@ function EmptyChart({ chartType, hasX, hasY }: { chartType: ChartType; hasX: boo
     msg = 'No data to display';
   }
   return (
-    <div className="flex h-[320px] items-center justify-center rounded-xl border border-dashed border-[#35354a]/50">
-      <p className="text-sm text-[#4a4a60] text-center px-4">{msg}</p>
+    <div className="flex h-[320px] items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50">
+      <p className="text-sm text-gray-400 text-center px-4">{msg}</p>
     </div>
   );
 }
@@ -255,7 +256,7 @@ function ChartPane({
     return (
       <ResponsiveContainer width="100%" height={320}>
         <ScatterChart>
-          <CartesianGrid strokeDasharray="3 3" stroke="#2a2a3d" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
           <XAxis type="number" dataKey="x" name={config.xAxis} tick={AXIS_STYLE} />
           <YAxis type="number" dataKey="y" name={config.yAxis} tick={AXIS_STYLE} />
           <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ strokeDasharray: '3 3' }} />
@@ -272,8 +273,8 @@ function ChartPane({
     return (
       <ResponsiveContainer width="100%" height={320}>
         <BarChart data={data} barCategoryGap="2%">
-          <CartesianGrid strokeDasharray="3 3" stroke="#2a2a3d" />
-          <XAxis dataKey="bin" tick={AXIS_STYLE} label={{ value: config.xAxis, position: 'insideBottom', offset: -2, fill: '#6a6a80', fontSize: 11 }} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <XAxis dataKey="bin" tick={AXIS_STYLE} label={{ value: config.xAxis, position: 'insideBottom', offset: -2, fill: '#9ca3af', fontSize: 11 }} />
           <YAxis tick={AXIS_STYLE} />
           <Tooltip contentStyle={TOOLTIP_STYLE} />
           <Bar dataKey="count" fill="#8b5cf6" radius={[2, 2, 0, 0]} />
@@ -307,7 +308,7 @@ function ChartPane({
             ))}
           </Pie>
           <Tooltip contentStyle={TOOLTIP_STYLE} />
-          <Legend wrapperStyle={{ color: '#8d8da0', fontSize: 11 }} />
+          <Legend wrapperStyle={{ color: '#9ca3af', fontSize: 11 }} />
         </PieChart>
       </ResponsiveContainer>
     );
@@ -321,7 +322,7 @@ function ChartPane({
     return (
       <ResponsiveContainer width="100%" height={320}>
         <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#2a2a3d" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
           <XAxis dataKey="name" tick={AXIS_STYLE} />
           <YAxis tick={AXIS_STYLE} />
           <Tooltip contentStyle={TOOLTIP_STYLE} />
@@ -390,14 +391,14 @@ function ColSelect({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-xs font-medium text-[#8d8da0]">
+      <label className="mb-1 block text-xs font-medium text-gray-500">
         {label}
-        {hint && <span className="ml-1 text-[#4a4a60]">({hint})</span>}
+        {hint && <span className="ml-1 text-gray-400">({hint})</span>}
       </label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-xl border border-[#35354a] bg-[#0f0f1d] px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
+        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-violet-400 focus:outline-none"
       >
         <option value="">{optional ? '— none —' : '— select —'}</option>
         {cols.map((c) => {
@@ -574,14 +575,14 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
         <div className="flex items-center justify-between">
           <button
             onClick={() => router.push(`/teacher/datasets/${dataset.id}`)}
-            className="flex items-center gap-1.5 text-sm text-[#6a6a80] hover:text-violet-400 transition-colors"
+            className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-violet-600 transition-colors"
           >
             <ArrowLeft className="size-3.5" /> Back to {dataset.name}
           </button>
-          <span className="rounded-full border border-[#35354a]/60 bg-[#151526] px-3 py-1 text-xs text-[#6a6a80]">
+          <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-500">
             {dataset.row_count.toLocaleString()} rows
             {rows.length < dataset.row_count && rows.length > 0 && (
-              <span className="ml-1 text-[#4a4a60]">(preview: first {rows.length})</span>
+              <span className="ml-1 text-gray-400">(preview: first {rows.length})</span>
             )}
           </span>
         </div>
@@ -595,8 +596,8 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
           <div className="space-y-4 lg:max-h-[calc(100vh-140px)] lg:overflow-y-auto lg:pr-1">
 
             {/* Chart type */}
-            <div className="rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80 p-4">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-[#6a6a80]">Chart type</p>
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-400">Chart type</p>
               <div className="grid grid-cols-5 gap-1.5">
                 {CHART_TYPES.map(({ type, label, icon: Icon }) => (
                   <button
@@ -605,7 +606,7 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
                     className={`flex flex-col items-center gap-1.5 rounded-xl py-3 text-xs font-semibold transition ${
                       chartType === type
                         ? 'bg-violet-600 text-white'
-                        : 'border border-[#35354a] text-[#6a6a80] hover:border-violet-500/40 hover:text-violet-300'
+                        : 'border border-gray-200 text-gray-500 hover:border-violet-300 hover:text-violet-600'
                     }`}
                   >
                     <Icon className="size-4" />
@@ -616,24 +617,24 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
             </div>
 
             {/* Title */}
-            <div className="rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80 p-4">
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-widest text-[#6a6a80]">
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-widest text-gray-400">
                 Display title
               </label>
               <input
                 value={config.title}
                 onChange={(e) => patchConfig({ title: e.target.value })}
                 placeholder="Enter chart title…"
-                className="w-full rounded-xl border border-[#35354a] bg-[#0f0f1d] px-3 py-2 text-sm text-white placeholder-[#4a4a60] focus:border-violet-500 focus:outline-none"
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-violet-400 focus:outline-none"
               />
             </div>
 
             {/* Column source */}
-            <div className="rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80 p-4">
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-[#6a6a80]">Column source</p>
-                  <p className="mt-0.5 text-xs text-[#4a4a60]">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Column source</p>
+                  <p className="mt-0.5 text-xs text-gray-400">
                     {useVisibleOnly
                       ? `Student-visible only (${visibleColumns.length} of ${schema.length})`
                       : `All columns (${schema.length})`}
@@ -641,7 +642,7 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
                 </div>
                 <button
                   onClick={() => setUseVisibleOnly((v) => !v)}
-                  className="flex items-center gap-1.5 rounded-xl border border-[#35354a] px-3 py-1.5 text-xs font-semibold text-[#8d8da0] transition hover:border-violet-500/40 hover:text-violet-300"
+                  className="flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-500 transition hover:border-violet-300 hover:text-violet-600"
                 >
                   {useVisibleOnly ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
                   {useVisibleOnly ? 'Visible-only' : 'All cols'}
@@ -650,8 +651,8 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
             </div>
 
             {/* Field mapping */}
-            <div className="rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80 p-4 space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-[#6a6a80]">Field mapping</p>
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Field mapping</p>
 
               <div>
                 <ColSelect
@@ -662,7 +663,7 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
                   coercibleNames={coercibleCols}
                 />
                 {config.xAxis && xUniqueCount !== null && (chartType === 'bar' || chartType === 'pie' || chartType === 'line') && (
-                  <p className="mt-1 text-xs text-[#6a6a80]">→ {xUniqueCount} unique values</p>
+                  <p className="mt-1 text-xs text-gray-400">→ {xUniqueCount} unique values</p>
                 )}
               </div>
 
@@ -680,11 +681,11 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
 
               {fieldMeta.showAgg && (
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-[#8d8da0]">Aggregation</label>
+                  <label className="mb-1 block text-xs font-medium text-gray-500">Aggregation</label>
                   <select
                     value={config.aggregation}
                     onChange={(e) => patchConfig({ aggregation: e.target.value as Aggregation })}
-                    className="w-full rounded-xl border border-[#35354a] bg-[#0f0f1d] px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
+                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-violet-400 focus:outline-none"
                   >
                     <option value="mean">Mean (average)</option>
                     <option value="sum">Sum (total)</option>
@@ -694,9 +695,9 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
               )}
 
               {showNoNumericBanner && (
-                <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-xs text-amber-400">
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700">
                   ⚠ No numeric columns detected — bar, line, scatter and histogram charts need at least one numeric column.{' '}
-                  <Link href={`/teacher/datasets/${dataset.id}?tab=clean`} className="underline hover:text-amber-300">
+                  <Link href={`/teacher/datasets/${dataset.id}?tab=clean`} className="underline hover:text-amber-800">
                     Clean dataset
                   </Link>
                 </div>
@@ -704,14 +705,14 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
             </div>
 
             {/* Filter */}
-            <div className="rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80 p-4 space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-[#6a6a80]">Filter (optional)</p>
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Filter (optional)</p>
               <div>
-                <label className="mb-1 block text-xs font-medium text-[#8d8da0]">Column</label>
+                <label className="mb-1 block text-xs font-medium text-gray-500">Column</label>
                 <select
                   value={config.filterColumn}
                   onChange={(e) => patchConfig({ filterColumn: e.target.value, filterValue: '' })}
-                  className="w-full rounded-xl border border-[#35354a] bg-[#0f0f1d] px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-violet-400 focus:outline-none"
                 >
                   <option value="">— no filter —</option>
                   {availableCols.map((c) => (
@@ -723,11 +724,11 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
               {config.filterColumn && (
                 <>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-[#8d8da0]">Condition</label>
+                    <label className="mb-1 block text-xs font-medium text-gray-500">Condition</label>
                     <select
                       value={config.filterOperator}
                       onChange={(e) => patchConfig({ filterOperator: e.target.value as FilterOp })}
-                      className="w-full rounded-xl border border-[#35354a] bg-[#0f0f1d] px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
+                      className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-violet-400 focus:outline-none"
                     >
                       {FILTER_OPS.map(({ op, label }) => (
                         <option key={op} value={op}>{label}</option>
@@ -735,13 +736,13 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
                     </select>
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-[#8d8da0]">Value</label>
+                    <label className="mb-1 block text-xs font-medium text-gray-500">Value</label>
                     <input
                       value={config.filterValue}
                       onChange={(e) => patchConfig({ filterValue: e.target.value })}
                       list="filter-value-options"
                       placeholder="Filter value…"
-                      className="w-full rounded-xl border border-[#35354a] bg-[#0f0f1d] px-3 py-2 text-sm text-white placeholder-[#4a4a60] focus:border-violet-500 focus:outline-none"
+                      className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-violet-400 focus:outline-none"
                     />
                     {filterUniqueValues.length > 0 && (
                       <datalist id="filter-value-options">
@@ -756,8 +757,8 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
             </div>
 
             {/* Save options */}
-            <div className="rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80 p-4 space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-[#6a6a80]">Save</p>
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Save</p>
 
               <label className="flex cursor-pointer items-start gap-3">
                 <input
@@ -767,13 +768,13 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
                   className="mt-0.5 accent-violet-500"
                 />
                 <div>
-                  <p className="text-sm font-medium text-white">Save as template</p>
-                  <p className="text-xs text-[#6a6a80]">Reuse this chart config with other datasets of the same shape.</p>
+                  <p className="text-sm font-medium text-gray-800">Save as template</p>
+                  <p className="text-xs text-gray-400">Reuse this chart config with other datasets of the same shape.</p>
                 </div>
               </label>
 
               {saveError && (
-                <p className="rounded-xl border border-red-500/30 bg-red-500/5 px-3 py-2 text-xs text-red-400">
+                <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
                   {saveError}
                 </p>
               )}
@@ -791,34 +792,34 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
 
           {/* ── Preview pane ────────────────────────────────── */}
           <div className="lg:sticky lg:top-6 lg:self-start">
-            <div className="rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80 p-6">
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
               <div className="mb-4 flex items-center justify-between">
-                <p className="text-sm font-semibold text-white">
+                <p className="text-sm font-semibold text-gray-900">
                   {config.title || 'Untitled chart'}
                 </p>
-                <span className="rounded-full border border-[#35354a]/60 bg-[#151526] px-2.5 py-0.5 text-xs text-[#6a6a80] capitalize">
+                <span className="rounded-full border border-gray-200 bg-gray-50 px-2.5 py-0.5 text-xs text-gray-500 capitalize">
                   {chartType}
                 </span>
               </div>
 
               {loadingRows ? (
                 <div className="flex h-[320px] items-center justify-center">
-                  <p className="text-sm text-[#6a6a80]">Loading data…</p>
+                  <p className="text-sm text-gray-400">Loading data…</p>
                 </div>
               ) : rowError ? (
                 <div className="flex h-[320px] items-center justify-center">
-                  <p className="text-sm text-red-400">{rowError}</p>
+                  <p className="text-sm text-red-500">{rowError}</p>
                 </div>
               ) : mounted ? (
                 <ChartPane chartType={chartType} config={config} rows={rows} />
               ) : (
                 <div className="flex h-[320px] items-center justify-center">
-                  <p className="text-sm text-[#4a4a60]">Rendering…</p>
+                  <p className="text-sm text-gray-400">Rendering…</p>
                 </div>
               )}
 
               {rows.length > 0 && (
-                <div className="mt-3 flex items-center gap-1 text-xs text-[#4a4a60]">
+                <div className="mt-3 flex items-center gap-1 text-xs text-gray-400">
                   <Info className="size-3 shrink-0" />
                   Preview uses first {rows.length.toLocaleString()} of {dataset.row_count.toLocaleString()} rows.
                 </div>

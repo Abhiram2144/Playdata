@@ -3,13 +3,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  BookOpen, Plus, Copy, Trash2, Database, FolderPlus, BarChart3,
+  BookOpen, Plus, Copy, Trash2, Database, FolderPlus,
   CheckCircle, Clock, FileQuestion, AlertTriangle, Pencil,
-  Crown, UserCheck, Users, LayoutDashboard, TrendingUp, UserCircle, Share2,
+  Crown, UserCheck, Share2,
 } from 'lucide-react';
 import { GetServerSidePropsResult } from 'next';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { type NavItem } from '@/components/layout/Sidebar';
+import { TEACHER_NAV } from '@/lib/teacher-nav';
 import { withAuth } from '@/lib/auth';
 import { createClientFromContext } from '@/lib/supabase/server-props';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -142,21 +142,13 @@ export const getServerSideProps = withAuth(
 );
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const NAV_ITEMS: NavItem[] = [
-  { href: '/teacher/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/teacher/datasets', label: 'Datasets', icon: Database },
-  { href: '/teacher/visualisations', label: 'Visualisations', icon: BarChart3 },
-  { href: '/teacher/quizzes', label: 'Quizzes', icon: BookOpen },
-  { href: '/teacher/sessions', label: 'Sessions', icon: Users },
-  { href: '/teacher/analytics', label: 'Analytics', icon: TrendingUp, disabled: true },
-  { href: '/profile', label: 'Profile', icon: UserCircle },
-];
+const NAV_ITEMS = TEACHER_NAV;
 
 const STATUS_META: Record<QuizStatus, { label: string; colour: string }> = {
-  draft:       { label: 'Draft',       colour: 'bg-[#35354a]/60 text-[#8d8da0]' },
-  in_progress: { label: 'In progress', colour: 'bg-amber-500/15 text-amber-400' },
-  assigned:    { label: 'Assigned',    colour: 'bg-blue-500/15 text-blue-400' },
-  completed:   { label: 'Completed',   colour: 'bg-emerald-500/15 text-emerald-400' },
+  draft:       { label: 'Draft',       colour: 'bg-gray-100 text-gray-500' },
+  in_progress: { label: 'In progress', colour: 'bg-amber-100 text-amber-700' },
+  assigned:    { label: 'Assigned',    colour: 'bg-blue-100 text-blue-700' },
+  completed:   { label: 'Completed',   colour: 'bg-emerald-100 text-emerald-700' },
 };
 
 function timeAgo(iso: string): string {
@@ -195,38 +187,38 @@ function QuizCard({
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80 p-5"
+      className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
     >
       <div className="flex items-start gap-4">
         {/* Icon */}
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/10 ring-1 ring-violet-500/20">
-          <BookOpen className="size-5 text-violet-400" />
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-100 ring-1 ring-violet-200">
+          <BookOpen className="size-5 text-violet-600" />
         </span>
 
         {/* Info */}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="truncate text-sm font-semibold text-white">{quiz.title}</h2>
+            <h2 className="truncate text-sm font-semibold text-gray-900">{quiz.title}</h2>
             <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${status.colour}`}>
               {status.label}
             </span>
             {/* Role badge */}
             {quiz.is_owner ? (
-              <span className="flex items-center gap-0.5 rounded-full bg-violet-500/10 px-1.5 py-0.5 text-xs text-violet-400 ring-1 ring-violet-500/20">
+              <span className="flex items-center gap-0.5 rounded-full bg-violet-100 px-1.5 py-0.5 text-xs text-violet-700 ring-1 ring-violet-200">
                 <Crown className="size-2.5" /> Owner
               </span>
             ) : quiz.my_role === 'contributor' ? (
-              <span className="flex items-center gap-0.5 rounded-full bg-[#252538] px-1.5 py-0.5 text-xs text-[#8d8da0] ring-1 ring-[#35354a]">
+              <span className="flex items-center gap-0.5 rounded-full bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500 ring-1 ring-gray-200">
                 <UserCheck className="size-2.5" /> Contributor
               </span>
             ) : null}
           </div>
 
           {quiz.description && (
-            <p className="mt-0.5 truncate text-xs text-[#8d8da0]">{quiz.description}</p>
+            <p className="mt-0.5 truncate text-xs text-gray-500">{quiz.description}</p>
           )}
 
-          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-[#6a6a80]">
+          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-400">
             <span className="flex items-center gap-1">
               <FileQuestion className="size-3" />
               {quiz.question_count} question{quiz.question_count !== 1 ? 's' : ''}
@@ -242,13 +234,13 @@ function QuizCard({
               {new Date(quiz.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
             </span>
             {quiz.assigned_to_name && quiz.assigned_to !== currentUserId && (
-              <span className="flex items-center gap-1 text-blue-400">
+              <span className="flex items-center gap-1 text-blue-600">
                 <UserCheck className="size-3" />
                 Assigned to {quiz.assigned_to_name}
               </span>
             )}
             {quiz.last_edited_by_name && quiz.last_edited_at && (
-              <span className="flex items-center gap-1 text-[#4a4a60]">
+              <span className="flex items-center gap-1 text-gray-400">
                 <Pencil className="size-3" />
                 {quiz.last_edited_by === currentUserId ? 'you' : quiz.last_edited_by_name}
                 {' · '}{timeAgo(quiz.last_edited_at)}
@@ -264,7 +256,7 @@ function QuizCard({
             <button
               onClick={() => onMarkComplete(quiz.id)}
               disabled={completing === quiz.id}
-              className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-600/10 px-3 py-1.5 text-xs font-medium text-emerald-400 transition hover:bg-emerald-600/20 disabled:opacity-40"
+              className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-40"
             >
               <CheckCircle className="size-3" />
               {completing === quiz.id ? 'Updating…' : 'Complete'}
@@ -273,7 +265,7 @@ function QuizCard({
 
           <Link
             href={`/teacher/quizzes/${quiz.id}`}
-            className="flex items-center gap-1.5 rounded-lg border border-[#35354a] px-3 py-1.5 text-xs font-medium text-[#c9c9d4] transition hover:border-violet-500/40 hover:text-violet-400"
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-violet-300 hover:text-violet-600"
           >
             <Pencil className="size-3" /> Edit
           </Link>
@@ -282,21 +274,21 @@ function QuizCard({
             <>
               <Link
                 href={`/teacher/quizzes/${quiz.id}#collaborators`}
-                className="flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-1.5 text-xs font-medium text-violet-400 transition hover:bg-violet-500/20"
+                className="flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-medium text-violet-700 transition hover:bg-violet-100"
               >
                 <Share2 className="size-3" /> Share
               </Link>
               <button
                 onClick={() => onDuplicate(quiz.id)}
                 disabled={duplicating === quiz.id}
-                className="flex items-center gap-1.5 rounded-lg border border-[#35354a] px-3 py-1.5 text-xs font-medium text-[#c9c9d4] transition hover:border-violet-500/40 hover:text-violet-400 disabled:opacity-40"
+                className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-violet-300 hover:text-violet-600 disabled:opacity-40"
               >
                 <Copy className="size-3" />
                 {duplicating === quiz.id ? 'Copying…' : 'Duplicate'}
               </button>
               <button
                 onClick={() => onDelete(quiz.id)}
-                className="flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-600/10 px-3 py-1.5 text-xs font-medium text-red-400 transition hover:bg-red-600/20"
+                className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-100"
               >
                 <Trash2 className="size-3" />
               </button>
@@ -372,8 +364,8 @@ export default function QuizList({ profile, quizzes: initial }: Props) {
           className="flex items-center justify-between"
         >
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-[#6a6a80]">Quizzes</p>
-            <h1 className="mt-0.5 text-2xl font-bold text-white">Your Quizzes</h1>
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Quizzes</p>
+            <h1 className="mt-0.5 text-2xl font-bold text-gray-900">Your Quizzes</h1>
           </div>
           <Link
             href="/teacher/quizzes/new"
@@ -390,9 +382,9 @@ export default function QuizList({ profile, quizzes: initial }: Props) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.04 }}
           >
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-[#6a6a80] flex items-center gap-2">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-gray-400 flex items-center gap-2">
               <UserCheck className="size-3.5" /> Assigned to me
-              <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-xs font-medium text-blue-400">
+              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
                 {assignedToMe.length}
               </span>
             </h2>
@@ -410,13 +402,13 @@ export default function QuizList({ profile, quizzes: initial }: Props) {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05 }}
-            className="rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80 px-8 py-16 text-center"
+            className="rounded-2xl border border-gray-100 bg-white px-8 py-16 text-center shadow-sm"
           >
-            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-500/10 ring-1 ring-violet-500/20">
-              <BookOpen className="size-7 text-violet-400" />
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-100 ring-1 ring-violet-200">
+              <BookOpen className="size-7 text-violet-600" />
             </span>
-            <p className="mt-4 text-sm font-semibold text-white">No quizzes yet</p>
-            <p className="mt-1 text-xs text-[#6a6a80]">Create your first quiz to get started.</p>
+            <p className="mt-4 text-sm font-semibold text-gray-800">No quizzes yet</p>
+            <p className="mt-1 text-xs text-gray-400">Create your first quiz to get started.</p>
             <Link
               href="/teacher/quizzes/new"
               className="mt-5 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500"
@@ -431,7 +423,7 @@ export default function QuizList({ profile, quizzes: initial }: Props) {
             transition={{ delay: 0.06 }}
           >
             {assignedToMe.length > 0 && (
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-[#6a6a80] flex items-center gap-2">
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-gray-400 flex items-center gap-2">
                 <FolderPlus className="size-3.5" /> My quizzes
               </h2>
             )}
@@ -451,21 +443,21 @@ export default function QuizList({ profile, quizzes: initial }: Props) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4"
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-sm rounded-2xl border border-[#35354a]/60 bg-[#11111f] p-6 shadow-2xl"
+              className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-xl"
             >
               <div className="flex items-start gap-3 mb-5">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-500/10 ring-1 ring-red-500/20">
-                  <AlertTriangle className="size-4 text-red-400" />
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-100 ring-1 ring-red-200">
+                  <AlertTriangle className="size-4 text-red-500" />
                 </span>
                 <div>
-                  <h2 className="text-sm font-bold text-white">Delete quiz?</h2>
-                  <p className="text-xs text-[#8d8da0] mt-0.5">
+                  <h2 className="text-sm font-bold text-gray-900">Delete quiz?</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
                     This will permanently delete the quiz and all its questions. This cannot be undone.
                   </p>
                 </div>
@@ -473,7 +465,7 @@ export default function QuizList({ profile, quizzes: initial }: Props) {
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setConfirmDelete(null)}
-                  className="rounded-xl border border-[#35354a] px-4 py-2 text-sm text-[#8d8da0] transition hover:text-white"
+                  className="rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-500 transition hover:text-gray-700"
                 >
                   Cancel
                 </button>

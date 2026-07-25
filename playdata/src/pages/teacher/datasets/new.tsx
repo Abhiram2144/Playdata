@@ -134,12 +134,12 @@ export default function NewDataset({ profile }: Props) {
         <div className="mb-8">
           <button
             onClick={() => router.push('/teacher/datasets')}
-            className="mb-4 text-sm text-[#6a6a80] hover:text-violet-400 transition-colors"
+            className="mb-4 text-sm text-gray-400 hover:text-violet-600 transition-colors"
           >
             ← Back to Datasets
           </button>
-          <h1 className="text-3xl font-bold text-white">Upload Dataset</h1>
-          <p className="mt-1 text-sm text-[#8d8da0]">
+          <h1 className="text-3xl font-bold text-gray-900">Upload Dataset</h1>
+          <p className="mt-1 text-sm text-gray-500">
             Upload a .csv or .xlsx file. Columns and types are detected automatically.
           </p>
         </div>
@@ -150,10 +150,10 @@ export default function NewDataset({ profile }: Props) {
           animate={{ opacity: 1, y: 0 }}
           className={`relative rounded-2xl border-2 border-dashed transition-colors duration-200 ${
             dragging
-              ? 'border-violet-500 bg-violet-600/10'
+              ? 'border-violet-400 bg-violet-50'
               : file
-              ? 'border-[#35354a] bg-[#11111f]'
-              : 'border-[#35354a] bg-[#11111f] hover:border-violet-500/50'
+              ? 'border-gray-200 bg-white'
+              : 'border-gray-200 bg-gray-50 hover:border-violet-300 hover:bg-white'
           }`}
           onDrop={onDrop}
           onDragOver={onDragOver}
@@ -169,13 +169,13 @@ export default function NewDataset({ profile }: Props) {
                 exit={{ opacity: 0 }}
                 className="flex flex-col items-center justify-center gap-4 px-8 py-16 text-center"
               >
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-600/15 ring-1 ring-violet-500/20">
-                  <UploadCloud className="size-8 text-violet-400" />
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-100 ring-1 ring-violet-200">
+                  <UploadCloud className="size-8 text-violet-600" />
                 </div>
                 <div>
-                  <p className="font-semibold text-white">Drop your file here</p>
-                  <p className="mt-1 text-sm text-[#6a6a80]">or click to browse</p>
-                  <p className="mt-2 text-xs text-[#4a4a60]">.csv or .xlsx — max 50 MB</p>
+                  <p className="font-semibold text-gray-800">Drop your file here</p>
+                  <p className="mt-1 text-sm text-gray-400">or click to browse</p>
+                  <p className="mt-2 text-xs text-gray-400">.csv or .xlsx — max 50 MB</p>
                 </div>
                 <button
                   type="button"
@@ -194,17 +194,17 @@ export default function NewDataset({ profile }: Props) {
                 exit={{ opacity: 0 }}
                 className="flex items-center gap-4 px-6 py-5"
               >
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet-600/15 ring-1 ring-violet-500/20">
-                  <FileSpreadsheet className="size-6 text-violet-400" />
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet-100 ring-1 ring-violet-200">
+                  <FileSpreadsheet className="size-6 text-violet-600" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-white">{file.name}</p>
-                  <p className="text-xs text-[#6a6a80]">{formatBytes(file.size)}</p>
+                  <p className="truncate font-medium text-gray-900">{file.name}</p>
+                  <p className="text-xs text-gray-400">{formatBytes(file.size)}</p>
                 </div>
                 {state === 'idle' && (
                   <button
                     onClick={clearFile}
-                    className="shrink-0 rounded-lg p-1.5 text-[#6a6a80] hover:text-white hover:bg-white/5 transition-colors"
+                    className="shrink-0 rounded-lg p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
                   >
                     <X className="size-4" />
                   </button>
@@ -229,15 +229,15 @@ export default function NewDataset({ profile }: Props) {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="mt-4 rounded-xl border border-[#35354a] bg-[#11111f] p-4 space-y-3"
+              className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3"
             >
               {state === 'uploading' ? (
                 <>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-[#c9c9d4]">Uploading…</span>
-                    <span className="text-violet-400 font-semibold">{progress}%</span>
+                    <span className="text-gray-700">Uploading…</span>
+                    <span className="text-violet-600 font-semibold">{progress}%</span>
                   </div>
-                  <div className="h-1.5 w-full rounded-full bg-[#252538] overflow-hidden">
+                  <div className="h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
                     <motion.div
                       className="h-full rounded-full bg-violet-500"
                       animate={{ width: `${progress}%` }}
@@ -246,8 +246,8 @@ export default function NewDataset({ profile }: Props) {
                   </div>
                 </>
               ) : (
-                <div className="flex items-center gap-3 text-sm text-[#c9c9d4]">
-                  <Loader2 className="size-4 text-violet-400 animate-spin shrink-0" />
+                <div className="flex items-center gap-3 text-sm text-gray-600">
+                  <Loader2 className="size-4 text-violet-600 animate-spin shrink-0" />
                   Analysing columns and types…
                 </div>
               )}
@@ -258,7 +258,7 @@ export default function NewDataset({ profile }: Props) {
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-4 flex items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-600/10 px-4 py-3 text-sm text-emerald-300"
+              className="mt-4 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
             >
               <CheckCircle2 className="size-4 shrink-0" />
               Dataset uploaded — redirecting to preview…
@@ -269,7 +269,7 @@ export default function NewDataset({ profile }: Props) {
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-4 flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-600/10 px-4 py-3 text-sm text-red-300"
+              className="mt-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
             >
               <AlertCircle className="size-4 shrink-0 mt-0.5" />
               {errorMsg}

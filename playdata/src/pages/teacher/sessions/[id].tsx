@@ -244,22 +244,22 @@ export default function SessionBuilder({ profile, session, initialItems, availab
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
-            <Link href="/teacher/sessions" className="mt-1 rounded-lg border border-[#35354a] p-1.5 text-[#6a6a80] hover:text-white transition">
+            <Link href="/teacher/sessions" className="mt-1 rounded-lg border border-gray-200 p-1.5 text-gray-400 hover:text-gray-700 hover:border-gray-300 transition">
               <ArrowLeft className="size-4" />
             </Link>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-[#6a6a80]">Session Builder</p>
-              <h1 className="mt-0.5 text-2xl font-bold text-white">{session.title}</h1>
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Session Builder</p>
+              <h1 className="mt-0.5 text-2xl font-bold text-gray-900">{session.title}</h1>
               <div className="mt-1 flex items-center gap-2">
-                <span className="text-xs text-[#8d8da0]">Join code:</span>
+                <span className="text-xs text-gray-500">Join code:</span>
                 <button
                   onClick={copyCode}
-                  className="flex items-center gap-1.5 rounded-lg border border-[#35354a] px-2 py-0.5 font-mono text-sm font-bold tracking-widest text-violet-400 transition hover:border-violet-500/40"
+                  className="flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-2 py-0.5 font-mono text-sm font-bold tracking-widest text-violet-700 transition hover:bg-violet-100"
                 >
                   {session.join_code}
                   <Copy className="size-3" />
                 </button>
-                {copied && <span className="text-xs text-emerald-400">Copied!</span>}
+                {copied && <span className="text-xs text-emerald-600">Copied!</span>}
               </div>
             </div>
           </div>
@@ -277,51 +277,51 @@ export default function SessionBuilder({ profile, session, initialItems, availab
 
           {/* Session items list */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }} className="col-span-3 space-y-3">
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-[#6a6a80]">
-              Session Items <span className="text-[#4a4a5a]">({items.length})</span>
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+              Session Items <span className="text-gray-300">({items.length})</span>
             </h2>
 
             {items.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-[#35354a]/60 bg-[#0f0f1a]/40 py-14 text-center">
-                <Plus className="mx-auto size-8 text-[#35354a] mb-2" />
-                <p className="text-sm text-[#4a4a5a]">Add quizzes or visualisations from the panel →</p>
+              <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 py-14 text-center">
+                <Plus className="mx-auto size-8 text-gray-300 mb-2" />
+                <p className="text-sm text-gray-400">Add quizzes or visualisations from the panel →</p>
               </div>
             ) : (
               <div className="space-y-2">
                 {[...items].sort((a, b) => a.order_index - b.order_index).map((item, index) => (
                   <div
                     key={item.id}
-                    className="flex items-center gap-3 rounded-xl border border-[#35354a]/60 bg-[#11111f]/80 px-4 py-3"
+                    className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm"
                   >
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#252538] text-xs font-bold text-[#6a6a80]">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xs font-bold text-gray-500">
                       {index + 1}
                     </span>
-                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${item.type === 'quiz' ? 'bg-violet-500/10 text-violet-400' : 'bg-sky-500/10 text-sky-400'}`}>
+                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${item.type === 'quiz' ? 'bg-violet-100 text-violet-600' : 'bg-sky-100 text-sky-600'}`}>
                       {item.type === 'quiz' ? <BookOpen className="size-3.5" /> : <BarChart2 className="size-3.5" />}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-white">{item.title}</p>
-                      <p className="text-xs text-[#6a6a80] capitalize">{item.type} · {item.subtitle}</p>
+                      <p className="truncate text-sm font-medium text-gray-900">{item.title}</p>
+                      <p className="text-xs text-gray-400 capitalize">{item.type} · {item.subtitle}</p>
                     </div>
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => moveItem(index, 'up')}
                         disabled={index === 0}
-                        className="rounded p-1 text-[#4a4a5a] hover:text-white disabled:opacity-20 transition"
+                        className="rounded p-1 text-gray-300 hover:text-gray-600 disabled:opacity-20 transition"
                       >
                         <ChevronUp className="size-4" />
                       </button>
                       <button
                         onClick={() => moveItem(index, 'down')}
                         disabled={index === items.length - 1}
-                        className="rounded p-1 text-[#4a4a5a] hover:text-white disabled:opacity-20 transition"
+                        className="rounded p-1 text-gray-300 hover:text-gray-600 disabled:opacity-20 transition"
                       >
                         <ChevronDown className="size-4" />
                       </button>
                       <button
                         onClick={() => removeItem(item.id)}
                         disabled={removingId === item.id}
-                        className="rounded p-1 text-red-500/40 hover:text-red-400 disabled:opacity-40 transition"
+                        className="rounded p-1 text-red-300 hover:text-red-500 disabled:opacity-40 transition"
                       >
                         <Trash2 className="size-4" />
                       </button>
@@ -334,41 +334,41 @@ export default function SessionBuilder({ profile, session, initialItems, availab
 
           {/* Available items panel */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="col-span-2 space-y-3">
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-[#6a6a80]">Add Items</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400">Add Items</h2>
 
-            <div className="rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80 overflow-hidden">
+            <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
               {/* Tabs */}
-              <div className="flex border-b border-[#35354a]/60">
+              <div className="flex border-b border-gray-100">
                 {(['quizzes', 'visualisations'] as const).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`flex-1 py-2.5 text-xs font-semibold transition capitalize ${activeTab === tab ? 'text-violet-400 border-b-2 border-violet-500 bg-violet-500/5' : 'text-[#6a6a80] hover:text-white'}`}
+                    className={`flex-1 py-2.5 text-xs font-semibold transition capitalize ${activeTab === tab ? 'text-violet-700 border-b-2 border-violet-500 bg-violet-50' : 'text-gray-400 hover:text-gray-700'}`}
                   >
                     {tab}
                   </button>
                 ))}
               </div>
 
-              <div className="divide-y divide-[#35354a]/40 max-h-[calc(100vh-24rem)] overflow-y-auto">
+              <div className="divide-y divide-gray-100 max-h-[calc(100vh-24rem)] overflow-y-auto">
                 {activeTab === 'quizzes' && (
                   availableQuizzes.length === 0
-                    ? <p className="py-8 text-center text-xs text-[#4a4a5a]">No quizzes yet. Create one first.</p>
+                    ? <p className="py-8 text-center text-xs text-gray-400">No quizzes yet. Create one first.</p>
                     : availableQuizzes.map((quiz) => {
                       const added = isAdded('quiz', quiz.id)
                       return (
                         <div key={quiz.id} className="flex items-center gap-3 px-4 py-3">
-                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-500/10">
-                            <BookOpen className="size-3.5 text-violet-400" />
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-100">
+                            <BookOpen className="size-3.5 text-violet-600" />
                           </span>
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-xs font-medium text-white">{quiz.title}</p>
-                            <p className="text-xs text-[#6a6a80]">{quiz.question_count} question{quiz.question_count !== 1 ? 's' : ''}</p>
+                            <p className="truncate text-xs font-medium text-gray-900">{quiz.title}</p>
+                            <p className="text-xs text-gray-400">{quiz.question_count} question{quiz.question_count !== 1 ? 's' : ''}</p>
                           </div>
                           <button
                             onClick={() => addItem('quiz', quiz.id, quiz.title, `${quiz.question_count} questions`)}
                             disabled={addingId === quiz.id || added}
-                            className={`flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition ${added ? 'text-emerald-400 bg-emerald-500/10 cursor-default' : 'border border-[#35354a] text-[#8d8da0] hover:border-violet-500/40 hover:text-violet-400'}`}
+                            className={`flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition ${added ? 'text-emerald-600 bg-emerald-50 cursor-default' : 'border border-gray-200 text-gray-500 hover:border-violet-300 hover:text-violet-600'}`}
                           >
                             {added ? '✓ Added' : addingId === quiz.id ? '…' : <><Plus className="size-3" /> Add</>}
                           </button>
@@ -378,22 +378,22 @@ export default function SessionBuilder({ profile, session, initialItems, availab
                 )}
                 {activeTab === 'visualisations' && (
                   availableVisualisations.length === 0
-                    ? <p className="py-8 text-center text-xs text-[#4a4a5a]">No visualisations yet.</p>
+                    ? <p className="py-8 text-center text-xs text-gray-400">No visualisations yet.</p>
                     : availableVisualisations.map((vis) => {
                       const added = isAdded('visualisation', vis.id)
                       return (
                         <div key={vis.id} className="flex items-center gap-3 px-4 py-3">
-                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sky-500/10">
-                            <BarChart2 className="size-3.5 text-sky-400" />
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sky-100">
+                            <BarChart2 className="size-3.5 text-sky-600" />
                           </span>
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-xs font-medium text-white">{vis.name}</p>
-                            <p className="text-xs text-[#6a6a80]">{CHART_LABELS[vis.chart_type] ?? vis.chart_type} chart</p>
+                            <p className="truncate text-xs font-medium text-gray-900">{vis.name}</p>
+                            <p className="text-xs text-gray-400">{CHART_LABELS[vis.chart_type] ?? vis.chart_type} chart</p>
                           </div>
                           <button
                             onClick={() => addItem('visualisation', vis.id, vis.name, `${CHART_LABELS[vis.chart_type] ?? vis.chart_type} chart`)}
                             disabled={addingId === vis.id || added}
-                            className={`flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition ${added ? 'text-emerald-400 bg-emerald-500/10 cursor-default' : 'border border-[#35354a] text-[#8d8da0] hover:border-violet-500/40 hover:text-violet-400'}`}
+                            className={`flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition ${added ? 'text-emerald-600 bg-emerald-50 cursor-default' : 'border border-gray-200 text-gray-500 hover:border-violet-300 hover:text-violet-600'}`}
                           >
                             {added ? '✓ Added' : addingId === vis.id ? '…' : <><Plus className="size-3" /> Add</>}
                           </button>
@@ -405,16 +405,16 @@ export default function SessionBuilder({ profile, session, initialItems, availab
             </div>
 
             {/* Tip */}
-            <div className="rounded-xl border border-[#35354a]/40 bg-[#0f0f1a]/60 px-4 py-3">
-              <p className="text-xs text-[#6a6a80]">
-                <span className="text-[#8d8da0] font-medium">Tip:</span> Students join with the 6-character code <span className="font-mono font-bold text-violet-400">{session.join_code}</span>. Add content, then click <span className="text-emerald-400 font-medium">Go Live</span> to start.
+            <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+              <p className="text-xs text-gray-400">
+                <span className="text-gray-600 font-medium">Tip:</span> Students join with the 6-character code <span className="font-mono font-bold text-violet-700">{session.join_code}</span>. Add content, then click <span className="text-emerald-600 font-medium">Go Live</span> to start.
               </p>
             </div>
 
             {/* Separate FileQuestion items in future */}
-            <div className="rounded-xl border border-[#35354a]/40 bg-[#0f0f1a]/60 px-4 py-3 flex items-start gap-2">
-              <FileQuestion className="size-3.5 text-[#4a4a5a] shrink-0 mt-0.5" />
-              <p className="text-xs text-[#4a4a5a]">Standalone question items (from individual quiz questions) can be added here in a future update.</p>
+            <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 flex items-start gap-2">
+              <FileQuestion className="size-3.5 text-gray-300 shrink-0 mt-0.5" />
+              <p className="text-xs text-gray-400">Standalone question items (from individual quiz questions) can be added here in a future update.</p>
             </div>
           </motion.div>
         </div>

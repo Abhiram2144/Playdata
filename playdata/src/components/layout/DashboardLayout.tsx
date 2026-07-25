@@ -16,7 +16,7 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children, navItems, profile }: DashboardLayoutProps) {
   return (
-    <div className="min-h-screen bg-[#0d0d18]">
+    <div className="min-h-screen bg-[#f5f3ff]">
       <Sidebar items={navItems} profile={profile} />
       <div className="pl-60">
         <motion.main
