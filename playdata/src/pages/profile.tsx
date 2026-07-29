@@ -5,14 +5,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
   Trophy, Loader2, CheckCircle2, AlertCircle,
-  LayoutDashboard, Users, UserCircle,
+  LayoutDashboard, Users, UserCircle, Zap,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import { createClientFromContext } from '@/lib/supabase/server-props';
 import type { NavItem } from '@/components/layout/Sidebar';
@@ -54,8 +51,8 @@ type FormData = z.infer<typeof schema>;
 
 const STUDENT_NAV: NavItem[] = [
   { href: '/student/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/student/results', label: 'My Results', icon: Trophy, disabled: true },
-  { href: '/student/sessions', label: 'Sessions', icon: Users, disabled: true },
+  { href: '/student/join', label: 'Join Session', icon: Users },
+  { href: '/student/results', label: 'My Results', icon: Trophy },
   { href: '/profile', label: 'Profile', icon: UserCircle },
 ];
 
@@ -77,8 +74,7 @@ export default function ProfilePage({ profile }: Props) {
       .eq('id', profile.id);
 
     if (error) {
-      if (error.code === '23505') toast.error('Username taken', { description: 'Try a different one.' });
-      else toast.error('Update failed', { description: error.message });
+      toast.error('Update failed', { description: error.message });
       return;
     }
 
@@ -87,126 +83,143 @@ export default function ProfilePage({ profile }: Props) {
     toast.success('Profile updated');
   };
 
-  const joinedDate = new Date(profile.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const joinedDate = new Date(profile.created_at).toLocaleDateString('en-GB', {
+    day: 'numeric', month: 'long', year: 'numeric',
+  });
+
+  const initial = profile.full_name?.[0]?.toUpperCase() ?? '?';
+
+  const roleColors: Record<string, string> = {
+    student: 'bg-violet-100 text-violet-700 ring-violet-200',
+    teacher: 'bg-indigo-100 text-indigo-700 ring-indigo-200',
+    admin: 'bg-red-100 text-red-700 ring-red-200',
+  };
 
   return (
     <DashboardLayout navItems={navItems} profile={profile}>
       <div className="max-w-2xl space-y-8">
 
-        {/* Header */}
+        {/* Page header */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-2xl font-bold text-white">Profile</h1>
-          <p className="mt-1 text-sm text-[#8d8da0]">Manage your personal information</p>
+          <div className="flex items-center gap-2 mb-2">
+            <Zap className="size-3.5 text-violet-600" />
+            <span className="text-xs font-bold uppercase tracking-[0.2em] text-violet-600">Settings</span>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
+          <p className="mt-1 text-sm text-gray-500">Manage your personal information</p>
         </motion.div>
 
-        {/* Avatar + role */}
+        {/* Avatar + identity */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="flex items-center gap-5 rounded-2xl border border-[#35354a]/60 bg-[#1a1a2e]/60 p-6"
+          className="flex items-center gap-5 rounded-2xl border border-gray-200 bg-white shadow-sm p-6"
         >
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-600/20 ring-1 ring-violet-500/30 text-2xl font-bold text-violet-300 select-none">
-            {profile.full_name?.[0]?.toUpperCase() ?? '?'}
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-100 ring-1 ring-violet-200 text-2xl font-bold text-violet-700 select-none shrink-0">
+            {initial}
           </div>
-          <div>
-            <p className="text-lg font-bold text-white">{profile.full_name}</p>
-            <p className="text-sm text-[#8d8da0]">{profile.email}</p>
-            <div className="mt-2 flex items-center gap-2">
-              <span className={cn(
-                'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize',
-                profile.role === 'teacher' ? 'bg-indigo-600/15 text-indigo-300 ring-1 ring-indigo-500/25'
-                  : profile.role === 'admin' ? 'bg-red-600/15 text-red-300 ring-1 ring-red-500/25'
-                  : 'bg-violet-600/15 text-violet-300 ring-1 ring-violet-500/25'
-              )}>
+          <div className="min-w-0 flex-1">
+            <p className="text-lg font-bold text-gray-900 truncate">{profile.full_name}</p>
+            <p className="text-sm text-gray-400 truncate">{profile.email}</p>
+            <div className="mt-2 flex items-center gap-2 flex-wrap">
+              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset ${roleColors[profile.role] ?? roleColors.student}`}>
                 {profile.role}
               </span>
-              <span className="text-xs text-[#6a6a80]">Member since {joinedDate}</span>
+              <span className="text-xs text-gray-400">Member since {joinedDate}</span>
             </div>
           </div>
         </motion.div>
 
-        {/* Editable fields */}
+        {/* Edit name */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="rounded-2xl border border-[#35354a]/60 bg-[#1a1a2e]/60 p-6"
+          className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6"
         >
-          <h2 className="mb-5 text-sm font-semibold uppercase tracking-widest text-[#6a6a80]">Edit profile</h2>
+          <h2 className="mb-5 text-sm font-semibold uppercase tracking-widest text-gray-400">Edit profile</h2>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-[#c9c9d4]">Full name</label>
-              <Input
+              <label className="text-sm font-medium text-gray-700">Full name</label>
+              <input
                 placeholder="Your full name"
-                className={cn(errors.full_name && 'border-red-500/70')}
+                className={`w-full rounded-xl border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-100 shadow-sm transition ${
+                  errors.full_name
+                    ? 'border-red-300 focus:border-red-400'
+                    : 'border-gray-200 focus:border-violet-400'
+                }`}
                 {...register('full_name')}
               />
-              {errors.full_name && <p className="text-xs text-red-400">{errors.full_name.message}</p>}
+              {errors.full_name && (
+                <p className="text-xs text-red-500">{errors.full_name.message}</p>
+              )}
             </div>
 
-            <div className="rounded-xl border border-[#35354a]/50 bg-[#151526]/70 p-3 text-sm text-[#8d8da0]">
+            <p className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-400">
               Your account uses your email address for sign-in. You can update your display name above.
-            </div>
+            </p>
 
-            <Button
+            <button
               type="submit"
               disabled={isSubmitting || !isDirty}
-              className={cn('transition-all', saved ? 'bg-emerald-600 hover:bg-emerald-600' : 'bg-violet-600 hover:bg-violet-700')}
+              className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition disabled:opacity-40 disabled:cursor-not-allowed ${
+                saved ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-violet-600 hover:bg-violet-500'
+              }`}
             >
               {isSubmitting ? (
-                <><Loader2 size={15} className="animate-spin" />Saving…</>
+                <><Loader2 className="size-4 animate-spin" />Saving…</>
               ) : saved ? (
-                <><CheckCircle2 size={15} />Saved</>
+                <><CheckCircle2 className="size-4" />Saved</>
               ) : (
                 'Save changes'
               )}
-            </Button>
+            </button>
           </form>
         </motion.div>
 
-        {/* Read-only info */}
+        {/* Account details (read-only) */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="rounded-2xl border border-[#35354a]/60 bg-[#1a1a2e]/60 divide-y divide-[#35354a]/40"
         >
-          <div className="px-6 py-4">
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-[#6a6a80]">Account details</h2>
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-gray-400">Account details</h2>
+          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm divide-y divide-gray-100">
+            {[
+              { label: 'Email', value: profile.email },
+              { label: 'Account type', value: profile.role.charAt(0).toUpperCase() + profile.role.slice(1) },
+              ...(profile.role === 'teacher'
+                ? [
+                    { label: 'Subject taught', value: profile.subject_taught ?? '—' },
+                    { label: 'Institution role', value: profile.institution_role ?? '—' },
+                  ]
+                : [{ label: 'Education level', value: profile.education_level ?? '—' }]
+              ),
+            ].map(({ label, value }) => (
+              <div key={label} className="flex items-center justify-between px-6 py-3.5">
+                <span className="text-sm text-gray-400">{label}</span>
+                <span className="text-sm font-medium text-gray-700">{value}</span>
+              </div>
+            ))}
           </div>
-          {[
-            { label: 'Email', value: profile.email },
-            { label: 'Account type', value: profile.role.charAt(0).toUpperCase() + profile.role.slice(1) },
-            ...(profile.role === 'teacher'
-              ? [
-                  { label: 'Subject taught', value: profile.subject_taught ?? '—' },
-                  { label: 'Institution role', value: profile.institution_role ?? '—' },
-                ]
-              : [{ label: 'Education level', value: profile.education_level ?? '—' }]
-            ),
-          ].map(({ label, value }) => (
-            <div key={label} className="flex items-center justify-between px-6 py-3.5">
-              <span className="text-sm text-[#8d8da0]">{label}</span>
-              <span className="text-sm font-medium text-[#f0f0f8]">{value}</span>
-            </div>
-          ))}
         </motion.div>
 
-        {/* Role notice */}
+        {/* Student upgrade notice */}
         {profile.role === 'student' && (
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="flex items-start gap-3 rounded-xl border border-amber-500/20 bg-amber-950/20 px-4 py-3.5"
+            className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3.5"
           >
-            <AlertCircle className="size-4 text-amber-400 mt-0.5 shrink-0" />
-            <p className="text-sm text-amber-300/80">
+            <AlertCircle className="size-4 text-amber-500 mt-0.5 shrink-0" />
+            <p className="text-sm text-amber-700">
               Teacher accounts are approved manually. Contact your institution administrator if you need elevated access.
             </p>
           </motion.div>
         )}
+
       </div>
     </DashboardLayout>
   );
