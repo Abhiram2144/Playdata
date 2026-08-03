@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { motion } from 'framer-motion';
-import { Database, FolderPlus, BarChart3, Cable, CheckCircle2, Clock, AlertCircle, Plus, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Database, FolderPlus, BarChart3, Cable, CheckCircle2, Clock, AlertCircle, Plus, X, LogOut, Loader2 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { type NavItem } from '@/components/layout/Sidebar';
 import { TEACHER_NAV } from '@/lib/teacher-nav';
@@ -92,6 +92,8 @@ export default function TeacherConnections({ profile }: Props) {
   const [formName, setFormName] = useState('');
   const [formProvider, setFormProvider] = useState<'google_drive' | 'dropbox'>('google_drive');
   const [submitting, setSubmitting] = useState(false);
+  const [confirmDisconnect, setConfirmDisconnect] = useState<string | null>(null);
+  const [disconnecting, setDisconnecting] = useState<string | null>(null);
 
   useEffect(() => {
     fetchConnections();
@@ -148,6 +150,24 @@ export default function TeacherConnections({ profile }: Props) {
     } else {
       window.location.assign(`/api/teacher/drive/dropbox-connect?connectionId=${conn.id}`);
     }
+  };
+
+  const handleDisconnect = async (connId: string) => {
+    setDisconnecting(connId);
+    setMessage(null);
+
+    const res = await fetch(`/api/teacher/connections/${connId}/disconnect`, { method: 'DELETE' });
+    const data = await res.json();
+    setDisconnecting(null);
+    setConfirmDisconnect(null);
+
+    if (!res.ok) {
+      setMessage({ type: 'error', text: data.error ?? 'Failed to disconnect' });
+      return;
+    }
+
+    setMessage({ type: 'success', text: 'Account disconnected. You can reconnect anytime.' });
+    await fetchConnections();
   };
 
   return (
@@ -252,26 +272,84 @@ export default function TeacherConnections({ profile }: Props) {
                     <StatusBadge conn={conn} />
                   </div>
 
-                  {/* Action row */}
-                  {conn.is_approved && (!conn.has_token || conn.token_expired) && (
-                    <div className="mt-3 flex items-center gap-2">
-                      {conn.token_expired && (
-                        <p className="text-xs text-red-600 mr-2">Your OAuth token expired.</p>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => handleConnect(conn)}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-violet-50 border border-violet-200 px-3 py-1.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-100"
-                      >
-                        {conn.token_expired ? 'Reconnect' : 'Connect via OAuth'}
-                      </button>
-                    </div>
-                  )}
-
+                  {/* Folder info */}
                   {conn.is_approved && conn.has_token && !conn.token_expired && conn.external_folder_id && (
                     <p className="mt-2 text-xs text-gray-400">
                       Folder: <span className="text-gray-600 font-mono">{conn.external_folder_id}</span>
                     </p>
+                  )}
+
+                  {/* Action row */}
+                  {conn.is_approved && (
+                    <div className="mt-3 flex items-center gap-2 flex-wrap">
+                      {/* Connect / Reconnect */}
+                      {(!conn.has_token || conn.token_expired) && (
+                        <>
+                          {conn.token_expired && (
+                            <p className="text-xs text-red-600">Your OAuth token expired.</p>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleConnect(conn)}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-violet-50 border border-violet-200 px-3 py-1.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-100"
+                          >
+                            {conn.token_expired ? 'Reconnect' : 'Connect via OAuth'}
+                          </button>
+                        </>
+                      )}
+
+                      {/* Disconnect (only when connected) */}
+                      {conn.has_token && !conn.token_expired && (
+                        <>
+                          {confirmDisconnect === conn.id ? (
+                            <AnimatePresence>
+                              <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-1.5"
+                              >
+                                <span className="text-xs text-red-700 font-medium">Disconnect this account?</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDisconnect(conn.id)}
+                                  disabled={disconnecting === conn.id}
+                                  className="inline-flex items-center gap-1 rounded-lg bg-red-600 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-red-500 disabled:opacity-60"
+                                >
+                                  {disconnecting === conn.id
+                                    ? <Loader2 className="size-3 animate-spin" />
+                                    : <LogOut className="size-3" />}
+                                  Yes, disconnect
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmDisconnect(null)}
+                                  className="rounded-lg border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-600 transition hover:bg-red-50"
+                                >
+                                  Cancel
+                                </button>
+                              </motion.div>
+                            </AnimatePresence>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => { setConfirmDisconnect(conn.id); setMessage(null); }}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 transition hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                            >
+                              <LogOut className="size-3" /> Disconnect
+                            </button>
+                          )}
+
+                          {/* Switch account: reconnect via OAuth while already connected */}
+                          <button
+                            type="button"
+                            onClick={() => handleConnect(conn)}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700"
+                          >
+                            Switch account
+                          </button>
+                        </>
+                      )}
+                    </div>
                   )}
                 </div>
               ))}

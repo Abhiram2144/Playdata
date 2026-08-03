@@ -181,12 +181,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     description,
     dataset_id,
     status = 'draft',
+    is_timed,
+    allow_student_charts = false,
     questions = [],
   } = req.body as {
     title?: string;
     description?: string;
     dataset_id?: string | null;
     status?: string;
+    is_timed?: boolean;
+    allow_student_charts?: boolean;
     questions?: QuestionInput[];
   };
 
@@ -217,6 +221,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       description: description?.trim() || null,
       dataset_id: dataset_id || null,
       status,
+      ...(is_timed !== undefined ? { is_timed } : {}),
+      allow_student_charts: allow_student_charts ?? false,
     })
     .select('id')
     .single();

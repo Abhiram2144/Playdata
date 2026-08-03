@@ -7,7 +7,7 @@ import {
   CheckCircle2, XCircle, BarChart2, BookOpen, Zap,
   Users, Send, LayoutDashboard, UserCircle,
   TrendingUp, PieChart as PieIcon, Maximize2, AlignLeft,
-  Loader2,
+  Loader2, PenLine, ChevronDown, ChevronUp, Plus,
 } from 'lucide-react'
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -34,6 +34,14 @@ interface VizConfig {
   filterValue?: string
 }
 
+interface QuizQuestionVis {
+  id: string
+  name: string
+  chart_type: ChartType
+  config: VizConfig
+  dataset_id: string | null
+}
+
 interface QuizQuestion {
   id: string
   text: string
@@ -42,6 +50,8 @@ interface QuizQuestion {
   correct_answer: string
   time_limit_secs: number
   order_index: number
+  visualisation_ids: string[]
+  visualisations: QuizQuestionVis[]
 }
 
 interface SessionItem {
@@ -56,6 +66,7 @@ interface SessionItem {
   dataset_id?: string | null
   // Quiz
   quizQuestions?: QuizQuestion[]
+  allow_student_charts?: boolean
   // Question
   question_type?: string
   options?: string[] | null
@@ -491,6 +502,237 @@ function VisPanel({ item, sessionId }: { item: SessionItem; sessionId: string })
   )
 }
 
+// ── Quiz question chart (teacher vis + optional student builder) ──────────────
+
+function QuizQuestionChart({
+  vis,
+  sessionId,
+  allowStudentCharts,
+}: {
+  vis: QuizQuestionVis
+  sessionId: string
+  allowStudentCharts: boolean
+}) {
+  const [rows, setRows] = useState<Record<string, unknown>[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
+  const [expanded, setExpanded] = useState(true)
+  const [selectedType, setSelectedType] = useState<ChartType>(vis.chart_type)
+  const [builderOpen, setBuilderOpen] = useState(false)
+  const [studentChartType, setStudentChartType] = useState<ChartType>('bar')
+  const [studentConfig, setStudentConfig] = useState<VizConfig>({})
+
+  useEffect(() => { setMounted(true) }, [])
+
+  useEffect(() => {
+    if (!vis.dataset_id) return
+    setLoading(true)
+    setError(null)
+    fetch(`/api/student/sessions/${sessionId}/vis-rows?vis_id=${vis.id}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.rows) setRows(data.rows)
+        else setError('Failed to load chart data')
+      })
+      .catch(() => setError('Failed to load chart data'))
+      .finally(() => setLoading(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vis.id, sessionId])
+
+  const columns = rows.length > 0 ? Object.keys(rows[0]) : []
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      {/* Teacher chart header */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 bg-gray-50">
+        <div className="flex items-center gap-2">
+          <BarChart2 className="size-3.5 text-sky-500" />
+          <span className="text-xs font-semibold text-gray-700">{vis.name}</span>
+          <span className="rounded-full bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold text-sky-600">Teacher</span>
+        </div>
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="rounded-md p-1 text-gray-400 hover:text-gray-600 transition"
+        >
+          {expanded ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+        </button>
+      </div>
+
+      {expanded && (
+        <div className="p-4 space-y-3">
+          {/* Chart type switcher */}
+          <div className="flex flex-wrap gap-1.5">
+            {CHART_TYPES.map((ct) => (
+              <button
+                key={ct}
+                onClick={() => setSelectedType(ct)}
+                className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition border ${
+                  selectedType === ct
+                    ? 'bg-violet-600 text-white border-violet-600'
+                    : 'bg-white text-gray-500 border-gray-200 hover:border-violet-300 hover:text-violet-600'
+                }`}
+              >
+                {CHART_ICONS[ct]}
+                {CHART_LABELS[ct]}
+                {ct === vis.chart_type && selectedType !== ct && (
+                  <span className="ml-0.5 rounded-full bg-violet-100 px-1 text-[9px] font-bold text-violet-600">T</span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Chart area */}
+          {!vis.dataset_id ? (
+            <div className="flex h-48 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50">
+              <p className="text-xs text-gray-400">No dataset linked</p>
+            </div>
+          ) : loading ? (
+            <div className="flex h-48 items-center justify-center">
+              <Loader2 className="size-5 animate-spin text-violet-500" />
+            </div>
+          ) : error ? (
+            <div className="flex h-48 items-center justify-center rounded-xl border border-red-100 bg-red-50">
+              <p className="text-xs text-red-500">{error}</p>
+            </div>
+          ) : rows.length === 0 ? (
+            <div className="flex h-48 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50">
+              <p className="text-xs text-gray-400">No data available</p>
+            </div>
+          ) : mounted ? (
+            <div>
+              {vis.config.title && (
+                <p className="mb-2 text-xs font-semibold text-gray-700">{vis.config.title}</p>
+              )}
+              <ChartRenderer chartType={selectedType} config={vis.config} rows={rows} />
+            </div>
+          ) : (
+            <div className="flex h-48 items-center justify-center">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-violet-200 border-t-violet-600" />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Student chart builder */}
+      {allowStudentCharts && rows.length > 0 && (
+        <div className="border-t border-gray-100">
+          <button
+            onClick={() => setBuilderOpen((v) => !v)}
+            className={`flex w-full items-center gap-2 px-4 py-2.5 text-xs font-semibold transition ${
+              builderOpen
+                ? 'bg-violet-50 text-violet-700'
+                : 'bg-gray-50 text-gray-500 hover:bg-violet-50 hover:text-violet-700'
+            }`}
+          >
+            <PenLine className="size-3.5" />
+            {builderOpen ? 'Close my chart' : 'Build my own chart'}
+            {builderOpen ? <ChevronUp className="size-3 ml-auto" /> : <ChevronDown className="size-3 ml-auto" />}
+          </button>
+
+          <AnimatePresence>
+            {builderOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.18 }}
+                className="overflow-hidden"
+              >
+                <div className="p-4 space-y-3 bg-violet-50/50 border-t border-violet-100">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-violet-500">My chart</p>
+
+                  {/* Chart type */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {CHART_TYPES.map((ct) => (
+                      <button
+                        key={ct}
+                        onClick={() => setStudentChartType(ct)}
+                        className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition border ${
+                          studentChartType === ct
+                            ? 'bg-violet-600 text-white border-violet-600'
+                            : 'bg-white text-gray-500 border-gray-200 hover:border-violet-300 hover:text-violet-600'
+                        }`}
+                      >
+                        {CHART_ICONS[ct]} {CHART_LABELS[ct]}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Axis selectors */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-violet-500">
+                        X Axis
+                      </label>
+                      <select
+                        value={studentConfig.xAxis ?? ''}
+                        onChange={(e) => setStudentConfig((c) => ({ ...c, xAxis: e.target.value }))}
+                        className="w-full rounded-lg border border-violet-200 bg-white px-2 py-1.5 text-xs text-gray-700 focus:border-violet-400 focus:outline-none"
+                      >
+                        <option value="">— pick column —</option>
+                        {columns.map((col) => <option key={col} value={col}>{col}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-violet-500">
+                        Y Axis <span className="font-normal normal-case text-violet-400">(optional)</span>
+                      </label>
+                      <select
+                        value={studentConfig.yAxis ?? ''}
+                        onChange={(e) => setStudentConfig((c) => ({ ...c, yAxis: e.target.value || undefined }))}
+                        className="w-full rounded-lg border border-violet-200 bg-white px-2 py-1.5 text-xs text-gray-700 focus:border-violet-400 focus:outline-none"
+                      >
+                        <option value="">— none —</option>
+                        {columns.map((col) => <option key={col} value={col}>{col}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Aggregation (only for bar/line/pie with Y axis) */}
+                  {studentConfig.yAxis && ['bar', 'line', 'pie'].includes(studentChartType) && (
+                    <div>
+                      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-violet-500">
+                        Aggregation
+                      </label>
+                      <div className="flex gap-1.5">
+                        {(['mean', 'sum', 'count'] as const).map((agg) => (
+                          <button
+                            key={agg}
+                            onClick={() => setStudentConfig((c) => ({ ...c, aggregation: agg }))}
+                            className={`rounded-lg px-3 py-1 text-xs font-medium transition border capitalize ${
+                              (studentConfig.aggregation ?? 'mean') === agg
+                                ? 'bg-violet-600 text-white border-violet-600'
+                                : 'bg-white text-gray-500 border-gray-200 hover:border-violet-300 hover:text-violet-600'
+                            }`}
+                          >
+                            {agg}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Preview */}
+                  {studentConfig.xAxis ? (
+                    <div className="rounded-xl border border-violet-200 bg-white p-3">
+                      <ChartRenderer chartType={studentChartType} config={studentConfig} rows={rows} />
+                    </div>
+                  ) : (
+                    <div className="flex h-24 items-center justify-center rounded-xl border border-dashed border-violet-200 bg-white">
+                      <p className="text-xs text-violet-400">Pick an X axis to preview your chart</p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function StudentSession({
@@ -740,7 +982,9 @@ export default function StudentSession({
     questionText: string,
     questionType: string,
     options: string[] | null,
-    timeLimitSecs: number
+    timeLimitSecs: number,
+    visualisations?: QuizQuestionVis[],
+    allowStudentCharts?: boolean
   ) => {
     const response = myResponses.find((r) => r.question_id === questionId) ?? null
     const submitted = !!response
@@ -748,6 +992,30 @@ export default function StudentSession({
 
     return (
       <div className="space-y-4">
+        {/* Teacher-linked charts */}
+        {visualisations && visualisations.length > 0 && (
+          <div className="space-y-3">
+            {visualisations.map((vis) => (
+              <QuizQuestionChart
+                key={vis.id}
+                vis={vis}
+                sessionId={session.id}
+                allowStudentCharts={allowStudentCharts ?? false}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* If no teacher chart but student builder is allowed, show a standalone builder */}
+        {allowStudentCharts && (!visualisations || visualisations.length === 0) && (
+          <div className="rounded-xl border border-violet-200 bg-violet-50/50 px-4 py-3 text-xs text-violet-500">
+            <div className="flex items-center gap-1.5">
+              <PenLine className="size-3.5" />
+              <span>Chart builder is enabled — link a visualisation to this question to use it.</span>
+            </div>
+          </div>
+        )}
+
         <p className="text-base font-semibold text-gray-900 leading-relaxed">{questionText}</p>
 
         {timeLimitSecs > 0 && timeLeft !== null && !submitted && (
@@ -978,6 +1246,8 @@ export default function StudentSession({
                         activeQuizQuestion.type,
                         activeQuizQuestion.options,
                         activeQuizQuestion.time_limit_secs,
+                        activeQuizQuestion.visualisations,
+                        activeItem.allow_student_charts,
                       )}
 
                       <div className="flex items-center justify-between pt-2 border-t border-gray-100">

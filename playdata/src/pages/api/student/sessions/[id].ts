@@ -70,14 +70,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const visIds = items.filter((i) => i.type === 'visualisation').map((i) => i.reference_id as string)
   const questionIds = items.filter((i) => i.type === 'question').map((i) => i.reference_id as string)
 
-  type QuizRow = { id: string; title: string; questions: QuizQuestion[] }
+  type QuizQuestionRaw = { id: string; text: string; type: string; options: unknown; correct_answer: string; time_limit_secs: number; order_index: number; visualisation_ids: string[] | null }
+  type QuizRow = { id: string; title: string; allow_student_charts: boolean; questions: QuizQuestionRaw[] }
   type VisRow = { id: string; name: string; chart_type: string; config: Record<string, unknown>; dataset_id: string | null }
   type QuestionRow = { id: string; text: string; type: string; options: unknown; correct_answer: string; time_limit_secs: number }
-  type QuizQuestion = { id: string; text: string; type: string; options: unknown; correct_answer: string; time_limit_secs: number; order_index: number }
 
   const [quizzesRes, visRes, questionsRes] = await Promise.all([
     quizIds.length > 0
-      ? admin.from('quizzes').select('id, title, questions(id, text, type, options, correct_answer, time_limit_secs, order_index)').in('id', quizIds)
+      ? admin.from('quizzes').select('id, title, allow_student_charts, questions(id, text, type, options, correct_answer, time_limit_secs, order_index, visualisation_ids)').in('id', quizIds)
       : { data: [] },
     visIds.length > 0
       ? admin.from('visualisations').select('id, name, chart_type, config, dataset_id').in('id', visIds)
@@ -87,8 +87,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       : { data: [] },
   ])
 
+  // Collect all vis IDs referenced by quiz questions so we can resolve their metadata
+  const quizQuestionVisIds = new Set<string>()
+  for (const quiz of (quizzesRes.data ?? []) as QuizRow[]) {
+    for (const q of quiz.questions ?? []) {
+      for (const visId of q.visualisation_ids ?? []) {
+        quizQuestionVisIds.add(visId)
+      }
+    }
+  }
+
+  // Fetch vis metadata for question-linked visualisations (skip ones already fetched via visIds)
+  const missingVisIds = [...quizQuestionVisIds].filter((id) => !visIds.includes(id))
+  const questionVisRes = missingVisIds.length > 0
+    ? await admin.from('visualisations').select('id, name, chart_type, config, dataset_id').in('id', missingVisIds)
+    : { data: [] }
+
   const quizMap = new Map((quizzesRes.data ?? []).map((q: QuizRow) => [q.id, q]))
-  const visMap = new Map((visRes.data ?? []).map((v: VisRow) => [v.id, v]))
+  const visMap = new Map([
+    ...(visRes.data ?? []).map((v: VisRow) => [v.id, v] as [string, VisRow]),
+    ...(questionVisRes.data ?? []).map((v: VisRow) => [v.id, v] as [string, VisRow]),
+  ])
   const qMap = new Map((questionsRes.data ?? []).map((q: QuestionRow) => [q.id, q]))
 
   const enrichedItems = items.map((item) => {
@@ -97,7 +116,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const q = quizMap.get(ref) as QuizRow | undefined
       const quizQuestions = (Array.isArray(q?.questions) ? [...q!.questions] : [])
         .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
-      return { ...item, title: q?.title ?? 'Quiz', quizQuestions }
+        .map((qq) => ({
+          ...qq,
+          visualisation_ids: qq.visualisation_ids ?? [],
+          visualisations: (qq.visualisation_ids ?? [])
+            .map((visId: string) => visMap.get(visId))
+            .filter(Boolean),
+        }))
+      return {
+        ...item,
+        title: q?.title ?? 'Quiz',
+        allow_student_charts: q?.allow_student_charts ?? false,
+        quizQuestions,
+      }
     }
     if (item.type === 'visualisation') {
       const v = visMap.get(ref) as VisRow | undefined

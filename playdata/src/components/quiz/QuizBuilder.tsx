@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Trash2, GripVertical, ChevronDown, ChevronUp,
   Database, Hash, AlignLeft, List, AlertTriangle, Check,
-  Clock, BookOpen, X, CheckCircle, BarChart2,
+  Clock, BookOpen, X, CheckCircle, BarChart2, PenLine,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -38,6 +38,7 @@ export interface QuizBuilderProps {
   initialQuestions?: QuestionDraft[];
   initialStatus?: QuizStatus;
   initialIsTimed?: boolean;
+  initialAllowStudentCharts?: boolean;
   datasets: DatasetOption[];
   visualisations?: VisualisationOption[];
   /** Label shown on primary save button */
@@ -473,6 +474,7 @@ export default function QuizBuilder({
   initialQuestions = [],
   initialStatus = 'draft',
   initialIsTimed = true,
+  initialAllowStudentCharts = false,
   datasets,
   visualisations = [],
   saveLabel = 'Save',
@@ -484,6 +486,7 @@ export default function QuizBuilder({
   const [description, setDescription] = useState(initialDescription);
   const [datasetId, setDatasetId] = useState(initialDatasetId);
   const [isTimed, setIsTimed] = useState(initialIsTimed);
+  const [allowStudentCharts, setAllowStudentCharts] = useState(initialAllowStudentCharts);
 
   // Questions
   const [questions, setQuestions] = useState<QuestionDraft[]>(
@@ -564,6 +567,7 @@ export default function QuizBuilder({
     dataset_id: datasetId || undefined,
     status,
     is_timed: isTimed,
+    allow_student_charts: allowStudentCharts,
     questions: questions.map((q, idx) => ({
       order_index: idx,
       text: q.text.trim(),
@@ -698,6 +702,27 @@ export default function QuizBuilder({
               {isTimed
                 ? 'Each question has a countdown timer. Set time limits per question in Advanced options.'
                 : 'No time limits — students can answer at their own pace.'}
+            </p>
+          </div>
+        </label>
+
+        {/* Allow student charts toggle */}
+        <label className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition ${allowStudentCharts ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-[#35354a]/40 bg-[#0f0f1d]'}`}>
+          <input
+            type="checkbox"
+            checked={allowStudentCharts}
+            onChange={(e) => setAllowStudentCharts(e.target.checked)}
+            className="accent-emerald-500 shrink-0"
+          />
+          <div>
+            <div className="flex items-center gap-2">
+              <PenLine className="size-3.5 text-emerald-400" />
+              <p className="text-sm font-medium text-white">Allow student chart creation</p>
+            </div>
+            <p className="text-xs text-[#6a6a80] mt-0.5">
+              {allowStudentCharts
+                ? 'Students can build their own charts while answering questions. Charts are temporary and not saved.'
+                : 'Students will only see the charts you linked to each question.'}
             </p>
           </div>
         </label>

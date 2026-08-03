@@ -99,7 +99,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data, error } = await admin
       .from('quizzes')
       .select(`
-        id, title, description, status, dataset_id, teacher_id, is_timed,
+        id, title, description, status, dataset_id, teacher_id, is_timed, allow_student_charts,
         assigned_to, last_edited_by, last_edited_at, created_at, updated_at,
         datasets(id, name, schema),
         questions(id, order_index, text, type, options, correct_answer,
@@ -134,6 +134,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     dataset_id,
     status,
     is_timed,
+    allow_student_charts,
     questions = [],
   } = req.body as {
     title?: string;
@@ -141,6 +142,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     dataset_id?: string | null;
     status?: string;
     is_timed?: boolean;
+    allow_student_charts?: boolean;
     questions?: QuestionInput[];
   };
 
@@ -171,6 +173,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       dataset_id: dataset_id || null,
       ...(status ? { status } : {}),
       ...(is_timed !== undefined ? { is_timed } : {}),
+      ...(allow_student_charts !== undefined ? { allow_student_charts } : {}),
       last_edited_by: user.id,
       last_edited_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

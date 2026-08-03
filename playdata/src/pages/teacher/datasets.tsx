@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import {
   Database, FolderPlus, BarChart3,
   UploadCloud, HardDrive, Cloud, CloudDownload,
-  CheckCircle2, AlertCircle, RefreshCw,
+  CheckCircle2, AlertCircle, RefreshCw, Cable,
 } from 'lucide-react';
 import Link from 'next/link';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -341,8 +341,18 @@ export default function TeacherDatasets({ profile, googleConnected: initGoogle, 
           transition={{ delay: 0.06 }}
           className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm"
         >
-          <p className="text-sm font-semibold uppercase tracking-widest text-gray-400 mb-1">Import</p>
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Add a dataset</h2>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-widest text-gray-400 mb-1">Import</p>
+              <h2 className="text-xl font-bold text-gray-900">Add a dataset</h2>
+            </div>
+            <Link
+              href="/teacher/connections"
+              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2 text-xs font-semibold text-gray-500 transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700"
+            >
+              <Cable className="size-3.5" /> Manage connections
+            </Link>
+          </div>
 
           {importMsg && (
             <div className={`mb-6 rounded-2xl border px-4 py-3 text-sm ${

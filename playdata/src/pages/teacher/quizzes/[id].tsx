@@ -30,6 +30,7 @@ interface QuizRow {
   dataset_id: string | null;
   assigned_to: string | null;
   is_timed: boolean;
+  allow_student_charts: boolean;
   questions: {
     id: string;
     order_index: number;
@@ -92,7 +93,7 @@ export const getServerSideProps = withAuth(
     const { data: rawQuiz } = await admin
       .from('quizzes')
       .select(`
-        id, title, description, status, dataset_id, assigned_to, teacher_id, is_timed,
+        id, title, description, status, dataset_id, assigned_to, teacher_id, is_timed, allow_student_charts,
         questions(id, order_index, text, type, options, correct_answer,
                   answer_tolerance, dataset_column, visualisation_ids, explanation, time_limit_secs)
       `)
@@ -170,6 +171,7 @@ export const getServerSideProps = withAuth(
       dataset_id: rawQuiz.dataset_id as string | null,
       assigned_to: assignedTo,
       is_timed: (quizRecord.is_timed as boolean) ?? true,
+      allow_student_charts: (quizRecord.allow_student_charts as boolean) ?? false,
       questions: questions.map((q) => ({
         id: q.id as string,
         order_index: q.order_index as number,
@@ -260,6 +262,7 @@ export default function EditQuizPage({
           initialQuestions={initialQuestions}
           initialStatus={quiz.status}
           initialIsTimed={quiz.is_timed}
+          initialAllowStudentCharts={quiz.allow_student_charts}
           datasets={datasets}
           visualisations={visualisations}
           saveLabel="Update"
