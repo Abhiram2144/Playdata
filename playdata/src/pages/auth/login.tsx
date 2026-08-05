@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Zap, ArrowRight, Mail, Lock } from 'lucide-react';
+import { Loader2, Zap, ArrowRight, Mail, Lock, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -221,6 +221,22 @@ export default function AuthLoginPage() {
                 )}
               </Button>
             </form>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-white/8" />
+              <span className="text-xs text-[#4a4a60]">or</span>
+              <div className="h-px flex-1 bg-white/8" />
+            </div>
+
+            {/* Guest join */}
+            <Link
+              href="/guest/join"
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/4 px-4 py-2.5 text-sm font-medium text-[#c9c9d4] transition hover:border-violet-500/40 hover:bg-violet-600/10 hover:text-violet-300"
+            >
+              <Users size={15} />
+              Join a session as guest
+            </Link>
 
             <p className="text-center text-sm text-[#6a6a80]">
               Don&apos;t have an account?{' '}

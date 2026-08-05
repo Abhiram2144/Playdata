@@ -394,10 +394,10 @@ export default function LiveSession({ profile, session: initialSession, items, p
       <div className="max-w-7xl space-y-5">
 
         {/* Top bar */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <span
-              className="flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold tracking-wider text-emerald-700 ring-1 ring-emerald-200"
+              className="flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold tracking-wider text-emerald-700 ring-1 ring-emerald-200"
             >
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
@@ -405,7 +405,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
               </span>
               <Radio className="size-3" /> LIVE
             </span>
-            <h1 className="text-lg font-bold text-gray-900 truncate">{session.title}</h1>
+            <h1 className="text-base font-bold text-gray-900 truncate md:text-lg">{session.title}</h1>
           </div>
           <button
             onClick={() => setShowEndConfirm(true)}
@@ -415,64 +415,10 @@ export default function LiveSession({ profile, session: initialSession, items, p
           </button>
         </motion.div>
 
-        <div className="grid grid-cols-12 gap-5">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-12">
 
-          {/* Left: Join info + participants */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }} className="col-span-3 space-y-4">
-
-            {/* Join code + QR */}
-            <div className="rounded-2xl border border-violet-200 bg-violet-50 p-5 text-center shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-widest text-violet-500 mb-1">Join Code</p>
-              <button onClick={copyCode} className="flex items-center justify-center gap-2 mx-auto" title="Click to copy">
-                <span className="font-mono text-4xl font-black tracking-[0.25em] text-violet-700">
-                  {session.join_code}
-                </span>
-                <Copy className="size-4 text-violet-400" />
-              </button>
-              {copied && <p className="text-xs text-emerald-600 mt-1">Copied!</p>}
-              <div className="mt-4 flex justify-center">
-                <div className="rounded-xl bg-white p-3 shadow-sm">
-                  <QRCodeSVG value={joinUrl} size={120} bgColor="#ffffff" fgColor="#1e1b4b" level="M" />
-                </div>
-              </div>
-              <p className="mt-2 text-xs text-violet-500">Scan to join</p>
-            </div>
-
-            {/* Participants */}
-            <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">Students</span>
-                <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-bold text-violet-700">
-                  {activeParticipants.length}
-                </span>
-              </div>
-              <div className="divide-y divide-gray-100 max-h-72 overflow-y-auto">
-                {activeParticipants.length === 0 ? (
-                  <p className="py-6 text-center text-xs text-gray-400">Waiting for students…</p>
-                ) : (
-                  [...activeParticipants].sort((a, b) => b.score - a.score).map((p, rank) => (
-                    <div key={p.id} className="flex items-center gap-2.5 px-4 py-2.5">
-                      <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                        rank === 0 ? 'bg-amber-100 text-amber-600' :
-                        rank === 1 ? 'bg-gray-100 text-gray-500' :
-                        rank === 2 ? 'bg-orange-100 text-orange-600' :
-                        'bg-gray-50 text-gray-400'
-                      }`}>
-                        {rank < 3 ? <Trophy className="size-3" /> : rank + 1}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-medium text-gray-900">{profileName(p)}</p>
-                        <p className="truncate text-xs text-gray-400">Score: {p.score}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Centre: current item */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }} className="col-span-6 space-y-4">
+          {/* Centre: current item — shown first on mobile */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }} className="order-1 col-span-1 space-y-4 md:order-2 md:col-span-6">
 
             {/* Item display */}
             <div className="rounded-2xl border border-gray-200 bg-white min-h-64 overflow-hidden shadow-sm">
@@ -496,7 +442,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.2 }}
-                  className="p-6"
+                  className="p-5 md:p-6"
                 >
                   {!activeItem ? (
                     <div className="py-12 text-center">
@@ -554,7 +500,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
                                 {activeQuizQuestion.text}
                               </p>
                               {activeQuizQuestion.type === 'mcq' && Array.isArray(activeQuizQuestion.options) && (
-                                <div className="grid grid-cols-2 gap-2">
+                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                                   {(activeQuizQuestion.options as string[]).map((opt) => (
                                     <div
                                       key={opt}
@@ -586,7 +532,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
                             >
                               <ChevronLeft className="size-3" /> Prev Q
                             </button>
-                            <span className="flex-1 text-center text-xs text-gray-400">preview only — students navigate independently</span>
+                            <span className="flex-1 text-center text-xs text-gray-400 hidden sm:block">preview only — students navigate independently</span>
                             <button
                               onClick={() => navigateQuizQuestion(quizQuestionIndex + 1)}
                               disabled={quizQuestionIndex >= (activeItem.quizQuestions.length - 1)}
@@ -618,7 +564,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
                       {/* Standalone question */}
                       <p className="text-base font-semibold text-gray-900 leading-relaxed">{activeItem.title}</p>
                       {Array.isArray(activeItem.options) && activeItem.options.length > 0 && (
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                           {(activeItem.options as string[]).map((opt) => (
                             <div
                               key={opt}
@@ -649,7 +595,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
               <button
                 onClick={() => advance(currentItem - 1)}
                 disabled={currentItem === 0 || advancing || sortedItems.length === 0}
-                className="flex items-center gap-2 rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition hover:border-violet-300 hover:text-violet-600 disabled:opacity-30"
+                className="flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 transition hover:border-violet-300 hover:text-violet-600 disabled:opacity-30 md:px-5"
               >
                 <ChevronLeft className="size-4" /> Previous
               </button>
@@ -676,15 +622,69 @@ export default function LiveSession({ profile, session: initialSession, items, p
               <button
                 onClick={() => advance(currentItem + 1)}
                 disabled={currentItem >= sortedItems.length - 1 || advancing || sortedItems.length === 0}
-                className="flex items-center gap-2 rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition hover:border-violet-300 hover:text-violet-600 disabled:opacity-30"
+                className="flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 transition hover:border-violet-300 hover:text-violet-600 disabled:opacity-30 md:px-5"
               >
                 Next <ChevronRight className="size-4" />
               </button>
             </div>
           </motion.div>
 
+          {/* Left: Join info + participants */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }} className="order-2 col-span-1 space-y-4 md:order-1 md:col-span-3">
+
+            {/* Join code + QR */}
+            <div className="rounded-2xl border border-violet-200 bg-violet-50 p-5 text-center shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-widest text-violet-500 mb-1">Join Code</p>
+              <button onClick={copyCode} className="flex items-center justify-center gap-2 mx-auto" title="Click to copy">
+                <span className="font-mono text-3xl font-black tracking-[0.2em] text-violet-700 md:text-4xl md:tracking-[0.25em]">
+                  {session.join_code}
+                </span>
+                <Copy className="size-4 text-violet-400" />
+              </button>
+              {copied && <p className="text-xs text-emerald-600 mt-1">Copied!</p>}
+              <div className="mt-4 flex justify-center">
+                <div className="rounded-xl bg-white p-3 shadow-sm">
+                  <QRCodeSVG value={joinUrl} size={120} bgColor="#ffffff" fgColor="#1e1b4b" level="M" />
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-violet-500">Scan to join</p>
+            </div>
+
+            {/* Participants */}
+            <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">Students</span>
+                <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-bold text-violet-700">
+                  {activeParticipants.length}
+                </span>
+              </div>
+              <div className="divide-y divide-gray-100 max-h-72 overflow-y-auto">
+                {activeParticipants.length === 0 ? (
+                  <p className="py-6 text-center text-xs text-gray-400">Waiting for students…</p>
+                ) : (
+                  [...activeParticipants].sort((a, b) => b.score - a.score).map((p, rank) => (
+                    <div key={p.id} className="flex items-center gap-2.5 px-4 py-2.5">
+                      <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                        rank === 0 ? 'bg-amber-100 text-amber-600' :
+                        rank === 1 ? 'bg-gray-100 text-gray-500' :
+                        rank === 2 ? 'bg-orange-100 text-orange-600' :
+                        'bg-gray-50 text-gray-400'
+                      }`}>
+                        {rank < 3 ? <Trophy className="size-3" /> : rank + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-medium text-gray-900">{profileName(p)}</p>
+                        <p className="truncate text-xs text-gray-400">Score: {p.score}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </motion.div>
+
           {/* Right: response feed */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="col-span-3 space-y-4">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="order-3 col-span-1 space-y-4 md:col-span-3">
 
             {/* Tally */}
             {activeItem?.type !== 'visualisation' && (
@@ -762,7 +762,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
                   <div key={p.id} className="flex items-center justify-between py-1">
                     <div className="flex items-center gap-2">
                       <span className="text-sm leading-none">{(['🥇', '🥈', '🥉'] as const)[i]}</span>
-                      <span className="text-xs text-gray-700 truncate max-w-[80px]">{profileName(p)}</span>
+                      <span className="text-xs text-gray-700 truncate max-w-[100px]">{profileName(p)}</span>
                     </div>
                     <span
                       className={`text-xs font-mono font-bold ${i === 0 ? 'text-amber-600' : i === 1 ? 'text-gray-500' : 'text-orange-600'}`}

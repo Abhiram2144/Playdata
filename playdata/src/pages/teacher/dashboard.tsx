@@ -234,7 +234,7 @@ export default function TeacherDashboard({ profile, stats }: Props) {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="relative overflow-hidden rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50 p-8 shadow-sm"
+          className="relative overflow-hidden rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50 p-5 sm:p-8 shadow-sm"
         >
           <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(124,58,237,1) 1px, transparent 1px), linear-gradient(90deg, rgba(124,58,237,1) 1px, transparent 1px)', backgroundSize: '36px 36px' }} />
           <div className="absolute -right-8 -top-8 h-56 w-56 rounded-full bg-violet-200/50 blur-3xl pointer-events-none" />
@@ -248,7 +248,7 @@ export default function TeacherDashboard({ profile, stats }: Props) {
               <Zap className="size-3.5 text-violet-600" />
               <span className="text-xs font-bold uppercase tracking-[0.2em] text-violet-600">Teacher Dashboard</span>
             </div>
-            <h1 className="text-3xl font-bold mb-1">
+            <h1 className="text-2xl font-bold mb-1 sm:text-3xl">
               <span className="text-gray-900">Good day, </span>
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-indigo-500">{firstName}</span>
               <span className="ml-1">👋</span>
@@ -378,7 +378,7 @@ export default function TeacherDashboard({ profile, stats }: Props) {
                   </AnimatePresence>
 
                   {/* All steps mini list */}
-                  <div className="mt-5 grid grid-cols-5 gap-2">
+                  <div className="mt-5 grid grid-cols-3 gap-2 sm:grid-cols-5">
                     {STEPS.map((s, i) => {
                       const Icon = s.icon;
                       return (
@@ -412,7 +412,7 @@ export default function TeacherDashboard({ profile, stats }: Props) {
           transition={{ delay: 0.1 }}
         >
           <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-gray-400">Overview</h2>
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {QUICK_STATS.map(({ label, value, icon: Icon, sub, href, colour, iconBg }) => {
               const inner = (
                 <div className={`rounded-2xl border border-gray-100 bg-white p-5 h-full shadow-sm transition-all duration-200 ${href ? 'hover:border-violet-200 hover:shadow-md cursor-pointer' : ''}`}>
@@ -443,7 +443,7 @@ export default function TeacherDashboard({ profile, stats }: Props) {
           transition={{ delay: 0.15 }}
         >
           <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-gray-400">Quick actions</h2>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
             {QUICK_ACTIONS.map(({ icon: Icon, title, desc, href, colour }) => {
               const card = (
                 <div className="rounded-2xl border border-gray-100 bg-white p-5 h-full shadow-sm transition-all duration-200 hover:border-violet-200 hover:shadow-md cursor-pointer">

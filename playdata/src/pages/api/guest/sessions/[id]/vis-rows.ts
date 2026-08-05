@@ -1,63 +1,31 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { createAdminClient } from '@/lib/supabase/admin'
 import path from 'path'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
 
-function serializeCookie(name: string, value: string, opts: CookieOptions = {}): string {
-  const parts = [`${encodeURIComponent(name)}=${encodeURIComponent(value)}`]
-  if (opts.maxAge != null) parts.push(`Max-Age=${opts.maxAge}`)
-  if (opts.domain) parts.push(`Domain=${opts.domain}`)
-  parts.push(`Path=${opts.path ?? '/'}`)
-  if (opts.expires instanceof Date) parts.push(`Expires=${opts.expires.toUTCString()}`)
-  if (opts.httpOnly) parts.push('HttpOnly')
-  if (opts.secure) parts.push('Secure')
-  if (opts.sameSite) parts.push(`SameSite=${opts.sameSite}`)
-  return parts.join('; ')
-}
-
-async function getSessionUser(req: NextApiRequest, res: NextApiResponse) {
-  const cookies: string[] = []
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return Object.entries(req.cookies).map(([name, value]) => ({ name, value: value ?? '' })) },
-        setAll(cs) { cs.forEach(({ name, value, options }) => cookies.push(serializeCookie(name, value, options))) },
-      },
-    }
-  )
-  if (cookies.length > 0) res.setHeader('Set-Cookie', cookies)
-  const { data: { user } } = await supabase.auth.getUser()
-  return user
-}
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
 
-  const user = await getSessionUser(req, res)
-  if (!user) return res.status(401).json({ error: 'Unauthorised' })
-
   const sessionId = req.query.id as string
   const visId = req.query.vis_id as string
+  const guestToken = req.query.guest_token as string
+
   if (!visId) return res.status(400).json({ error: 'vis_id query param required' })
+  if (!guestToken) return res.status(400).json({ error: 'guest_token query param required' })
 
   const admin = createAdminClient()
 
-  // Verify student is a participant in this session
   const { data: participant } = await admin
     .from('session_participants')
     .select('id')
     .eq('session_id', sessionId)
-    .eq('student_id', user.id)
+    .eq('guest_token', guestToken)
     .maybeSingle()
 
   if (!participant) return res.status(403).json({ error: 'Not a participant in this session' })
 
-  // Verify this visualisation is accessible in this session — either as a direct item
-  // or as a visualization linked to a question inside a quiz session item.
+  // Allow: direct vis session item OR vis linked to a quiz question in the session
   const { data: directItem } = await admin
     .from('session_items')
     .select('id')
@@ -89,7 +57,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!foundInQuiz) return res.status(404).json({ error: 'Visualisation not found in session' })
   }
 
-  // Load the visualisation with its dataset
   const { data: vis } = await admin
     .from('visualisations')
     .select('id, chart_type, config, dataset_id, datasets(id, storage_path, name)')
@@ -115,10 +82,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   let allRows: Record<string, unknown>[]
   if (ext === '.csv') {
-    const result = Papa.parse<Record<string, unknown>>(buffer.toString('utf-8'), {
-      header: true,
-      skipEmptyLines: true,
-    })
+    const result = Papa.parse<Record<string, unknown>>(buffer.toString('utf-8'), { header: true, skipEmptyLines: true })
     allRows = result.data
   } else {
     const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true })
@@ -128,9 +92,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       : []
   }
 
-  return res.status(200).json({
-    rows: allRows.slice(0, 500),
-    config: vis.config ?? {},
-    chart_type: vis.chart_type ?? 'bar',
-  })
+  return res.status(200).json({ rows: allRows.slice(0, 500), config: vis.config ?? {}, chart_type: vis.chart_type ?? 'bar' })
 }

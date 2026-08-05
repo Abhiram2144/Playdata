@@ -828,7 +828,12 @@ export default function StudentSession({
     fetch('/api/socket').then(() => {
       const socket = ioClient({ path: '/api/socket', transports: ['websocket', 'polling'] })
       socketRef.current = socket
-      socket.emit('join-session', session.id)
+
+      // Emit join-session once the transport is established to avoid the race
+      // where the server broadcasts session:start before the socket has joined the room.
+      socket.on('connect', () => {
+        socket.emit('join-session', session.id)
+      })
 
       socket.on('session:start', ({ currentItem }: { currentItem: number }) => {
         setCurrentItemIdx(currentItem)
@@ -854,6 +859,25 @@ export default function StudentSession({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.id])
+
+  // Polling fallback: if the socket misses session:start (race condition between
+  // socket connect and teacher starting the session), poll until active.
+  useEffect(() => {
+    if (session.status !== 'waiting') return
+
+    const pollId = setInterval(async () => {
+      const res = await fetch(`/api/student/sessions/${session.id}`)
+      if (!res.ok) return
+      const data = await res.json()
+      if (data.session?.status === 'active') {
+        setCurrentItemIdx(data.session.current_item ?? 0)
+        setSession((prev) => ({ ...prev, status: 'active', current_item: data.session.current_item ?? 0 }))
+      }
+    }, 3000)
+
+    return () => clearInterval(pollId)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.status, session.id])
 
   // ── Answer submission ──────────────────────────────────────────────────────
 
@@ -1134,19 +1158,19 @@ export default function StudentSession({
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between gap-4"
+          className="flex items-center justify-between gap-3"
         >
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold tracking-wider text-emerald-700 ring-1 ring-emerald-200">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs font-bold tracking-wider text-emerald-700 ring-1 ring-emerald-200 sm:gap-1.5 sm:px-3">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
               </span>
-              <Radio className="size-3" /> LIVE
+              <Radio className="size-3" /> <span className="hidden sm:inline">LIVE</span>
             </span>
-            <h1 className="text-lg font-bold text-gray-900 truncate">{session.title}</h1>
+            <h1 className="truncate text-base font-bold text-gray-900 sm:text-lg">{session.title}</h1>
           </div>
-          <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 shadow-sm">
+          <div className="flex shrink-0 items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 shadow-sm">
             <Trophy className="size-4 text-amber-500" />
             <span className="text-sm font-bold text-amber-700 tabular-nums">{score}</span>
           </div>

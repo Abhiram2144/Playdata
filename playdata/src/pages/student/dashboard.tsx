@@ -188,7 +188,7 @@ export default function StudentDashboard({ profile, analytics }: Props) {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="relative overflow-hidden rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50 p-8 shadow-sm"
+          className="relative overflow-hidden rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50 p-5 sm:p-8 shadow-sm"
         >
           <div className="absolute -right-8 -top-8 h-56 w-56 rounded-full bg-violet-200/50 blur-3xl pointer-events-none" />
           <div className="absolute -left-16 -bottom-12 h-48 w-48 rounded-full bg-indigo-200/40 blur-3xl pointer-events-none" />
@@ -197,7 +197,7 @@ export default function StudentDashboard({ profile, analytics }: Props) {
               <Zap className="size-3.5 text-violet-600" />
               <span className="text-xs font-bold uppercase tracking-[0.2em] text-violet-600">Dashboard</span>
             </div>
-            <h1 className="text-3xl font-bold mb-1">
+            <h1 className="text-2xl font-bold mb-1 sm:text-3xl">
               <span className="text-gray-900">Welcome back, </span>
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-indigo-500">{firstName}</span>
               <span className="ml-1">👋</span>
@@ -359,9 +359,9 @@ export default function StudentDashboard({ profile, analytics }: Props) {
                         <span className="text-xs text-gray-400">{dateStr}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0">
                       {s.answered > 0 && (
-                        <div className="flex items-center gap-2 text-xs">
+                        <div className="hidden items-center gap-2 text-xs sm:flex">
                           <span className="flex items-center gap-1 text-emerald-600">
                             <CheckCircle2 className="size-3" />{s.correct}
                           </span>
@@ -371,7 +371,7 @@ export default function StudentDashboard({ profile, analytics }: Props) {
                         </div>
                       )}
                       {acc !== null && (
-                        <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+                        <span className={`hidden rounded-full px-2.5 py-1 text-xs font-bold sm:inline-block ${
                           acc >= 70 ? 'bg-emerald-100 text-emerald-700' :
                           acc >= 40 ? 'bg-amber-100 text-amber-700' :
                           'bg-red-100 text-red-700'
