@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
-import { Zap, LogOut, User } from 'lucide-react';
+import { Zap, LogOut, User, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 
@@ -20,9 +20,11 @@ interface SidebarProps {
     username?: string | null;
     role: string;
   };
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-export function Sidebar({ items, profile }: SidebarProps) {
+export function Sidebar({ items, profile, isOpen, onClose }: SidebarProps) {
   const router = useRouter();
   const supabase = createClient();
 
@@ -32,13 +34,25 @@ export function Sidebar({ items, profile }: SidebarProps) {
   };
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r border-[#e4e0f8] bg-white shadow-sm">
+    <aside className={cn(
+      'fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r border-[#e4e0f8] bg-white shadow-sm',
+      'transition-transform duration-300 ease-in-out',
+      'md:translate-x-0',
+      isOpen ? 'translate-x-0' : '-translate-x-full'
+    )}>
       {/* Logo */}
       <div className="flex h-16 items-center gap-2.5 border-b border-[#e4e0f8] px-5">
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100 ring-1 ring-violet-200">
           <Zap className="size-3.5 text-violet-600" />
         </div>
         <span className="text-lg font-bold text-gray-900">PlayData</span>
+        <button
+          onClick={onClose}
+          className="ml-auto flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition md:hidden"
+          aria-label="Close menu"
+        >
+          <X className="size-4" />
+        </button>
       </div>
 
       {/* Nav items */}
@@ -61,7 +75,7 @@ export function Sidebar({ items, profile }: SidebarProps) {
           }
 
           return (
-            <Link key={item.href} href={item.href}>
+            <Link key={item.href} href={item.href} onClick={onClose}>
               <motion.div
                 whileHover={{ x: 2 }}
                 transition={{ duration: 0.15 }}
@@ -88,7 +102,7 @@ export function Sidebar({ items, profile }: SidebarProps) {
 
       {/* User section */}
       <div className="border-t border-[#e4e0f8] px-3 py-3 space-y-1">
-        <Link href="/profile">
+        <Link href="/profile" onClick={onClose}>
           <motion.div
             whileHover={{ x: 2 }}
             className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-colors cursor-pointer"
