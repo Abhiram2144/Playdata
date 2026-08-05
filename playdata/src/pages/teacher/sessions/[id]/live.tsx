@@ -42,7 +42,9 @@ interface SessionItem {
 
 interface Participant {
   id: string
-  student_id: string
+  student_id: string | null
+  guest_name: string | null
+  guest_student_id: string | null
   score: number
   joined_at: string
   left_at: string | null
@@ -50,6 +52,7 @@ interface Participant {
 }
 
 function profileName(p: Participant): string {
+  if (p.guest_name) return p.guest_name
   if (!p.profiles) return 'Student'
   if (Array.isArray(p.profiles)) return p.profiles[0]?.full_name ?? 'Student'
   return p.profiles.full_name ?? 'Student'
@@ -119,7 +122,7 @@ export const getServerSideProps = withAuth(
 
     const [itemsRes, participantsRes, responsesRes] = await Promise.all([
       admin.from('session_items').select('id, type, reference_id, order_index').eq('session_id', sessionId).order('order_index'),
-      admin.from('session_participants').select('id, student_id, score, joined_at, left_at, profiles(full_name, email)').eq('session_id', sessionId).order('joined_at'),
+      admin.from('session_participants').select('id, student_id, guest_name, guest_student_id, score, joined_at, left_at, profiles(full_name, email)').eq('session_id', sessionId).order('joined_at'),
       admin.from('student_responses').select('id, question_id, student_id, answer, is_correct, submitted_at').eq('session_id', sessionId),
     ])
 

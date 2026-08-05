@@ -408,6 +408,7 @@ export default function GuestSession() {
   const [submitting, setSubmitting] = useState(false)
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
   const [timedOut, setTimedOut] = useState(false)
+  const [quizDismissed, setQuizDismissed] = useState(false)
 
   const sortedItems = [...items].sort((a, b) => a.order_index - b.order_index)
   const activeItem = sortedItems[currentItemIdx] ?? null
@@ -421,6 +422,11 @@ export default function GuestSession() {
     ? myResponses.find((r) => r.question_id === activeQuestionId) ?? null
     : null
   const alreadyAnswered = !!myResponseForActive
+
+  const quizComplete =
+    activeItem?.type === 'quiz' &&
+    (activeItem.quizQuestions?.length ?? 0) > 0 &&
+    (activeItem.quizQuestions ?? []).every((q) => myResponses.some((r) => r.question_id === q.id))
 
   // ── Load from localStorage + API ─────────────────────────────────────────────
 
@@ -471,7 +477,7 @@ export default function GuestSession() {
   }, [])
 
   useEffect(() => {
-    setQuizQIdx(0); setSelectedAnswer(''); setTextAnswer(''); setTimedOut(false)
+    setQuizQIdx(0); setSelectedAnswer(''); setTextAnswer(''); setTimedOut(false); setQuizDismissed(false)
     if (timerRef.current) clearInterval(timerRef.current)
     setTimeLeft(null)
     if (activeItem?.type === 'quiz' && activeItem.quizQuestions?.[0]) startTimer(activeItem.quizQuestions[0].time_limit_secs)
@@ -552,10 +558,9 @@ export default function GuestSession() {
     }
   }
 
-  const handleMcqSelect = (option: string, questionId: string) => {
+  const handleMcqSelect = (option: string) => {
     if (alreadyAnswered || timedOut) return
     setSelectedAnswer(option)
-    submitAnswer(questionId, option)
   }
 
   const handleTextSubmit = (questionId: string) => {
@@ -600,13 +605,25 @@ export default function GuestSession() {
           </motion.div>
         )}
         {!submitted && !isTimedOut && questionType === 'mcq' && Array.isArray(options) && (
-          <div className="grid grid-cols-1 gap-2.5">
-            {options.map((opt) => (
-              <button key={opt} onClick={() => handleMcqSelect(opt, questionId)} disabled={submitting}
-                className={`w-full rounded-xl border px-4 py-3 text-left text-sm font-medium transition shadow-sm disabled:opacity-50 ${selectedAnswer === opt ? 'border-violet-400 bg-violet-50 text-violet-700 ring-1 ring-violet-200' : 'border-gray-200 bg-white text-gray-700 hover:border-violet-300 hover:bg-violet-50'}`}>
-                {opt}
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-2.5">
+              {options.map((opt) => (
+                <button key={opt} onClick={() => handleMcqSelect(opt)} disabled={submitting}
+                  className={`w-full rounded-xl border px-4 py-3 text-left text-sm font-medium transition shadow-sm disabled:opacity-50 ${selectedAnswer === opt ? 'border-violet-400 bg-violet-50 text-violet-700 ring-1 ring-violet-200' : 'border-gray-200 bg-white text-gray-700 hover:border-violet-300 hover:bg-violet-50'}`}>
+                  {opt}
+                </button>
+              ))}
+            </div>
+            {selectedAnswer && (
+              <button
+                onClick={() => submitAnswer(questionId, selectedAnswer)}
+                disabled={submitting}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:opacity-50 shadow-sm"
+              >
+                {submitting ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+                Confirm Answer
               </button>
-            ))}
+            )}
           </div>
         )}
         {submitted && questionType === 'mcq' && Array.isArray(options) && (
@@ -773,6 +790,58 @@ export default function GuestSession() {
               ) : activeItem.type === 'quiz' ? (
                 <div className="space-y-5">
                   {activeItem.quizQuestions && activeItem.quizQuestions.length > 0 ? (
+                    quizComplete && !quizDismissed ? (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="py-4 space-y-5 text-center"
+                      >
+                        <div className="flex justify-center">
+                          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 ring-1 ring-emerald-200">
+                            <CheckCircle2 className="size-7 text-emerald-600" />
+                          </div>
+                        </div>
+                        <div>
+                          <h2 className="text-lg font-bold text-gray-900">Quiz Complete!</h2>
+                          <p className="text-sm text-gray-500 mt-1">
+                            You answered all {activeItem.quizQuestions.length} question{activeItem.quizQuestions.length !== 1 ? 's' : ''}.
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-center gap-6">
+                          <div className="text-center">
+                            <p className="text-2xl font-black text-emerald-600">
+                              {activeItem.quizQuestions.filter((q) =>
+                                myResponses.find((r) => r.question_id === q.id)?.is_correct === true
+                              ).length}
+                            </p>
+                            <p className="text-xs text-gray-400">Correct</p>
+                          </div>
+                          <div className="h-8 w-px bg-gray-200" />
+                          <div className="text-center">
+                            <p className="text-2xl font-black text-red-500">
+                              {activeItem.quizQuestions.filter((q) =>
+                                myResponses.find((r) => r.question_id === q.id)?.is_correct === false
+                              ).length}
+                            </p>
+                            <p className="text-xs text-gray-400">Incorrect</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-center gap-3 pt-2">
+                          <button
+                            onClick={() => setQuizDismissed(true)}
+                            className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 shadow-sm transition hover:border-violet-300 hover:text-violet-700"
+                          >
+                            Stay &amp; view session
+                          </button>
+                          <button
+                            onClick={() => router.push('/guest/join')}
+                            className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-500"
+                          >
+                            Exit session
+                          </button>
+                        </div>
+                      </motion.div>
+                    ) : (
                     <>
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {activeItem.quizQuestions.map((q, i) => {
@@ -800,6 +869,7 @@ export default function GuestSession() {
                         </button>
                       </div>
                     </>
+                    )
                   ) : (
                     <p className="text-sm text-gray-400">This quiz has no questions.</p>
                   )}
