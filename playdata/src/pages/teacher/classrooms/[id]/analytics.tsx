@@ -6,7 +6,7 @@ import {
   BookOpen, ChevronUp, ChevronDown, AlertCircle, Download, Zap, Star,
 } from 'lucide-react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { TEACHER_NAV } from '@/lib/teacher-nav';
@@ -235,45 +235,44 @@ function TrendChart({ data, avgScore }: { data: TrendPoint[]; avgScore: number |
   }));
 
   return (
-    <ResponsiveContainer width="100%" height={220}>
-      <LineChart data={chartData} margin={{ top: 8, right: 20, left: -12, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-        <XAxis
-          dataKey="name"
-          tick={{ fontSize: 11, fill: '#9ca3af' }}
-          tickLine={false}
-          axisLine={false}
-        />
-        <YAxis
-          domain={[0, 100]}
-          tick={{ fontSize: 11, fill: '#9ca3af' }}
-          tickLine={false}
-          axisLine={false}
-          unit="%"
-        />
-        {avgScore !== null && (
-          <ReferenceLine
-            y={Math.round(avgScore * 10) / 10}
-            stroke="#c4b5fd"
-            strokeDasharray="4 4"
-            label={{ value: 'avg', position: 'insideTopRight', fontSize: 10, fill: '#a78bfa' }}
+    <div className="space-y-1">
+      <ResponsiveContainer width="100%" height={220}>
+        <LineChart data={chartData} margin={{ top: 8, right: 20, left: -12, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+          <XAxis
+            dataKey="name"
+            tick={{ fontSize: 11, fill: '#9ca3af' }}
+            tickLine={false}
+            axisLine={false}
           />
-        )}
-        <Tooltip
-          formatter={(v) => [`${Number(v).toFixed(1)}%`, 'Avg accuracy']}
-          labelFormatter={(_, payload) => payload?.[0]?.payload?.fullTitle ?? ''}
-          contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb', boxShadow: '0 2px 8px #0001' }}
-        />
-        <Line
-          type="monotone"
-          dataKey="score"
-          stroke="#7c3aed"
-          strokeWidth={2.5}
-          dot={{ r: 4, fill: '#7c3aed', strokeWidth: 0 }}
-          activeDot={{ r: 6, strokeWidth: 0 }}
-        />
-      </LineChart>
-    </ResponsiveContainer>
+          <YAxis
+            domain={[0, 100]}
+            tick={{ fontSize: 11, fill: '#9ca3af' }}
+            tickLine={false}
+            axisLine={false}
+            unit="%"
+          />
+          <Tooltip
+            formatter={(v) => [`${Number(v).toFixed(1)}%`, 'Avg accuracy']}
+            labelFormatter={(_, payload) => payload?.[0]?.payload?.fullTitle ?? ''}
+            contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb', boxShadow: '0 2px 8px #0001' }}
+          />
+          <Line
+            type="monotone"
+            dataKey="score"
+            stroke="#7c3aed"
+            strokeWidth={2.5}
+            dot={{ r: 4, fill: '#7c3aed', strokeWidth: 0 }}
+            activeDot={{ r: 6, strokeWidth: 0 }}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+      {avgScore !== null && (
+        <p className="text-right text-[11px] text-violet-400 pr-1">
+          Overall avg: {avgScore.toFixed(1)}%
+        </p>
+      )}
+    </div>
   );
 }
 
