@@ -38,7 +38,7 @@ interface Visualisation {
   is_template: boolean;
   created_at: string;
   dataset_id: string | null;
-  datasets: { id: string; name: string } | null;
+  datasets: { id: string; name: string }[] | null;
 }
 
 interface Props {
@@ -313,15 +313,21 @@ export default function VisualisationsPage({ profile, visualisations: initial, d
 
                 {/* Dataset */}
                 {vis.datasets ? (
+                  (() => {
+                    const dataset = Array.isArray(vis.datasets) ? vis.datasets[0] : vis.datasets
+                    if (!dataset) return <p className="text-xs text-gray-400">No dataset linked</p>
+                    return (
                   <p className="text-xs text-gray-400 truncate">
                     <span className="text-gray-400">Dataset: </span>
                     <Link
-                      href={`/teacher/datasets/${vis.datasets.id}`}
+                      href={`/teacher/datasets/${dataset.id}`}
                       className="text-gray-600 hover:text-violet-600 transition-colors"
                     >
-                      {vis.datasets.name}
+                      {dataset.name}
                     </Link>
                   </p>
+                    )
+                  })()
                 ) : (
                   <p className="text-xs text-gray-400">No dataset linked</p>
                 )}

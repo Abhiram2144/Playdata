@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/router'
 import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Radio, CheckCircle2, XCircle, UserCheck, BarChart2,
   StopCircle, Copy, AlertTriangle, BookOpen,
-  ChevronLeft, ChevronRight, Clock, Trophy,
+  ChevronLeft, ChevronRight, Clock, Trophy, Flame,
 } from 'lucide-react'
 import { GetServerSidePropsResult } from 'next'
 import { toast } from 'sonner'
@@ -46,9 +46,19 @@ interface Participant {
   guest_name: string | null
   guest_student_id: string | null
   score: number
+  current_streak: number
+  best_streak: number
   joined_at: string
   left_at: string | null
   profiles: { full_name: string; email: string } | { full_name: string; email: string }[] | null
+}
+
+interface LeaderboardEntry {
+  rank: number
+  studentId: string | null
+  name: string
+  score: number
+  currentStreak?: number
 }
 
 function profileName(p: Participant): string {
@@ -122,7 +132,7 @@ export const getServerSideProps = withAuth(
 
     const [itemsRes, participantsRes, responsesRes] = await Promise.all([
       admin.from('session_items').select('id, type, reference_id, order_index').eq('session_id', sessionId).order('order_index'),
-      admin.from('session_participants').select('id, student_id, guest_name, guest_student_id, score, joined_at, left_at, profiles(full_name, email)').eq('session_id', sessionId).order('joined_at'),
+      admin.from('session_participants').select('id, student_id, guest_name, guest_student_id, score, current_streak, best_streak, joined_at, left_at, profiles(full_name, email)').eq('session_id', sessionId).order('joined_at'),
       admin.from('student_responses').select('id, question_id, student_id, answer, is_correct, submitted_at').eq('session_id', sessionId),
     ])
 
@@ -219,6 +229,128 @@ function TimerBar({ timeLeft, total }: { timeLeft: number; total: number }) {
   )
 }
 
+  function LeaderboardPodium({
+    leaderboard,
+    streaks,
+    hasBroadcast,
+  }: {
+    leaderboard: LeaderboardEntry[]
+    streaks: Map<string, number>
+    hasBroadcast: boolean
+  }) {
+    const topThree = leaderboard.slice(0, 3)
+    const nextSeven = leaderboard.slice(3, 10)
+
+    const podiumOrder = [1, 0, 2]
+
+    return (
+      <motion.section
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="rounded-2xl border border-amber-200 bg-amber-50 shadow-sm overflow-hidden"
+      >
+        <div className="flex items-center justify-between gap-3 border-b border-amber-100 px-5 py-4">
+          <div className="flex items-center gap-2">
+            <Trophy className="size-4 text-amber-500" />
+            <div>
+              <p className="text-sm font-bold text-gray-900">Leaderboard podium</p>
+              <p className="text-xs text-gray-500">
+                {hasBroadcast ? 'Updated from the scoring engine after the last question.' : 'Awaiting the first ranking broadcast.'}
+              </p>
+            </div>
+          </div>
+          <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+            Top 10
+          </span>
+        </div>
+
+        <div className="p-5">
+          {leaderboard.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-amber-200 bg-white/70 px-4 py-10 text-center text-sm text-gray-400">
+              Rankings will appear here once the scoring engine broadcasts the first podium.
+            </div>
+          ) : (
+            <div className="space-y-5">
+              <div className="grid gap-3 lg:grid-cols-3">
+                {podiumOrder.map((index) => {
+                  const entry = topThree[index]
+                  if (!entry) return <div key={index} />
+                  const rank = entry.rank
+                  const isTop = rank === 1
+                  const streak = streaks.get(entry.studentId ?? '') ?? entry.currentStreak ?? 0
+                  return (
+                    <motion.div
+                      key={entry.studentId ?? `${entry.rank}`}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.04 }}
+                      className={`relative rounded-2xl border p-4 shadow-sm ${
+                        isTop
+                          ? 'border-amber-300 bg-amber-100 lg:-translate-y-2'
+                          : rank === 2
+                            ? 'border-slate-200 bg-white'
+                            : 'border-orange-200 bg-orange-50'
+                      }`}
+                    >
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <span className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-black ${
+                          rank === 1 ? 'bg-amber-200 text-amber-800' : rank === 2 ? 'bg-slate-100 text-slate-600' : 'bg-orange-100 text-orange-700'
+                        }`}>
+                          {rank}
+                        </span>
+                        {streak > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-700">
+                            <Flame className="size-3 fill-current" />
+                            {streak} streak
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <p className="truncate text-sm font-bold text-gray-900">{entry.name}</p>
+                        <p className="mt-1 text-2xl font-black tabular-nums text-gray-900">{entry.score.toLocaleString()}</p>
+                        <p className="text-xs text-gray-500">points</p>
+                      </div>
+                    </motion.div>
+                  )
+                })}
+              </div>
+
+              {nextSeven.length > 0 && (
+                <div className="rounded-2xl border border-white bg-white/80 shadow-sm overflow-hidden">
+                  <div className="border-b border-gray-100 px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Next 7</p>
+                  </div>
+                  <div className="divide-y divide-gray-50">
+                    {nextSeven.map((entry) => {
+                      const streak = streaks.get(entry.studentId ?? '') ?? entry.currentStreak ?? 0
+                      return (
+                        <div key={entry.studentId ?? `${entry.rank}`} className="flex items-center gap-3 px-4 py-3">
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-500">
+                            {entry.rank}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-gray-800">{entry.name}</p>
+                            {streak > 0 && (
+                              <p className="mt-0.5 flex items-center gap-1 text-xs text-rose-600">
+                                <Flame className="size-3 fill-current" />
+                                {streak} active streak{streak === 1 ? '' : 's'}
+                              </p>
+                            )}
+                          </div>
+                          <span className="tabular-nums text-sm font-bold text-gray-900">{entry.score.toLocaleString()}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </motion.section>
+    )
+  }
+
 const NAV_ITEMS = TEACHER_NAV
 
 export default function LiveSession({ profile, session: initialSession, items, participants: initialParticipants, responses: initialResponses }: Props) {
@@ -230,6 +362,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
   const [currentItem, setCurrentItem] = useState<number>(initialSession.current_item ?? 0)
   const [participants, setParticipants] = useState<Participant[]>(initialParticipants)
   const [responses, setResponses] = useState<Response[]>(initialResponses)
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [ending, setEnding] = useState(false)
   const [advancing, setAdvancing] = useState(false)
   const [showEndConfirm, setShowEndConfirm] = useState(false)
@@ -244,6 +377,30 @@ export default function LiveSession({ profile, session: initialSession, items, p
   const sortedItems = [...items].sort((a, b) => a.order_index - b.order_index)
   const activeItem = sortedItems[currentItem] ?? null
   const joinUrl = typeof window !== 'undefined' ? `${window.location.origin}/student/join?code=${session.join_code}` : `https://playdata.app/student/join?code=${session.join_code}`
+  const participantById = useMemo(() => new Map(participants.map((participant) => [participant.student_id ?? participant.id, participant])), [participants])
+  const leaderboardByBroadcast = useMemo(() => leaderboard.map((entry) => ({
+    ...entry,
+    currentStreak: participantById.get(entry.studentId ?? '')?.current_streak ?? entry.currentStreak ?? 0,
+  })), [leaderboard, participantById])
+  const fallbackLeaderboard = useMemo<LeaderboardEntry[]>(() => (
+    [...participants]
+      .filter((participant) => !participant.left_at)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10)
+      .map((participant, index) => ({
+        rank: index + 1,
+        studentId: participant.student_id ?? null,
+        name: profileName(participant),
+        score: participant.score,
+        currentStreak: participant.current_streak,
+      }))
+  ), [participants])
+  const displayLeaderboard = leaderboardByBroadcast.length > 0 ? leaderboardByBroadcast : fallbackLeaderboard
+  const streaks = useMemo(() => new Map(
+    participants
+      .filter((participant) => (participant.current_streak ?? 0) > 0)
+      .map((participant) => [participant.student_id ?? participant.id, participant.current_streak] as const)
+  ), [participants])
 
   const activeQuizQuestion = activeItem?.type === 'quiz' && activeItem.quizQuestions
     ? activeItem.quizQuestions[quizQuestionIndex] ?? null
@@ -315,6 +472,9 @@ export default function LiveSession({ profile, session: initialSession, items, p
       const socket = ioClient({ path: '/api/socket', transports: ['websocket', 'polling'] })
       socketRef.current = socket
       socket.emit('join-session', session.id)
+      socket.on('session:leaderboard', ({ ranked }: { ranked: LeaderboardEntry[] }) => {
+        setLeaderboard(ranked)
+      })
       socket.on('session:advance', ({ currentItem: idx }: { currentItem: number }) => {
         setCurrentItem(idx)
       })
@@ -417,6 +577,8 @@ export default function LiveSession({ profile, session: initialSession, items, p
             <StopCircle className="size-4" /> End Session
           </button>
         </motion.div>
+
+        <LeaderboardPodium leaderboard={displayLeaderboard} streaks={streaks} hasBroadcast={leaderboard.length > 0} />
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-12">
 
@@ -678,6 +840,12 @@ export default function LiveSession({ profile, session: initialSession, items, p
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-medium text-gray-900">{profileName(p)}</p>
                         <p className="truncate text-xs text-gray-400">Score: {p.score}</p>
+                        {p.current_streak > 0 && (
+                          <p className="mt-0.5 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-rose-600">
+                            <Flame className="size-3 fill-current" />
+                            {p.current_streak}x streak
+                          </p>
+                        )}
                       </div>
                     </div>
                   ))
@@ -754,28 +922,6 @@ export default function LiveSession({ profile, session: initialSession, items, p
               </div>
             )}
 
-            {/* Quick leaderboard */}
-            {activeParticipants.length > 0 && (
-              <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <Trophy className="size-3 text-amber-500" />
-                  <span className="text-xs font-bold text-amber-700 uppercase tracking-widest">Leaderboard</span>
-                </div>
-                {[...activeParticipants].sort((a, b) => b.score - a.score).slice(0, 3).map((p, i) => (
-                  <div key={p.id} className="flex items-center justify-between py-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm leading-none">{(['🥇', '🥈', '🥉'] as const)[i]}</span>
-                      <span className="text-xs text-gray-700 truncate max-w-[100px]">{profileName(p)}</span>
-                    </div>
-                    <span
-                      className={`text-xs font-mono font-bold ${i === 0 ? 'text-amber-600' : i === 1 ? 'text-gray-500' : 'text-orange-600'}`}
-                    >
-                      {p.score}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
           </motion.div>
         </div>
       </div>

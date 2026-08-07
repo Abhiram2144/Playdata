@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { GetServerSideProps, GetServerSidePropsResult } from 'next';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Database, BarChart3, BookOpen, Users,
-  TrendingUp, Zap, UploadCloud, ArrowRight, Play,
+  TrendingUp, Zap, UploadCloud, ArrowRight, Play, Trophy,
   ChevronRight, Gamepad2, CheckCircle2, X,
+  Search,
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { withAuth } from '@/lib/auth';
@@ -13,6 +14,7 @@ import { createClientFromContext } from '@/lib/supabase/server-props';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { NavItem } from '@/components/layout/Sidebar';
 import { TEACHER_NAV } from '@/lib/teacher-nav';
+import { Input } from '@/components/ui/input';
 
 interface Profile {
   id: string;
@@ -31,7 +33,19 @@ interface Stats {
   studentCount: number;
 }
 
-interface Props { profile: Profile; stats: Stats }
+interface LeaderboardRow {
+  studentId: string;
+  fullName: string;
+  email: string;
+  allTimePoints: number;
+  weekPoints: number;
+  sessionCount: number;
+  lastSessionAt: string | null;
+  allTimeRank: number;
+  weekRank: number;
+}
+
+interface Props { profile: Profile; stats: Stats; leaderboard: LeaderboardRow[] }
 
 export const getServerSideProps = withAuth(
   async (context, userId): Promise<GetServerSidePropsResult<Props>> => {
@@ -50,7 +64,7 @@ export const getServerSideProps = withAuth(
       { count: datasetCount },
       { count: quizCount },
       { count: sessionCount },
-      { data: participantRows },
+      { data: sessionParticipantRows },
     ] = await Promise.all([
       admin.from('datasets').select('*', { count: 'exact', head: true }).eq('teacher_id', userId),
       admin.from('quizzes').select('*', { count: 'exact', head: true }).eq('teacher_id', userId),
@@ -62,7 +76,7 @@ export const getServerSideProps = withAuth(
     ]);
 
     const studentIds = new Set<string>();
-    (participantRows ?? []).forEach((s: { session_participants: { student_id: string }[] }) => {
+    (sessionParticipantRows ?? []).forEach((s: { session_participants: { student_id: string }[] }) => {
       s.session_participants?.forEach((p) => studentIds.add(p.student_id));
     });
 
@@ -73,7 +87,101 @@ export const getServerSideProps = withAuth(
       studentCount: studentIds.size,
     };
 
-    return { props: { profile, stats } };
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    type ParticipantRow = {
+      student_id: string | null;
+      score: number | null;
+      session_id: string;
+      sessions: { started_at: string | null } | { started_at: string | null }[] | null;
+      profiles: { full_name: string; email: string } | { full_name: string; email: string }[] | null;
+    };
+
+    const { data: teacherSessionRows } = await admin
+      .from('sessions')
+      .select('id')
+      .eq('teacher_id', userId);
+
+    const teacherSessionIds = (teacherSessionRows ?? []).map((row: { id: string }) => row.id);
+
+    let leaderboardRowsRaw: ParticipantRow[] = [];
+    if (teacherSessionIds.length > 0) {
+      const { data } = await admin
+        .from('session_participants')
+        .select('student_id, score, session_id, sessions(started_at), profiles(full_name, email)')
+        .in('session_id', teacherSessionIds)
+        .not('student_id', 'is', null);
+      leaderboardRowsRaw = (data ?? []) as ParticipantRow[];
+    }
+
+    const participantRows = leaderboardRowsRaw;
+    const leaderboardStudentIds = [...new Set(participantRows.map((row) => row.student_id).filter((studentId): studentId is string => !!studentId))];
+
+    const statsRows = leaderboardStudentIds.length > 0
+      ? (await admin
+          .from('student_stats')
+          .select('student_id, total_points')
+          .in('student_id', leaderboardStudentIds)).data ?? []
+      : [];
+
+    const totalPointsByStudent = new Map((statsRows as { student_id: string; total_points: number | null }[]).map((row) => [row.student_id, row.total_points ?? 0]));
+
+    const grouped = new Map<string, {
+      fullName: string;
+      email: string;
+      allTimePoints: number;
+      weekPoints: number;
+      sessions: Set<string>;
+      lastSessionAt: string | null;
+    }>();
+
+    for (const row of participantRows) {
+      if (!row.student_id) continue;
+      const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+      const sessionRef = Array.isArray(row.sessions) ? row.sessions[0] : row.sessions;
+      const startedAt = sessionRef?.started_at ?? null;
+      const entry = grouped.get(row.student_id) ?? {
+        fullName: profile?.full_name ?? 'Student',
+        email: profile?.email ?? '',
+        allTimePoints: totalPointsByStudent.get(row.student_id) ?? 0,
+        weekPoints: 0,
+        sessions: new Set<string>(),
+        lastSessionAt: null,
+      };
+
+      entry.allTimePoints = totalPointsByStudent.get(row.student_id) ?? entry.allTimePoints;
+      entry.sessions.add(row.session_id);
+      if (startedAt && (!entry.lastSessionAt || startedAt > entry.lastSessionAt)) entry.lastSessionAt = startedAt;
+      if (startedAt && startedAt >= cutoff) entry.weekPoints += row.score ?? 0;
+      grouped.set(row.student_id, entry);
+    }
+
+    const allTimeSorted = [...grouped.entries()]
+      .map(([studentId, row]) => ({ studentId, ...row }))
+      .sort((a, b) => b.allTimePoints - a.allTimePoints || a.fullName.localeCompare(b.fullName))
+      .map((row, index) => ({ ...row, allTimeRank: index + 1 }));
+
+    const weekSorted = [...grouped.entries()]
+      .map(([studentId, row]) => ({ studentId, ...row }))
+      .sort((a, b) => b.weekPoints - a.weekPoints || a.fullName.localeCompare(b.fullName))
+      .map((row, index) => ({ ...row, weekRank: index + 1 }));
+
+    const leaderboard = allTimeSorted.map((row) => {
+      const weekMatch = weekSorted.find((candidate) => candidate.studentId === row.studentId)
+      return {
+        studentId: row.studentId,
+        fullName: row.fullName,
+        email: row.email,
+        allTimePoints: row.allTimePoints,
+        weekPoints: weekMatch?.weekPoints ?? 0,
+        sessionCount: row.sessions.size,
+        lastSessionAt: row.lastSessionAt,
+        allTimeRank: row.allTimeRank,
+        weekRank: weekMatch?.weekRank ?? row.allTimeRank,
+      }
+    });
+
+    return { props: { profile, stats, leaderboard } };
   },
   { allowedRoles: ['teacher'] }
 ) as GetServerSideProps<Props>;
@@ -130,12 +238,14 @@ const STEPS = [
   },
 ];
 
-export default function TeacherDashboard({ profile, stats }: Props) {
+export default function TeacherDashboard({ profile, stats, leaderboard }: Props) {
   const firstName = profile.full_name?.split(' ')[0] || 'Teacher';
   const joinedDate = new Date(profile.created_at).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 
   const [showGuide, setShowGuide] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
+  const [leaderboardScope, setLeaderboardScope] = useState<'all-time' | 'week'>('all-time');
+  const [leaderboardQuery, setLeaderboardQuery] = useState('');
 
   useEffect(() => {
     const seen = localStorage.getItem(WALKTHROUGH_KEY);
@@ -146,6 +256,23 @@ export default function TeacherDashboard({ profile, stats }: Props) {
     localStorage.setItem(WALKTHROUGH_KEY, '1');
     setShowGuide(false);
   };
+
+  const visibleLeaderboard = useMemo(() => {
+    const source = [...leaderboard].sort((a, b) => {
+      const lhs = leaderboardScope === 'week' ? a.weekPoints : a.allTimePoints;
+      const rhs = leaderboardScope === 'week' ? b.weekPoints : b.allTimePoints;
+      return rhs - lhs || a.fullName.localeCompare(b.fullName);
+    });
+    const query = leaderboardQuery.trim().toLowerCase();
+    const filtered = query
+      ? source.filter((row) =>
+          row.fullName.toLowerCase().includes(query) || row.email.toLowerCase().includes(query)
+        )
+      : source;
+    return filtered;
+  }, [leaderboard, leaderboardQuery, leaderboardScope]);
+
+  const topTenLeaderboard = visibleLeaderboard.slice(0, 10);
 
   const QUICK_STATS = [
     {
@@ -234,7 +361,7 @@ export default function TeacherDashboard({ profile, stats }: Props) {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="relative overflow-hidden rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50 p-5 sm:p-8 shadow-sm"
+          className="relative overflow-hidden rounded-2xl border border-violet-200 bg-violet-50 p-5 sm:p-8 shadow-sm"
         >
           <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(124,58,237,1) 1px, transparent 1px), linear-gradient(90deg, rgba(124,58,237,1) 1px, transparent 1px)', backgroundSize: '36px 36px' }} />
           <div className="absolute -right-8 -top-8 h-56 w-56 rounded-full bg-violet-200/50 blur-3xl pointer-events-none" />
@@ -250,7 +377,7 @@ export default function TeacherDashboard({ profile, stats }: Props) {
             </div>
             <h1 className="text-2xl font-bold mb-1 sm:text-3xl">
               <span className="text-gray-900">Good day, </span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-indigo-500">{firstName}</span>
+              <span className="text-violet-600">{firstName}</span>
               <span className="ml-1">👋</span>
             </h1>
             <p className="text-gray-500 max-w-lg">
@@ -433,6 +560,104 @@ export default function TeacherDashboard({ profile, stats }: Props) {
                 ? <Link key={label} href={href}>{inner}</Link>
                 : <div key={label}>{inner}</div>;
             })}
+          </div>
+        </motion.div>
+
+        {/* Class leaderboard */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.13 }}
+        >
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400">Class leaderboard</h2>
+              <p className="mt-1 text-sm text-gray-500">Ranked across sessions hosted by you. Search to jump straight to a student.</p>
+            </div>
+            <div className="flex items-center gap-2 rounded-2xl border border-gray-200 bg-white p-1 shadow-sm">
+              {(['all-time', 'week'] as const).map((scope) => (
+                <button
+                  key={scope}
+                  onClick={() => setLeaderboardScope(scope)}
+                  className={`rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-widest transition ${
+                    leaderboardScope === scope
+                      ? 'bg-violet-600 text-white shadow-sm'
+                      : 'text-gray-500 hover:text-gray-800'
+                  }`}
+                >
+                  {scope === 'all-time' ? 'All-time' : 'This week'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+            <div className="flex flex-col gap-3 border-b border-gray-100 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-gray-900">Top 10 students</p>
+                <p className="text-xs text-gray-400">
+                  {leaderboardScope === 'all-time' ? 'Sorted by student_stats.total_points' : 'Sorted by points earned from sessions in the last 7 days'}
+                </p>
+              </div>
+              <div className="relative w-full sm:max-w-sm">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+                <Input
+                  value={leaderboardQuery}
+                  onChange={(e) => setLeaderboardQuery(e.target.value)}
+                  placeholder="Find a student"
+                  className="h-10 pl-9"
+                />
+              </div>
+            </div>
+
+            <div className="divide-y divide-gray-50">
+              {topTenLeaderboard.length === 0 ? (
+                <div className="px-5 py-14 text-center">
+                  <Trophy className="mx-auto size-8 text-gray-200" />
+                  <p className="mt-3 text-sm text-gray-400">
+                    {leaderboardQuery.trim() ? 'No student matches that search.' : 'No leaderboard data yet.'}
+                  </p>
+                </div>
+              ) : (
+                topTenLeaderboard.map((row) => {
+                  const points = leaderboardScope === 'all-time' ? row.allTimePoints : row.weekPoints
+                  const rank = leaderboardScope === 'all-time' ? row.allTimeRank : row.weekRank
+                  const highlight = rank <= 3
+                  return (
+                    <div key={row.studentId} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-sm font-black ${
+                          rank === 1 ? 'bg-amber-100 text-amber-700' : rank === 2 ? 'bg-slate-100 text-slate-600' : rank === 3 ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-500'
+                        }`}>
+                          {rank}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-gray-900">{row.fullName}</p>
+                          <p className="truncate text-xs text-gray-400">{row.email || 'No email'} · {row.sessionCount} session{row.sessionCount !== 1 ? 's' : ''}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 self-end sm:self-auto">
+                        <div className="text-right">
+                          <p className={`text-lg font-black tabular-nums ${highlight ? 'text-gray-900' : 'text-gray-800'}`}>{points.toLocaleString()}</p>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{leaderboardScope === 'all-time' ? 'points' : 'week pts'}</p>
+                        </div>
+                        {row.lastSessionAt && (
+                          <span className="rounded-full bg-gray-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                            {new Date(row.lastSessionAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+
+            {leaderboardQuery.trim() && visibleLeaderboard.length > 10 && (
+              <div className="border-t border-gray-100 bg-gray-50 px-5 py-3 text-xs text-gray-400">
+                Showing {Math.min(10, visibleLeaderboard.length)} of {visibleLeaderboard.length} matching students.
+              </div>
+            )}
           </div>
         </motion.div>
 

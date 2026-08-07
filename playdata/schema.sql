@@ -4,7 +4,7 @@
 CREATE TABLE public.profiles (
   id uuid NOT NULL,
   username text NOT NULL UNIQUE,
-  email text NOT NULL,
+  email text NOT NULL UNIQUE,
   full_name text NOT NULL DEFAULT ''::text,
   role text NOT NULL DEFAULT 'student'::text CHECK (role = ANY (ARRAY['admin'::text, 'teacher'::text, 'student'::text])),
   is_active boolean NOT NULL DEFAULT true,
@@ -91,6 +91,7 @@ CREATE TABLE public.questions (
   dataset_column text,
   explanation text,
   time_limit_secs integer NOT NULL DEFAULT 30,
+  topic_tag text,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT questions_pkey PRIMARY KEY (id),
   CONSTRAINT questions_quiz_id_fkey FOREIGN KEY (quiz_id) REFERENCES public.quizzes(id)
@@ -104,10 +105,12 @@ CREATE TABLE public.sessions (
   current_item integer,
   started_at timestamp with time zone,
   ended_at timestamp with time zone,
+  classroom_id uuid,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT sessions_pkey PRIMARY KEY (id),
-  CONSTRAINT sessions_teacher_id_fkey FOREIGN KEY (teacher_id) REFERENCES public.profiles(id)
+  CONSTRAINT sessions_teacher_id_fkey FOREIGN KEY (teacher_id) REFERENCES public.profiles(id),
+  CONSTRAINT sessions_classroom_id_fkey FOREIGN KEY (classroom_id) REFERENCES public.classrooms(id)
 );
 CREATE TABLE public.session_visualisations (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -132,6 +135,8 @@ CREATE TABLE public.session_participants (
   session_id uuid NOT NULL,
   student_id uuid NOT NULL,
   score integer NOT NULL DEFAULT 0,
+  current_streak integer NOT NULL DEFAULT 0,
+  best_streak integer NOT NULL DEFAULT 0,
   joined_at timestamp with time zone NOT NULL DEFAULT now(),
   left_at timestamp with time zone,
   CONSTRAINT session_participants_pkey PRIMARY KEY (id),
@@ -145,6 +150,7 @@ CREATE TABLE public.student_responses (
   student_id uuid NOT NULL,
   answer text NOT NULL,
   is_correct boolean,
+  response_time_ms integer,
   ai_feedback text,
   submitted_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT student_responses_pkey PRIMARY KEY (id),
@@ -253,4 +259,66 @@ CREATE TABLE public.admin_activity_log (
   CONSTRAINT admin_activity_log_pkey PRIMARY KEY (id),
   CONSTRAINT admin_activity_log_admin_id_fkey FOREIGN KEY (admin_id) REFERENCES public.profiles(id),
   CONSTRAINT admin_activity_log_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id)
+);
+CREATE TABLE public.student_stats (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  student_id uuid NOT NULL UNIQUE,
+  total_points bigint NOT NULL DEFAULT 0,
+  level integer NOT NULL DEFAULT 1,
+  current_login_streak integer NOT NULL DEFAULT 0,
+  longest_login_streak integer NOT NULL DEFAULT 0,
+  last_active_date date,
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT student_stats_pkey PRIMARY KEY (id),
+  CONSTRAINT student_stats_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.badges (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  code text NOT NULL UNIQUE,
+  name text NOT NULL,
+  description text,
+  icon text,
+  category text CHECK (category = ANY (ARRAY['participation'::text, 'accuracy'::text, 'speed'::text, 'streak'::text, 'mastery'::text])),
+  criteria_type text NOT NULL,
+  criteria_value integer,
+  rarity text CHECK (rarity = ANY (ARRAY['common'::text, 'rare'::text, 'legendary'::text])) DEFAULT 'common'::text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT badges_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.student_badges (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  student_id uuid NOT NULL,
+  badge_id uuid NOT NULL,
+  session_id uuid,
+  earned_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT student_badges_pkey PRIMARY KEY (id),
+  CONSTRAINT student_badges_unique UNIQUE (student_id, badge_id),
+  CONSTRAINT student_badges_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.profiles(id),
+  CONSTRAINT student_badges_badge_id_fkey FOREIGN KEY (badge_id) REFERENCES public.badges(id),
+  CONSTRAINT student_badges_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.sessions(id)
+);
+CREATE TABLE public.classrooms (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  teacher_id uuid NOT NULL,
+  name text NOT NULL,
+  description text,
+  archived boolean NOT NULL DEFAULT false,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT classrooms_pkey PRIMARY KEY (id),
+  CONSTRAINT classrooms_teacher_id_fkey FOREIGN KEY (teacher_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.classroom_students (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  classroom_id uuid NOT NULL,
+  student_id uuid,
+  email text NOT NULL,
+  status text NOT NULL DEFAULT 'invited'::text CHECK (status = ANY (ARRAY['invited'::text, 'active'::text, 'removed'::text])),
+  invited_at timestamp with time zone NOT NULL DEFAULT now(),
+  joined_at timestamp with time zone,
+  CONSTRAINT classroom_students_pkey PRIMARY KEY (id),
+  CONSTRAINT classroom_students_classroom_email_uq UNIQUE (classroom_id, email),
+  CONSTRAINT classroom_students_email_normalised CHECK (email = lower(trim(email))),
+  CONSTRAINT classroom_students_classroom_id_fkey FOREIGN KEY (classroom_id) REFERENCES public.classrooms(id),
+  CONSTRAINT classroom_students_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.profiles(id)
 );

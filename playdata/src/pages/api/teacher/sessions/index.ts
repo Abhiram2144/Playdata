@@ -75,16 +75,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // POST: create
-  const { title } = req.body as { title?: string }
+  const { title, classroomId, quizId } = req.body as {
+    title?: string
+    classroomId?: string
+    quizId?: string
+  }
   if (!title?.trim()) return res.status(400).json({ error: 'Title is required' })
 
-  let created = null
+  // Validate classroom ownership when classroomId is provided
+  if (classroomId) {
+    const { data: classroom } = await admin
+      .from('classrooms')
+      .select('teacher_id')
+      .eq('id', classroomId)
+      .single()
+    if (!classroom) return res.status(404).json({ error: 'Classroom not found' })
+    if (classroom.teacher_id !== user.id) return res.status(403).json({ error: 'Forbidden' })
+  }
+
+  let created: { id: string; join_code: string } | null = null
   let lastErr: { message: string; code?: string } | null = null
   for (let attempt = 0; attempt < 5; attempt++) {
     const code = generateJoinCode()
     const { data, error } = await admin
       .from('sessions')
-      .insert({ teacher_id: user.id, title: title.trim(), join_code: code, status: 'waiting' })
+      .insert({
+        teacher_id: user.id,
+        title: title.trim(),
+        join_code: code,
+        status: 'waiting',
+        ...(classroomId ? { classroom_id: classroomId } : {}),
+      })
       .select('id, join_code')
       .single()
     if (!error) { created = data; break }
@@ -95,5 +116,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (!created) return res.status(500).json({ error: lastErr?.message ?? 'Failed to create session' })
+
+  // Attach the chosen quiz as the first session item
+  if (quizId && created.id) {
+    await admin.from('session_items').insert({
+      session_id: created.id,
+      type: 'quiz',
+      reference_id: quizId,
+      order_index: 0,
+    })
+  }
+
   return res.status(201).json({ sessionId: created.id, joinCode: created.join_code })
 }

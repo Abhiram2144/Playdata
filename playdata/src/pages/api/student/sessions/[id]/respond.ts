@@ -45,6 +45,14 @@ function checkAnswer(answer: string, correctAnswer: string, type: string, tolera
   return a.toLowerCase() === c.toLowerCase()
 }
 
+const MAX_POINTS = 1000
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getIO(res: NextApiResponse): any {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (res as any).socket?.server?.io ?? null
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
@@ -65,14 +73,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { data: participant } = await admin
     .from('session_participants')
-    .select('id, score')
+    .select('id, score, current_streak, best_streak')
     .eq('session_id', sessionId)
     .eq('student_id', user.id)
     .maybeSingle()
 
   if (!participant) return res.status(403).json({ error: 'Not a participant' })
 
-  const { question_id, answer } = req.body as { question_id?: string; answer?: string }
+  const { question_id, answer, response_time_ms: rawResponseTimeMs } = req.body as {
+    question_id?: string
+    answer?: string
+    response_time_ms?: number
+  }
   if (!question_id) return res.status(400).json({ error: 'question_id is required' })
   if (answer === undefined || answer === null) return res.status(400).json({ error: 'answer is required' })
 
@@ -90,7 +102,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Fetch the question to check correct answer
   const { data: question } = await admin
     .from('questions')
-    .select('correct_answer, type, answer_tolerance')
+    .select('correct_answer, type, answer_tolerance, time_limit_secs')
     .eq('id', question_id)
     .single()
 
@@ -98,25 +110,56 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const is_correct = checkAnswer(String(answer), question.correct_answer, question.type, question.answer_tolerance)
 
-  const { error: insertError } = await admin.from('student_responses').insert({
-    session_id: sessionId,
-    question_id,
-    student_id: user.id,
-    answer: String(answer),
-    is_correct,
-  })
+  // Core insert never includes response_time_ms so it succeeds even before
+  // migration 020 is applied to the remote database.
+  const { data: inserted, error: insertError } = await admin
+    .from('student_responses')
+    .insert({
+      session_id: sessionId,
+      question_id,
+      student_id: user.id,
+      answer: String(answer),
+      is_correct,
+    })
+    .select('id')
+    .single()
 
   if (insertError) return res.status(500).json({ error: insertError.message })
 
-  // Increment score on correct answer
-  let newScore = participant.score
-  if (is_correct) {
-    newScore = participant.score + 1
-    await admin
-      .from('session_participants')
-      .update({ score: newScore })
-      .eq('id', participant.id)
+  // Persist response_time_ms for badge computation (requires migration 020).
+  // Fire-and-forget: silently skipped if the column does not yet exist in the schema cache.
+  if (rawResponseTimeMs != null && inserted?.id) {
+    void admin
+      .from('student_responses')
+      .update({ response_time_ms: rawResponseTimeMs })
+      .eq('id', inserted.id)
   }
 
-  return res.status(200).json({ is_correct, score: newScore })
+  // ── Kahoot-style scoring ──────────────────────────────────────────────────
+  // Speed bonus: 1000 pts at instant answer, 500 pts at the time limit.
+  const timeLimitMs = (question.time_limit_secs ?? 30) * 1000
+  const clampedMs = Math.min(Math.max(rawResponseTimeMs ?? 0, 0), timeLimitMs)
+  const basePoints = is_correct
+    ? Math.round(MAX_POINTS * (1 - clampedMs / timeLimitMs / 2))
+    : 0
+
+  // Streak bonus: flat +100 from the 2nd consecutive correct answer onwards.
+  const newStreak = is_correct ? (participant.current_streak ?? 0) + 1 : 0
+  const streakBonus = is_correct && newStreak >= 2 ? 100 : 0
+  const pointsEarned = basePoints + streakBonus
+  const newBest = Math.max(participant.best_streak ?? 0, newStreak)
+  const newScore = (participant.score ?? 0) + pointsEarned
+
+  await admin
+    .from('session_participants')
+    .update({ score: newScore, current_streak: newStreak, best_streak: newBest })
+    .eq('id', participant.id)
+
+  // Notify the session room so the frontend can show a streak indicator.
+  const io = getIO(res)
+  if (io && newStreak >= 2) {
+    io.to(`session:${sessionId}`).emit('session:streak', { studentId: user.id, streak: newStreak })
+  }
+
+  return res.status(200).json({ is_correct, score: newScore, points_earned: pointsEarned, current_streak: newStreak })
 }

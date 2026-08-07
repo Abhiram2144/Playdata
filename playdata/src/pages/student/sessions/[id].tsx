@@ -8,6 +8,7 @@ import {
   Users, Send, LayoutDashboard, UserCircle,
   TrendingUp, PieChart as PieIcon, Maximize2, AlignLeft,
   Loader2, PenLine, ChevronDown, ChevronUp, Plus,
+  BadgeCheck, Trophy as TrophyIcon, Sparkles, Flame,
 } from 'lucide-react'
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -17,8 +18,9 @@ import {
 import { io as ioClient, Socket } from 'socket.io-client'
 import { toast } from 'sonner'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { BadgeCard } from '@/components/gamification/BadgeCard'
+import { STUDENT_NAV } from '@/lib/student-nav'
 import { createClientFromContext } from '@/lib/supabase/server-props'
-import type { NavItem } from '@/components/layout/Sidebar'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -95,6 +97,24 @@ interface Session {
 interface Participant {
   id: string
   score: number
+  current_streak: number
+  best_streak: number
+}
+
+interface LeaderboardEntry {
+  rank: number
+  studentId: string | null
+  name: string
+  score: number
+  currentStreak?: number
+}
+
+interface NewBadgeAward {
+  badgeId: string
+  code: string
+  name: string
+  description: string | null
+  rarity: string
 }
 
 interface Profile {
@@ -398,15 +418,6 @@ function TimerBar({ timeLeft, total }: { timeLeft: number; total: number }) {
     </div>
   )
 }
-
-// ── Nav ───────────────────────────────────────────────────────────────────────
-
-const NAV_ITEMS: NavItem[] = [
-  { href: '/student/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/student/join', label: 'Join Session', icon: Users },
-  { href: '/student/results', label: 'My Results', icon: Trophy },
-  { href: '/profile', label: 'Profile', icon: UserCircle },
-]
 
 // ── Vis panel (chart) ─────────────────────────────────────────────────────────
 
@@ -750,6 +761,7 @@ export default function StudentSession({
   const [currentItemIdx, setCurrentItemIdx] = useState<number>(initialSession.current_item ?? 0)
   const [myResponses, setMyResponses] = useState<MyResponse[]>(initialResponses)
   const [score, setScore] = useState(initialParticipant.score)
+  const [currentStreak, setCurrentStreak] = useState(initialParticipant.current_streak)
 
   const [quizQIdx, setQuizQIdx] = useState(0)
   const [selectedAnswer, setSelectedAnswer] = useState('')
@@ -758,6 +770,12 @@ export default function StudentSession({
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
   const [timedOut, setTimedOut] = useState(false)
   const [quizDismissed, setQuizDismissed] = useState(false)
+
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
+  const [showLeaderboard, setShowLeaderboard] = useState(false)
+  const [streakFlash, setStreakFlash] = useState<number | null>(null)
+  const [newBadges, setNewBadges] = useState<NewBadgeAward[]>([])
+  const questionStartRef = useRef<number>(Date.now())
 
   const sortedItems = [...items].sort((a, b) => a.order_index - b.order_index)
   const activeItem = sortedItems[currentItemIdx] ?? null
@@ -777,6 +795,11 @@ export default function StudentSession({
     : null
 
   const alreadyAnswered = !!myResponseForActive
+
+  const finalEntry = useMemo(
+    () => leaderboard.find((entry) => entry.studentId === profile.id) ?? null,
+    [leaderboard, profile.id]
+  )
 
   const quizComplete =
     activeItem?.type === 'quiz' &&
@@ -820,6 +843,7 @@ export default function StudentSession({
   }, [currentItemIdx])
 
   useEffect(() => {
+    questionStartRef.current = Date.now()
     if (activeQuizQuestion) {
       setSelectedAnswer('')
       setTextAnswer('')
@@ -849,10 +873,25 @@ export default function StudentSession({
       socket.on('session:advance', ({ currentItem }: { currentItem: number }) => {
         setCurrentItemIdx(currentItem)
         setSession((prev) => ({ ...prev, current_item: currentItem }))
+        setShowLeaderboard(false)
       })
       socket.on('session:end', () => {
         setSession((prev) => ({ ...prev, status: 'ended' }))
         toast.success('Session ended by teacher')
+      })
+      socket.on('session:leaderboard', ({ ranked }: { ranked: LeaderboardEntry[] }) => {
+        setLeaderboard(ranked)
+        setShowLeaderboard(true)
+      })
+      socket.on('session:streak', ({ studentId, streak }: { studentId: string; streak: number }) => {
+        if (studentId === profile.id) {
+          setCurrentStreak(streak)
+          setStreakFlash(streak)
+        }
+      })
+      socket.on('session:badges', (awardsMap: Record<string, NewBadgeAward[]>) => {
+        const mine = awardsMap[profile.id] ?? []
+        if (mine.length > 0) setNewBadges(mine)
       })
     })
 
@@ -886,16 +925,25 @@ export default function StudentSession({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.status, session.id])
 
+  // Auto-clear the streak flash after 2.5 s.
+  useEffect(() => {
+    if (streakFlash === null) return
+    const t = setTimeout(() => setStreakFlash(null), 2500)
+    return () => clearTimeout(t)
+  }, [streakFlash])
+
   // ── Answer submission ──────────────────────────────────────────────────────
 
   const submitAnswer = async (questionId: string, answer: string) => {
     if (!answer.trim() || submitting || alreadyAnswered) return
     setSubmitting(true)
 
+    const response_time_ms = Date.now() - questionStartRef.current
+
     const res = await fetch(`/api/student/sessions/${session.id}/respond`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question_id: questionId, answer }),
+      body: JSON.stringify({ question_id: questionId, answer, response_time_ms }),
     })
     const data = await res.json()
     setSubmitting(false)
@@ -906,6 +954,12 @@ export default function StudentSession({
         { id: data.id ?? questionId, question_id: questionId, answer, is_correct: data.is_correct ?? null, submitted_at: new Date().toISOString() },
       ])
       if (res.ok && typeof data.score === 'number') setScore(data.score)
+        if (res.ok && typeof data.current_streak === 'number') {
+          setCurrentStreak(data.current_streak)
+          if (data.current_streak >= 2) {
+            setStreakFlash(data.current_streak)
+          }
+      }
     } else {
       toast.error(data.error ?? 'Failed to submit answer')
     }
@@ -926,7 +980,7 @@ export default function StudentSession({
 
   if (session.status === 'waiting') {
     return (
-      <DashboardLayout navItems={NAV_ITEMS} profile={profile}>
+      <DashboardLayout navItems={STUDENT_NAV} profile={profile}>
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -964,40 +1018,72 @@ export default function StudentSession({
 
   if (session.status === 'ended') {
     return (
-      <DashboardLayout navItems={NAV_ITEMS} profile={profile}>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="text-center space-y-5 max-w-sm"
-          >
-            <div className="flex justify-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-100 ring-1 ring-amber-200">
+      <DashboardLayout navItems={STUDENT_NAV} profile={profile}>
+        <div className="relative min-h-[72vh] overflow-hidden rounded-4xl border border-gray-200 bg-violet-50 px-5 py-8 shadow-sm sm:px-8">
+          <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'radial-gradient(circle at 20% 20%, rgba(124,58,237,1) 0, transparent 28%), radial-gradient(circle at 80% 10%, rgba(245,158,11,1) 0, transparent 24%), radial-gradient(circle at 70% 80%, rgba(99,102,241,1) 0, transparent 24%)' }} />
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="relative mx-auto flex max-w-4xl flex-col gap-6">
+            <div className="text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-amber-100 ring-1 ring-amber-200 shadow-sm">
                 <Trophy className="size-8 text-amber-600" />
               </div>
+              <p className="text-xs font-bold uppercase tracking-[0.25em] text-amber-600">Session Complete</p>
+              <h1 className="mt-2 text-3xl font-black text-gray-900 sm:text-4xl">{session.title}</h1>
+              <p className="mt-2 text-sm text-gray-500">You finished with a full session summary and any badges you unlocked along the way.</p>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Session Complete!</h1>
-              <p className="text-sm text-gray-500 mt-1">{session.title}</p>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="rounded-3xl border border-violet-200 bg-white/90 p-5 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-widest text-violet-500">Final rank</p>
+                <p className="mt-2 text-4xl font-black text-gray-900">{finalEntry?.rank != null ? `#${finalEntry.rank}` : '—'}</p>
+                <p className="mt-1 text-sm text-gray-500">{finalEntry ? 'Your place on the final leaderboard' : 'Waiting for leaderboard data'}</p>
+              </div>
+              <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-widest text-amber-600">Session points</p>
+                <p className="mt-2 text-4xl font-black text-gray-900">{score.toLocaleString()}</p>
+                <p className="mt-1 text-sm text-gray-500">Total points earned in this session</p>
+              </div>
+              <div className="rounded-3xl border border-emerald-200 bg-white/90 p-5 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600">Current streak</p>
+                <p className="mt-2 text-4xl font-black text-gray-900">{currentStreak > 0 ? `${currentStreak}x` : '0'}</p>
+                <p className="mt-1 text-sm text-gray-500">Active answer streak before the session closed</p>
+              </div>
             </div>
-            <div className="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-indigo-50 px-8 py-6 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-widest text-violet-600 mb-1">Your Score</p>
-              <p className="text-5xl font-black text-gray-900">{score}</p>
-              <p className="text-sm text-gray-500 mt-1">correct answers</p>
-            </div>
-            <div className="flex items-center gap-3 justify-center">
-              <button
-                onClick={() => router.push('/student/results')}
-                className="flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 shadow-sm px-5 py-2.5 text-sm font-medium text-violet-700 transition hover:bg-violet-100"
-              >
-                View results
-              </button>
-              <button
-                onClick={() => router.push('/student/dashboard')}
-                className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white shadow-sm px-5 py-2.5 text-sm font-medium text-gray-600 transition hover:border-violet-300 hover:text-violet-700"
-              >
-                Dashboard
-              </button>
+
+            {newBadges.length > 0 && (
+              <div className="space-y-4 rounded-3xl border border-white/70 bg-white/80 p-5 shadow-sm backdrop-blur">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.25em] text-amber-600">Badges earned</p>
+                    <p className="mt-1 text-sm text-gray-500">A small celebratory reveal for each new unlock.</p>
+                  </div>
+                  <Sparkles className="size-5 text-amber-500" />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {newBadges.map((badge, index) => {
+                    const icon = badge.rarity === 'legendary' ? TrophyIcon : BadgeCheck
+                    return (
+                      <motion.div
+                        key={badge.badgeId}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                      >
+                        <BadgeCard
+                          icon={icon}
+                          name={badge.name}
+                          description={badge.description}
+                          rarity={badge.rarity === 'legendary' ? 'legendary' : badge.rarity === 'rare' ? 'rare' : 'common'}
+                        />
+                      </motion.div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <button onClick={() => router.push('/student/results')} className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-5 py-2.5 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-100">View results</button>
+              <button onClick={() => router.push('/student/dashboard')} className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-600 shadow-sm transition hover:border-violet-300 hover:text-violet-700">Dashboard</button>
             </div>
           </motion.div>
         </div>
@@ -1169,7 +1255,8 @@ export default function StudentSession({
   }
 
   return (
-    <DashboardLayout navItems={NAV_ITEMS} profile={profile}>
+    <DashboardLayout navItems={STUDENT_NAV} profile={profile}>
+      <>
       <div className="max-w-2xl space-y-5">
 
         {/* Header */}
@@ -1405,6 +1492,120 @@ export default function StudentSession({
           </motion.div>
         )}
       </div>
+
+      {/* ── Streak celebration ──────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {streakFlash !== null && (
+          <motion.div
+            key="streak-flash"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center px-4"
+          >
+            <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" />
+            <motion.div
+              initial={{ scale: 0.85, y: 16 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.92, y: 12 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+              className="relative w-full max-w-md rounded-4xl border border-amber-300/60 bg-orange-500 px-6 py-8 text-center shadow-[0_30px_80px_rgba(251,146,60,0.35)]"
+            >
+              <div className="absolute inset-x-6 top-6 flex justify-between text-white/80">
+                <Flame className="size-6 fill-current" />
+                <Flame className="size-6 fill-current" />
+              </div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/80">Answer Streak</p>
+              <p className="mt-3 text-6xl font-black leading-none text-white">{streakFlash}</p>
+              <p className="mt-2 text-lg font-semibold text-white/95">in a row</p>
+              <p className="mt-3 text-sm text-white/80">Keep the momentum going.</p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Leaderboard modal ──────────────────────────────────────────────────
+          Broadcast to the room when the teacher advances or ends the session.
+          Shows top 10 + a "you are here" row for students outside the top 10. */}
+      <AnimatePresence>
+        {showLeaderboard && leaderboard.length > 0 && (
+          <motion.div
+            key="leaderboard-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4"
+            onClick={() => setShowLeaderboard(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Trophy className="size-5 text-amber-500" />
+                  <h2 className="text-base font-bold text-gray-900">Leaderboard</h2>
+                </div>
+                <button
+                  onClick={() => setShowLeaderboard(false)}
+                  className="rounded-lg p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+                >
+                  <XCircle className="size-4" />
+                </button>
+              </div>
+
+              <ol className="space-y-1.5">
+                {leaderboard.slice(0, 10).map((entry) => {
+                  const isMe = entry.studentId === profile.id
+                  const medal = entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : entry.rank === 3 ? '🥉' : null
+                  return (
+                    <li
+                      key={entry.rank}
+                      className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm ${
+                        isMe ? 'bg-violet-100 ring-1 ring-violet-300' : 'bg-gray-50'
+                      }`}
+                    >
+                      <span className="w-5 shrink-0 text-center font-bold text-gray-400">
+                        {medal ?? entry.rank}
+                      </span>
+                      <span className={`flex-1 truncate font-medium ${isMe ? 'text-violet-700' : 'text-gray-700'}`}>
+                        {entry.name}{isMe ? ' (you)' : ''}
+                      </span>
+                      <span className={`tabular-nums font-bold ${isMe ? 'text-violet-700' : 'text-gray-900'}`}>
+                        {entry.score.toLocaleString()}
+                      </span>
+                    </li>
+                  )
+                })}
+
+                {/* "You are here" — only when the student is outside the top 10 */}
+                {!leaderboard.slice(0, 10).some((e) => e.studentId === profile.id) &&
+                  leaderboard.find((e) => e.studentId === profile.id) && (() => {
+                    const myEntry = leaderboard.find((e) => e.studentId === profile.id)!
+                    return (
+                      <>
+                        <li className="px-3 py-0.5 text-center text-xs text-gray-400">· · ·</li>
+                        <li className="flex items-center gap-3 rounded-xl bg-violet-100 px-3 py-2 text-sm ring-1 ring-violet-300">
+                          <span className="w-5 shrink-0 text-center font-bold text-gray-400">{myEntry.rank}</span>
+                          <span className="flex-1 truncate font-medium text-violet-700">{myEntry.name} (you)</span>
+                          <span className="tabular-nums font-bold text-violet-700">{myEntry.score.toLocaleString()}</span>
+                        </li>
+                      </>
+                    )
+                  })()
+                }
+              </ol>
+
+              <p className="mt-3 text-center text-xs text-gray-400">Tap anywhere outside to dismiss</p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      </>
     </DashboardLayout>
   )
 }

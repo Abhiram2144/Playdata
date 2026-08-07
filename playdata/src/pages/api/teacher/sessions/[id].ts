@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { awardPostSessionBadges } from '@/lib/post-session-awards'
 
 // ── Analytics helper ──────────────────────────────────────────────────────────
 // Called once when a session transitions to 'ended'.
@@ -120,6 +121,85 @@ function getIO(res: NextApiResponse) {
   return (res as any).socket?.server?.io ?? null
 }
 
+// Emits session:invite to every active classroom student's personal room.
+// Fire-and-forget — caller should .catch() any errors.
+async function broadcastClassroomInvites(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  io: any,
+  sessionId: string,
+  classroomId: string,
+  sessionTitle: string,
+  joinCode: string,
+  teacherId: string,
+  admin: ReturnType<typeof createAdminClient>
+) {
+  const [{ data: classroom }, { data: teacherProfile }, { data: activeStudents }] =
+    await Promise.all([
+      admin.from('classrooms').select('name').eq('id', classroomId).single(),
+      admin.from('profiles').select('full_name').eq('id', teacherId).single(),
+      admin
+        .from('classroom_students')
+        .select('student_id')
+        .eq('classroom_id', classroomId)
+        .eq('status', 'active')
+        .not('student_id', 'is', null),
+    ])
+
+  const payload = {
+    sessionId,
+    sessionTitle,
+    joinCode,
+    teacherName: (teacherProfile as { full_name: string } | null)?.full_name ?? 'Your teacher',
+    classroomName: (classroom as { name: string } | null)?.name ?? 'your classroom',
+  }
+
+  for (const row of (activeStudents ?? []) as { student_id: string }[]) {
+    if (row.student_id) {
+      io.to(`student:${row.student_id}`).emit('session:invite', payload)
+    }
+  }
+}
+
+// Fetches session_participants sorted by score desc and emits session:leaderboard.
+// Fire-and-forget on advance; awaited on end (so students receive it before leaving the room).
+async function broadcastLeaderboard(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  io: any,
+  sessionId: string,
+  admin: ReturnType<typeof createAdminClient>
+) {
+  const { data } = await admin
+    .from('session_participants')
+    .select('student_id, score, current_streak, display_name, guest_name, profiles(full_name)')
+    .eq('session_id', sessionId)
+    .order('score', { ascending: false })
+
+  if (!data?.length) return
+
+  type Row = {
+    student_id: string | null
+    score: number | null
+    current_streak: number | null
+    display_name: string | null
+    guest_name: string | null
+    // Supabase returns joined rows as arrays even on to-one FK
+    profiles: { full_name: string }[] | { full_name: string } | null
+  }
+
+  const ranked = (data as unknown as Row[]).map((p, i) => {
+    const prof = Array.isArray(p.profiles) ? p.profiles[0] : p.profiles
+    return {
+      rank: i + 1,
+      studentId: p.student_id ?? null,
+      name: prof?.full_name ?? p.display_name ?? p.guest_name ?? 'Guest',
+      score: p.score ?? 0,
+      currentStreak: p.current_streak ?? 0,
+    }
+  })
+
+  io.to(`session:${sessionId}`).emit('session:leaderboard', { ranked })
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!['GET', 'PATCH', 'DELETE'].includes(req.method ?? '')) {
     return res.status(405).json({ error: 'Method not allowed' })
@@ -136,7 +216,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { data: session } = await admin
     .from('sessions')
-    .select('id, teacher_id, title, join_code, status, current_item, started_at, ended_at, created_at, updated_at')
+    .select('id, teacher_id, title, join_code, status, classroom_id, current_item, started_at, ended_at, created_at, updated_at')
     .eq('id', sessionId)
     .single()
 
@@ -153,7 +233,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .order('order_index'),
       admin
         .from('session_participants')
-        .select('id, student_id, score, joined_at, left_at, profiles(full_name, email)')
+        .select('id, student_id, score, current_streak, best_streak, joined_at, left_at, profiles(full_name, email)')
         .eq('session_id', sessionId)
         .order('joined_at'),
       admin
@@ -231,7 +311,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (error) return res.status(500).json({ error: error.message })
 
       const io = getIO(res)
-      if (io) io.to(`session:${sessionId}`).emit('session:start', { currentItem: 0 })
+      if (io) {
+        io.to(`session:${sessionId}`).emit('session:start', { currentItem: 0 })
+
+        // Push real-time invites to every active student in the linked classroom.
+        if (session.classroom_id) {
+          broadcastClassroomInvites(
+            io,
+            sessionId,
+            session.classroom_id as string,
+            session.title as string,
+            session.join_code as string,
+            user.id,
+            admin
+          ).catch((e) =>
+            console.error('[invite] classroom broadcast failed for session', sessionId, e)
+          )
+        }
+      }
 
       return res.status(200).json({ session: updated })
     }
@@ -252,7 +349,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (error) return res.status(500).json({ error: error.message })
 
       const io = getIO(res)
-      if (io) io.to(`session:${sessionId}`).emit('session:advance', { currentItem: itemIndex })
+      if (io) {
+        io.to(`session:${sessionId}`).emit('session:advance', { currentItem: itemIndex })
+        // Leaderboard after the closing question — fire-and-forget, non-blocking.
+        broadcastLeaderboard(io, sessionId, admin).catch(() => {})
+      }
 
       return res.status(200).json({ session: updated })
     }
@@ -271,11 +372,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const io = getIO(res)
       if (io) {
+        // Leaderboard is awaited so the final standings arrive before session:end.
+        await broadcastLeaderboard(io, sessionId, admin)
         io.to(`session:${sessionId}`).emit('session:end', {})
-        io.socketsLeave(`session:${sessionId}`)
       }
 
-      // Compute and persist analytics — fire-and-forget; failure is non-fatal
+      // Awards are computed async: stats upsert + badge checks happen after the
+      // response is returned. When io is present, session:badges is emitted to
+      // the room and socketsLeave is called once badges are delivered.
+      awardPostSessionBadges(io, sessionId, admin).catch(e =>
+        console.error('[badges] post-session awards failed for session', sessionId, e)
+      )
+
+      // Analytics — fire-and-forget; failure is non-fatal.
       computeAndStoreAnalytics(sessionId, admin).catch((e) =>
         console.error('[analytics] computation failed for session', sessionId, e)
       )

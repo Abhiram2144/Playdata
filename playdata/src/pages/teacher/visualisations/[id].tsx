@@ -270,7 +270,7 @@ function ChartRenderer({ chartType, config, rows }: {
       <ResponsiveContainer width="100%" height={360}>
         <PieChart>
           <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={130}
-            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`} labelLine={false}>
+            label={({ name, percent = 0 }) => `${name} (${(percent * 100).toFixed(0)}%)`} labelLine={false}>
             {data.map((_, i) => <Cell key={i} fill={VIZ_COLORS[i % VIZ_COLORS.length]} />)}
           </Pie>
           <Tooltip contentStyle={TOOLTIP_STYLE} />

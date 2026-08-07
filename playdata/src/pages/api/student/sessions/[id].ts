@@ -51,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Verify participant
   const { data: participant } = await admin
     .from('session_participants')
-    .select('id, score')
+    .select('id, score, current_streak, best_streak')
     .eq('session_id', sessionId)
     .eq('student_id', user.id)
     .maybeSingle()

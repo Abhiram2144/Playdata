@@ -15,12 +15,20 @@ type AppPropsWithLayout = AppProps & {
 
 const ToasterClient = dynamic(() => import('@/components/ToasterClient'), { ssr: false });
 
+// Keeps a persistent personal socket room open for logged-in students so they
+// receive session:invite push events from classroom-linked sessions.
+const StudentInviteListener = dynamic(
+  () => import('@/components/StudentInviteListener').then((m) => m.StudentInviteListener),
+  { ssr: false }
+);
+
 export default function App({ Component, pageProps }: AppPropsWithLayout) {
   const getLayout = Component.getLayout ?? ((page) => page);
   return (
     <AdminProvider>
       {getLayout(<Component {...pageProps} />)}
       <ToasterClient />
+      <StudentInviteListener />
     </AdminProvider>
   );
 }

@@ -4,8 +4,8 @@ import { GetServerSideProps } from 'next'
 import { motion } from 'framer-motion'
 import { Zap, Hash, ArrowRight, Loader2, Users, Trophy, LayoutDashboard, UserCircle } from 'lucide-react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { STUDENT_NAV } from '@/lib/student-nav'
 import { createClientFromContext } from '@/lib/supabase/server-props'
-import type { NavItem } from '@/components/layout/Sidebar'
 
 interface Profile {
   id: string
@@ -36,13 +36,6 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
 
   return { props: { profile, prefillCode } }
 }
-
-const NAV_ITEMS: NavItem[] = [
-  { href: '/student/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/student/join', label: 'Join Session', icon: Users },
-  { href: '/student/results', label: 'My Results', icon: Trophy },
-  { href: '/profile', label: 'Profile', icon: UserCircle },
-]
 
 export default function JoinSession({ profile, prefillCode }: Props) {
   const router = useRouter()
@@ -77,7 +70,7 @@ export default function JoinSession({ profile, prefillCode }: Props) {
   }
 
   return (
-    <DashboardLayout navItems={NAV_ITEMS} profile={profile}>
+    <DashboardLayout navItems={STUDENT_NAV} profile={profile}>
       <div className="max-w-md mx-auto space-y-6 pt-8">
 
         {/* Header card */}
