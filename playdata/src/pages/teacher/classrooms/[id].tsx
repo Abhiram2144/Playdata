@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { GetServerSidePropsResult } from 'next';
 import {
   ArrowLeft, UserPlus, Users, MailCheck, MailX, X, Search, ChevronUp, ChevronDown,
-  Upload, FileText, AlertTriangle, PlayCircle, BookOpen,
+  Upload, FileText, AlertTriangle, PlayCircle, BookOpen, BarChart2,
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { TEACHER_NAV } from '@/lib/teacher-nav';
@@ -838,6 +838,13 @@ export default function ClassroomRosterPage({ profile, classroom, students: init
               )}
             </div>
             <div className="flex items-center gap-2 flex-wrap">
+              <Link
+                href={`/teacher/classrooms/${classroom.id}/analytics`}
+                className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 px-4 py-2.5 text-sm font-semibold text-gray-600 transition-colors"
+              >
+                <BarChart2 className="size-4" />
+                Analytics
+              </Link>
               <button
                 onClick={() => setShowStartSession(true)}
                 className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 hover:bg-violet-100 px-4 py-2.5 text-sm font-semibold text-violet-700 transition-colors"
