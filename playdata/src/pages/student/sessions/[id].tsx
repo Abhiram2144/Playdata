@@ -954,11 +954,8 @@ export default function StudentSession({
         { id: data.id ?? questionId, question_id: questionId, answer, is_correct: data.is_correct ?? null, submitted_at: new Date().toISOString() },
       ])
       if (res.ok && typeof data.score === 'number') setScore(data.score)
-        if (res.ok && typeof data.current_streak === 'number') {
-          setCurrentStreak(data.current_streak)
-          if (data.current_streak >= 2) {
-            setStreakFlash(data.current_streak)
-          }
+      if (res.ok && typeof data.current_streak === 'number') {
+        setCurrentStreak(data.current_streak)
       }
     } else {
       toast.error(data.error ?? 'Failed to submit answer')

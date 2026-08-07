@@ -1,6 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { createAdminClient } from '@/lib/supabase/admin'
+import type {
+  TrendDir, AnalyticsOverview, StudentStat, TopicStat, TrendPoint, ClassroomAnalytics,
+} from '@/types/classroom-analytics'
 
 function serializeCookie(name: string, value: string, opts: CookieOptions = {}): string {
   const parts = [`${encodeURIComponent(name)}=${encodeURIComponent(value)}`]
@@ -31,50 +34,6 @@ async function getSessionUser(req: NextApiRequest, res: NextApiResponse) {
   return user
 }
 
-export type TrendDir = 'up' | 'down' | 'flat'
-
-export interface AnalyticsOverview {
-  total_sessions: number
-  total_students: number
-  avg_score: number | null
-  trend: TrendDir | null
-  /** Percentage-point delta: recent avg − prior avg. Null when <4 sessions with data. */
-  trend_delta_pp: number | null
-}
-
-export interface StudentStat {
-  student_id: string | null
-  email: string
-  full_name: string | null
-  sessions_attended: number
-  total_sessions: number
-  avg_score: number | null
-  last_session_date: string | null
-  /** Null when gamification tables are not yet available or student has no stats row. */
-  current_streak: number | null
-  total_points: number | null
-}
-
-export interface TopicStat {
-  topic: string
-  accuracy_pct: number
-  total_responses: number
-  correct_responses: number
-}
-
-export interface TrendPoint {
-  session_id: string
-  title: string
-  date: string | null
-  avg_score: number
-}
-
-export interface ClassroomAnalytics {
-  overview: AnalyticsOverview
-  students: StudentStat[]
-  topics: TopicStat[]
-  trend: TrendPoint[]
-}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })

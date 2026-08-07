@@ -6,6 +6,7 @@ import { GetServerSidePropsResult } from 'next';
 import {
   ArrowLeft, UserPlus, Users, MailCheck, MailX, X, Search, ChevronUp, ChevronDown,
   Upload, FileText, AlertTriangle, PlayCircle, BookOpen, BarChart2,
+  Radio, CheckCircle2, Clock,
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { TEACHER_NAV } from '@/lib/teacher-nav';
@@ -48,11 +49,22 @@ interface QuizSummary {
   title: string;
 }
 
+interface SessionSummary {
+  id: string;
+  title: string;
+  status: 'waiting' | 'active' | 'ended';
+  started_at: string | null;
+  ended_at: string | null;
+  participant_count: number;
+  item_count: number;
+}
+
 interface Props {
   profile: Profile;
   classroom: Classroom;
   students: RosterStudent[];
   quizzes: QuizSummary[];
+  sessions: SessionSummary[];
 }
 
 // ── Server-side ──────────────────────────────────────────────────────────────
@@ -83,7 +95,7 @@ export const getServerSideProps = withAuth(
 
     type ProfileJoin = { full_name: string; email: string } | { full_name: string; email: string }[] | null;
 
-    const [{ data: rows }, { data: quizzesRows }] = await Promise.all([
+    const [{ data: rows }, { data: quizzesRows }, { data: sessionsRows }] = await Promise.all([
       admin
         .from('classroom_students')
         .select('id, email, status, invited_at, joined_at, student_id, profiles(full_name, email)')
@@ -94,6 +106,11 @@ export const getServerSideProps = withAuth(
         .from('quizzes')
         .select('id, title')
         .eq('teacher_id', userId)
+        .order('created_at', { ascending: false }),
+      admin
+        .from('sessions')
+        .select('id, title, status, started_at, ended_at, session_participants(id), session_items(id)')
+        .eq('classroom_id', classroomId)
         .order('created_at', { ascending: false }),
     ]);
 
@@ -118,6 +135,16 @@ export const getServerSideProps = withAuth(
       };
     });
 
+    const sessions: SessionSummary[] = (sessionsRows ?? []).map((s: Record<string, unknown>) => ({
+      id: s.id as string,
+      title: s.title as string,
+      status: s.status as 'waiting' | 'active' | 'ended',
+      started_at: s.started_at as string | null,
+      ended_at: s.ended_at as string | null,
+      participant_count: Array.isArray(s.session_participants) ? (s.session_participants as unknown[]).length : 0,
+      item_count: Array.isArray(s.session_items) ? (s.session_items as unknown[]).length : 0,
+    }));
+
     return {
       props: {
         profile,
@@ -130,6 +157,7 @@ export const getServerSideProps = withAuth(
         },
         students,
         quizzes: (quizzesRows ?? []) as QuizSummary[],
+        sessions,
       },
     };
   },
@@ -713,7 +741,7 @@ function sortStudents(students: RosterStudent[], key: SortKey, dir: SortDir): Ro
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
-export default function ClassroomRosterPage({ profile, classroom, students: initial, quizzes }: Props) {
+export default function ClassroomRosterPage({ profile, classroom, students: initial, quizzes, sessions }: Props) {
   const [students, setStudents] = useState<RosterStudent[]>(initial);
   const [showAdd, setShowAdd] = useState(false);
   const [showStartSession, setShowStartSession] = useState(false);
@@ -902,6 +930,83 @@ export default function ClassroomRosterPage({ profile, classroom, students: init
             )}
           </div>
         )}
+
+        {/* Sessions */}
+        <div>
+          <h2 className="text-sm font-semibold text-gray-700 mb-3">Sessions</h2>
+          {sessions.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-5 py-10 text-center">
+              <PlayCircle className="mx-auto size-7 text-gray-300 mb-2" />
+              <p className="text-sm text-gray-400">No sessions run for this classroom yet.</p>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden divide-y divide-gray-50">
+              {sessions.map((s) => {
+                const isActive = s.status === 'active'
+                const isWaiting = s.status === 'waiting'
+                const isEnded = s.status === 'ended'
+                const date = s.started_at ?? s.ended_at
+                return (
+                  <div key={s.id} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50/60 transition-colors">
+                    <div className="shrink-0">
+                      {isActive || isWaiting ? (
+                        <span className="flex size-8 items-center justify-center rounded-full bg-emerald-100">
+                          <Radio className="size-4 text-emerald-600" />
+                        </span>
+                      ) : (
+                        <span className="flex size-8 items-center justify-center rounded-full bg-gray-100">
+                          <CheckCircle2 className="size-4 text-gray-400" />
+                        </span>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-gray-800 truncate">{s.title}</p>
+                      <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                        <span className="text-xs text-gray-400">
+                          {s.participant_count} student{s.participant_count !== 1 ? 's' : ''}
+                        </span>
+                        <span className="text-gray-200">·</span>
+                        <span className="text-xs text-gray-400">
+                          {s.item_count} item{s.item_count !== 1 ? 's' : ''}
+                        </span>
+                        {date && (
+                          <>
+                            <span className="text-gray-200">·</span>
+                            <span className="inline-flex items-center gap-1 text-xs text-gray-400">
+                              <Clock className="size-3" />
+                              {new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="shrink-0 flex items-center gap-2">
+                      {isActive || isWaiting ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                          <span className="relative flex h-1.5 w-1.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
+                            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          </span>
+                          Live
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500">
+                          Ended
+                        </span>
+                      )}
+                      <Link
+                        href={isActive || isWaiting ? `/teacher/sessions/${s.id}/live` : `/teacher/sessions/${s.id}/results`}
+                        className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:border-violet-300 hover:text-violet-700 transition-colors shadow-sm"
+                      >
+                        {isActive || isWaiting ? 'Go to live' : 'View results'}
+                      </Link>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
 
         {/* Roster table */}
         {students.length === 0 ? (

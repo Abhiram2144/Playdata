@@ -137,10 +137,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // ── Kahoot-style scoring ──────────────────────────────────────────────────
   // Speed bonus: 1000 pts at instant answer, 500 pts at the time limit.
-  const timeLimitMs = (question.time_limit_secs ?? 30) * 1000
-  const clampedMs = Math.min(Math.max(rawResponseTimeMs ?? 0, 0), timeLimitMs)
+  // Untimed questions (time_limit_secs = 0 or null ≤ 0) award full MAX_POINTS.
+  const timeLimitMs = (question.time_limit_secs ?? 0) * 1000
+  const clampedMs = timeLimitMs > 0 ? Math.min(Math.max(rawResponseTimeMs ?? 0, 0), timeLimitMs) : 0
   const basePoints = is_correct
-    ? Math.round(MAX_POINTS * (1 - clampedMs / timeLimitMs / 2))
+    ? timeLimitMs <= 0
+      ? MAX_POINTS
+      : Math.round(MAX_POINTS * (1 - clampedMs / timeLimitMs / 2))
     : 0
 
   // Streak bonus: flat +100 from the 2nd consecutive correct answer onwards.

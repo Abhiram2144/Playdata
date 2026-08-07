@@ -15,7 +15,7 @@ import { createClientFromContext } from '@/lib/supabase/server-props';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type {
   ClassroomAnalytics, StudentStat, TrendPoint,
-} from '@/pages/api/teacher/classrooms/[id]/analytics';
+} from '@/types/classroom-analytics';
 
 // ── Server-side types ─────────────────────────────────────────────────────────
 

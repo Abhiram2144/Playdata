@@ -79,8 +79,6 @@ async function computeAndStoreAnalytics(
       avg_score: avgScore,
       participation_rate: participationRate,
       completion_rate: completionRate,
-      total_questions: totalQuestions,
-      participant_count: participantCount,
       computed_at: new Date().toISOString(),
     },
     { onConflict: 'session_id' }
@@ -170,7 +168,7 @@ async function broadcastLeaderboard(
 ) {
   const { data } = await admin
     .from('session_participants')
-    .select('student_id, score, current_streak, display_name, guest_name, profiles(full_name)')
+    .select('student_id, score, current_streak, guest_name, profiles(full_name)')
     .eq('session_id', sessionId)
     .order('score', { ascending: false })
 
@@ -180,7 +178,6 @@ async function broadcastLeaderboard(
     student_id: string | null
     score: number | null
     current_streak: number | null
-    display_name: string | null
     guest_name: string | null
     // Supabase returns joined rows as arrays even on to-one FK
     profiles: { full_name: string }[] | { full_name: string } | null
@@ -191,7 +188,7 @@ async function broadcastLeaderboard(
     return {
       rank: i + 1,
       studentId: p.student_id ?? null,
-      name: prof?.full_name ?? p.display_name ?? p.guest_name ?? 'Guest',
+      name: prof?.full_name ?? p.guest_name ?? 'Guest',
       score: p.score ?? 0,
       currentStreak: p.current_streak ?? 0,
     }
@@ -233,7 +230,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .order('order_index'),
       admin
         .from('session_participants')
-        .select('id, student_id, score, current_streak, best_streak, joined_at, left_at, profiles(full_name, email)')
+        .select('id, student_id, guest_name, score, current_streak, best_streak, joined_at, left_at, profiles(full_name, email)')
         .eq('session_id', sessionId)
         .order('joined_at'),
       admin
