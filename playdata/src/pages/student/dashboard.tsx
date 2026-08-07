@@ -13,7 +13,7 @@ import {
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { createClientFromContext } from '@/lib/supabase/server-props'
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { NavItem } from '@/components/layout/Sidebar'
+import { STUDENT_NAV } from '@/lib/student-nav'
 
 interface Profile {
   id: string
@@ -139,12 +139,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
   }
 }
 
-export const NAV_ITEMS: NavItem[] = [
-  { href: '/student/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/student/join', label: 'Join Session', icon: Users },
-  { href: '/student/results', label: 'My Results', icon: Trophy },
-  { href: '/profile', label: 'Profile', icon: UserCircle },
-]
+const NAV_ITEMS = STUDENT_NAV
 
 const TOOLTIP_STYLE = {
   backgroundColor: '#ffffff',

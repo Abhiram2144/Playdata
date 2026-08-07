@@ -12,9 +12,9 @@ import {
   ResponsiveContainer, BarChart, Bar,
 } from 'recharts'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { STUDENT_NAV } from '@/lib/student-nav'
 import { createClientFromContext } from '@/lib/supabase/server-props'
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { NavItem } from '@/components/layout/Sidebar'
 
 interface Profile {
   id: string
@@ -137,13 +137,6 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
   }
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { href: '/student/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/student/join', label: 'Join Session', icon: Users },
-  { href: '/student/results', label: 'My Results', icon: Trophy },
-  { href: '/profile', label: 'Profile', icon: UserCircle },
-]
-
 const TOOLTIP_STYLE = {
   backgroundColor: '#ffffff',
   border: '1px solid #e4e0f8',
@@ -174,7 +167,7 @@ export default function StudentResults({ profile, results, summary }: Props) {
     }))
 
   return (
-    <DashboardLayout navItems={NAV_ITEMS} profile={profile}>
+    <DashboardLayout navItems={STUDENT_NAV} profile={profile}>
       <div className="max-w-5xl space-y-8">
 
         {/* Header */}
