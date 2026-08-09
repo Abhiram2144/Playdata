@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Check, Loader2, Pencil, Tag, X,
-} from 'lucide-react';
+import { Check, Loader2, Pencil, Tag, X, BookOpen } from 'lucide-react';
 import { GetServerSidePropsResult } from 'next';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { TEACHER_NAV } from '@/lib/teacher-nav';
@@ -21,7 +20,6 @@ interface Profile {
 }
 
 interface TagEntry { tag: string; count: number }
-
 interface Props { profile: Profile }
 
 // ── Server-side ───────────────────────────────────────────────────────────────
@@ -33,11 +31,9 @@ export const getServerSideProps = withAuth(
       .select('id, full_name, email, role, subject_taught, institution_role, created_at')
       .eq('id', userId)
       .single();
-
     if (!profile || profile.role !== 'teacher') {
       return { redirect: { destination: '/auth/login', permanent: false } };
     }
-
     return { props: { profile: profile as Profile } };
   },
   { allowedRoles: ['teacher'] }
@@ -63,11 +59,10 @@ function RenameModal({
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { inputRef.current?.select(); }, []);
-
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', h);
+    return () => document.removeEventListener('keydown', h);
   }, [onClose]);
 
   const conflict = value.trim() !== tag.tag &&
@@ -90,7 +85,7 @@ function RenameModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/30 backdrop-blur-sm"
         onClick={onClose}
       />
       <motion.div
@@ -98,43 +93,50 @@ function RenameModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96 }}
         transition={{ duration: 0.15 }}
-        className="relative z-10 w-full max-w-sm rounded-2xl border border-[#35354a]/60 bg-[#0d0d18] p-5 shadow-2xl shadow-black/60"
+        className="relative z-10 w-full max-w-sm rounded-2xl border border-gray-100 bg-white p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-start justify-between">
-          <div>
-            <h3 className="text-sm font-semibold text-white">Rename tag</h3>
-            <p className="text-xs text-[#6a6a80]">
-              Updates all {tag.count} question{tag.count !== 1 ? 's' : ''} using this tag.
-            </p>
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-4 rounded-lg p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+        >
+          <X className="size-4" />
+        </button>
+
+        <div className="mb-5">
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 ring-1 ring-violet-200">
+            <Tag className="size-5 text-violet-600" />
           </div>
-          <button onClick={onClose} className="rounded-lg p-1 text-[#4a4a60] hover:text-white transition">
-            <X className="size-3.5" />
-          </button>
+          <h3 className="text-base font-semibold text-gray-900">Rename tag</h3>
+          <p className="mt-0.5 text-sm text-gray-500">
+            Renames <span className="font-medium text-gray-700">&ldquo;{tag.tag}&rdquo;</span> across all{' '}
+            {tag.count} question{tag.count !== 1 ? 's' : ''}.
+          </p>
         </div>
+
         <form onSubmit={handleSubmit} className="space-y-3">
           <input
             ref={inputRef}
             value={value}
             onChange={(e) => { setValue(e.target.value); setErr(''); }}
             placeholder="New tag name"
-            className="w-full rounded-xl border border-[#35354a] bg-[#11111f] px-3 py-2 text-sm text-white placeholder-[#4a4a60] focus:border-violet-500/60 focus:outline-none"
+            className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 transition focus:border-violet-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-100"
           />
           {(err || conflict) && (
-            <p className="text-xs text-red-400">{err || 'A tag with this name already exists.'}</p>
+            <p className="text-xs text-red-500">{err || 'A tag with this name already exists.'}</p>
           )}
           <div className="flex gap-2 pt-1">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-xl border border-[#35354a] py-2 text-sm text-[#8d8da0] transition hover:text-white"
+              className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving || !value.trim() || !!conflict}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-violet-600 py-2 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-violet-600 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
               Rename
@@ -143,6 +145,39 @@ function RenameModal({
         </form>
       </motion.div>
     </div>
+  );
+}
+
+// ── Tag card ──────────────────────────────────────────────────────────────────
+function TagCard({ entry, onRename }: { entry: TagEntry; onRename: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="group relative rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition hover:border-violet-200 hover:shadow-md"
+    >
+      {/* Rename button — appears on hover */}
+      <button
+        onClick={onRename}
+        className="absolute right-3 top-3 flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-gray-400 opacity-0 transition hover:bg-violet-50 hover:text-violet-600 group-hover:opacity-100"
+      >
+        <Pencil className="size-3" /> Rename
+      </button>
+
+      {/* Tag icon + name */}
+      <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-violet-100 ring-1 ring-violet-200">
+        <Tag className="size-4 text-violet-600" />
+      </div>
+
+      <p className="truncate pr-16 text-sm font-semibold text-gray-900">{entry.tag}</p>
+
+      <p className="mt-1 text-xs text-gray-400">
+        {entry.count} question{entry.count !== 1 ? 's' : ''}
+      </p>
+
+      {/* Coloured bottom accent */}
+      <div className="absolute bottom-0 left-5 right-5 h-0.5 rounded-full bg-violet-200 opacity-0 transition group-hover:opacity-100" />
+    </motion.div>
   );
 }
 
@@ -171,79 +206,100 @@ export default function TagsPage({ profile }: Props) {
       const d = await r.json();
       setRenaming(null);
       await loadTags();
-      setToast(`"${from}" renamed to "${d.tag}" across ${d.updated} question${d.updated !== 1 ? 's' : ''}`);
+      setToast(`"${from}" → "${d.tag}" · ${d.updated} question${d.updated !== 1 ? 's' : ''} updated`);
       setTimeout(() => setToast(null), 3500);
     }
   }
 
+  const totalQuestions = tags.reduce((sum, t) => sum + t.count, 0);
+
   return (
     <DashboardLayout navItems={NAV_ITEMS} profile={profile}>
-      <div className="max-w-2xl space-y-6">
+      <div className="max-w-4xl space-y-8">
 
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Tag className="size-5 text-violet-400" />
-            <h1 className="text-xl font-bold text-white">Topic Tags</h1>
-          </div>
-          <p className="text-sm text-[#6a6a80]">
-            Tags are applied per-question in your quizzes and drive topic-breakdown analytics after each session.
-            Rename a tag here to merge fragmented variants across all your questions at once.
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+          <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Question tags</p>
+          <h1 className="mt-0.5 text-2xl font-bold text-gray-900">Topic Tags</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Tags drive per-topic analytics after each session — use them to spot where students
+            struggle. Rename a tag here to merge fragmented variants across all your questions.
           </p>
         </motion.div>
 
-        {/* Tag list */}
+        {/* Stats row */}
+        {!loading && tags.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.04 }}
+            className="flex flex-wrap gap-3"
+          >
+            <div className="flex items-center gap-2.5 rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-100 ring-1 ring-violet-200">
+                <Tag className="size-4 text-violet-600" />
+              </span>
+              <div>
+                <p className="text-lg font-bold leading-none text-gray-900">{tags.length}</p>
+                <p className="mt-0.5 text-xs text-gray-400">distinct tags</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2.5 rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-100 ring-1 ring-violet-200">
+                <BookOpen className="size-4 text-violet-600" />
+              </span>
+              <div>
+                <p className="text-lg font-bold leading-none text-gray-900">{totalQuestions}</p>
+                <p className="mt-0.5 text-xs text-gray-400">tagged questions</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Tag grid */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.04 }}
-          className="rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80"
+          transition={{ delay: 0.06 }}
         >
-          <div className="flex items-center justify-between border-b border-[#35354a]/40 px-5 py-3.5">
-            <span className="text-sm font-semibold text-[#c9c9d4]">Your tags</span>
-            {!loading && (
-              <span className="rounded-full bg-violet-500/10 px-2 py-0.5 text-xs text-violet-400">
-                {tags.length}
-              </span>
-            )}
-          </div>
+          <h2 className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
+            <Tag className="size-3.5" /> All tags
+          </h2>
 
           {loading ? (
-            <div className="flex h-24 items-center justify-center">
-              <Loader2 className="size-4 animate-spin text-[#4a4a60]" />
+            <div className="flex h-32 items-center justify-center rounded-2xl border border-gray-100 bg-white shadow-sm">
+              <Loader2 className="size-5 animate-spin text-gray-300" />
             </div>
           ) : tags.length === 0 ? (
-            <div className="px-5 py-10 text-center">
-              <Tag className="mx-auto mb-2 size-6 text-[#35354a]" />
-              <p className="text-sm text-[#6a6a80]">No tags yet.</p>
-              <p className="mt-1 text-xs text-[#4a4a60]">
-                Open a quiz, expand Advanced options on any question, and set a Topic tag.
+            <div className="rounded-2xl border border-gray-100 bg-white px-8 py-16 text-center shadow-sm">
+              <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-100 ring-1 ring-violet-200">
+                <Tag className="size-7 text-violet-600" />
+              </span>
+              <p className="mt-4 text-sm font-semibold text-gray-800">No tags yet</p>
+              <p className="mt-1 text-xs text-gray-400 max-w-xs mx-auto">
+                Open a quiz, expand <span className="font-medium text-gray-600">Advanced options</span> on
+                any question, and set a Topic tag to get started.
               </p>
+              <Link
+                href="/teacher/quizzes"
+                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500"
+              >
+                Go to Quizzes
+              </Link>
             </div>
           ) : (
-            <ul className="divide-y divide-[#1a1a2e]">
-              {tags.map((t) => (
-                <li
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {tags.map((t, i) => (
+                <motion.div
                   key={t.tag}
-                  className="group flex items-center justify-between px-5 py-3 hover:bg-[#0f0f1d]/60 transition"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.06 + i * 0.04 }}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="flex items-center gap-1.5 rounded-full bg-[#1a1a2e] px-2.5 py-0.5 text-xs font-medium text-[#8d8da0]">
-                      <Tag className="size-2.5" /> {t.tag}
-                    </span>
-                    <span className="text-xs text-[#4a4a60]">
-                      {t.count} question{t.count !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => setRenaming(t)}
-                    className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-[#4a4a60] opacity-0 transition hover:bg-[#1a1a2e] hover:text-[#c9c9d4] group-hover:opacity-100"
-                  >
-                    <Pencil className="size-3" /> Rename
-                  </button>
-                </li>
+                  <TagCard entry={t} onRename={() => setRenaming(t)} />
+                </motion.div>
               ))}
-            </ul>
+            </div>
           )}
         </motion.div>
       </div>
@@ -267,10 +323,10 @@ export default function TagsPage({ profile }: Props) {
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-sm text-emerald-400 shadow-xl"
+            exit={{ opacity: 0, y: 8 }}
+            className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2.5 text-sm font-medium text-emerald-700 shadow-lg"
           >
-            <Check className="size-3.5" /> {toast}
+            <Check className="size-3.5 text-emerald-600" /> {toast}
           </motion.div>
         )}
       </AnimatePresence>

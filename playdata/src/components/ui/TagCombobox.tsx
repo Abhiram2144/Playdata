@@ -85,7 +85,7 @@ export function TagCombobox({ value, onChange, availableTags, placeholder = 'e.g
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           autoComplete="off"
-          className="w-full rounded-xl border border-[#35354a] bg-[#0d0d18] px-3 py-2 pr-8 text-sm text-white placeholder-[#4a4a60] focus:border-violet-500/60 focus:outline-none"
+          className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 pr-8 text-sm text-gray-900 placeholder-gray-400 transition focus:border-violet-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-100"
         />
         <button
           type="button"
@@ -99,14 +99,14 @@ export function TagCombobox({ value, onChange, availableTags, placeholder = 'e.g
               setOpen(true);
             }
           }}
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#4a4a60] hover:text-[#8d8da0] transition"
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 transition hover:text-gray-600"
         >
           <ChevronDown className={`size-3.5 transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
         </button>
       </div>
 
       {open && options.length > 0 && (
-        <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-xl border border-[#35354a] bg-[#11111f] py-1 shadow-2xl shadow-black/50">
+        <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-xl border border-gray-200 bg-white py-1 shadow-lg">
           {options.map((opt, i) => {
             const isNew = opt.startsWith('__new__:');
             const label = isNew ? opt.slice(8) : opt;
@@ -119,20 +119,20 @@ export function TagCombobox({ value, onChange, availableTags, placeholder = 'e.g
                   onMouseDown={(e) => { e.preventDefault(); select(opt); }}
                   onMouseEnter={() => setActiveIdx(i)}
                   className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition ${
-                    isActive ? 'bg-violet-500/15 text-white' : 'text-[#c9c9d4]'
+                    isActive ? 'bg-violet-50 text-violet-700' : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >
                   {isNew ? (
                     <>
-                      <Plus className="size-3 shrink-0 text-violet-400" />
+                      <Plus className="size-3 shrink-0 text-violet-600" />
                       <span>
                         Create tag:{' '}
-                        <span className="font-medium text-violet-300">{label}</span>
+                        <span className="font-medium text-violet-700">{label}</span>
                       </span>
                     </>
                   ) : (
                     <>
-                      <Check className={`size-3 shrink-0 ${isSelected ? 'text-violet-400' : 'invisible'}`} />
+                      <Check className={`size-3 shrink-0 ${isSelected ? 'text-violet-600' : 'invisible'}`} />
                       <span>{label}</span>
                     </>
                   )}
