@@ -16,6 +16,17 @@ interface QuestionInput {
   visualisation_ids?: string[] | null;
   explanation?: string | null;
   time_limit_secs?: number;
+  topic_tag?: string | null;
+}
+
+function normalizeTopic(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const collapsed = raw.trim().replace(/\s+/g, ' ');
+  if (!collapsed) return null;
+  return collapsed
+    .split(' ')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
 }
 
 function serializeCookie(name: string, value: string, opts: CookieOptions = {}): string {
@@ -103,7 +114,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         assigned_to, last_edited_by, last_edited_at, created_at, updated_at,
         datasets(id, name, schema),
         questions(id, order_index, text, type, options, correct_answer,
-                  answer_tolerance, dataset_column, visualisation_ids, explanation, time_limit_secs)
+                  answer_tolerance, dataset_column, visualisation_ids, explanation, time_limit_secs, topic_tag)
       `)
       .eq('id', id)
       .single();
@@ -200,6 +211,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       visualisation_ids: q.visualisation_ids ?? [],
       explanation: q.explanation || null,
       time_limit_secs: q.time_limit_secs ?? 30,
+      topic_tag: normalizeTopic(q.topic_tag),
     }));
 
     const { error: qErr } = await admin.from('questions').insert(rows);

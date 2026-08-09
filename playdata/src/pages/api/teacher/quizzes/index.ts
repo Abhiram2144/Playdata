@@ -17,6 +17,17 @@ interface QuestionInput {
   visualisation_ids?: string[] | null;
   explanation?: string | null;
   time_limit_secs?: number;
+  topic_tag?: string | null;
+}
+
+function normalizeTopic(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const collapsed = raw.trim().replace(/\s+/g, ' ');
+  if (!collapsed) return null;
+  return collapsed
+    .split(' ')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
 }
 
 function serializeCookie(name: string, value: string, opts: CookieOptions = {}): string {
@@ -63,6 +74,7 @@ function buildQuestionRow(q: QuestionInput, quizId: string, idx: number) {
     visualisation_ids: q.visualisation_ids ?? [],
     explanation: q.explanation || null,
     time_limit_secs: q.time_limit_secs ?? 30,
+    topic_tag: normalizeTopic(q.topic_tag),
   };
 }
 

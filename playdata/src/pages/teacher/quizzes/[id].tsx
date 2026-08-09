@@ -43,6 +43,7 @@ interface QuizRow {
     visualisation_ids: string[] | null;
     explanation: string | null;
     time_limit_secs: number;
+    topic_tag: string | null;
   }[];
 }
 
@@ -95,7 +96,7 @@ export const getServerSideProps = withAuth(
       .select(`
         id, title, description, status, dataset_id, assigned_to, teacher_id, is_timed, allow_student_charts,
         questions(id, order_index, text, type, options, correct_answer,
-                  answer_tolerance, dataset_column, visualisation_ids, explanation, time_limit_secs)
+                  answer_tolerance, dataset_column, visualisation_ids, explanation, time_limit_secs, topic_tag)
       `)
       .eq('id', id)
       .single();
@@ -184,6 +185,7 @@ export const getServerSideProps = withAuth(
         visualisation_ids: (q.visualisation_ids as string[] | null) ?? [],
         explanation: q.explanation as string | null,
         time_limit_secs: (q.time_limit_secs as number) ?? 30,
+        topic_tag: q.topic_tag as string | null,
       })),
     };
 
@@ -231,6 +233,7 @@ export default function EditQuizPage({
     visualisation_ids: q.visualisation_ids ?? [],
     explanation: q.explanation ?? '',
     time_limit_secs: q.time_limit_secs,
+    topic_tag: q.topic_tag ?? '',
   }));
 
   return (

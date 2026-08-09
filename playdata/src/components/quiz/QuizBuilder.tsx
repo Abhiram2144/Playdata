@@ -1,12 +1,14 @@
 'use client';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Trash2, GripVertical, ChevronDown, ChevronUp,
   Database, Hash, AlignLeft, List, AlertTriangle, Check,
-  Clock, BookOpen, X, CheckCircle, BarChart2, PenLine,
+  Clock, BookOpen, X, CheckCircle, BarChart2, PenLine, Tag, Library,
 } from 'lucide-react';
+import { TagCombobox } from '@/components/ui/TagCombobox';
+import QuestionBankPicker, { type BankQuestion } from './QuestionBankPicker';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export type QuestionType = 'mcq' | 'short_answer' | 'numerical';
@@ -27,6 +29,7 @@ export interface QuestionDraft {
   visualisation_ids: string[];
   explanation: string;
   time_limit_secs: number;
+  topic_tag: string;
 }
 
 export interface QuizBuilderProps {
@@ -64,6 +67,7 @@ function emptyQuestion(): QuestionDraft {
     visualisation_ids: [],
     explanation: '',
     time_limit_secs: 30,
+    topic_tag: '',
   };
 }
 
@@ -99,6 +103,7 @@ function QuestionCard({
   expanded,
   columns,
   visualisations,
+  availableTags,
   onToggle,
   onUpdate,
   onDelete,
@@ -113,6 +118,7 @@ function QuestionCard({
   expanded: boolean;
   columns: ColumnSchema[];
   visualisations: VisualisationOption[];
+  availableTags: string[];
   onToggle: () => void;
   onUpdate: (patch: Partial<QuestionDraft>) => void;
   onDelete: () => void;
@@ -452,6 +458,17 @@ function QuestionCard({
                             className="w-full resize-none rounded-xl border border-[#35354a] bg-[#0d0d18] px-3 py-2 text-sm text-white placeholder-[#4a4a60] focus:border-violet-500/60 focus:outline-none"
                           />
                         </div>
+
+                        <div>
+                          <label className="mb-1.5 flex items-center gap-1 text-xs font-semibold text-[#8d8da0] uppercase tracking-wide">
+                            <Tag className="size-3" /> Topic tag
+                          </label>
+                          <TagCombobox
+                            value={q.topic_tag}
+                            onChange={(v) => onUpdate({ topic_tag: v })}
+                            availableTags={availableTags}
+                          />
+                        </div>
                       </div>
                     </motion.div>
                   )}
@@ -499,6 +516,36 @@ export default function QuizBuilder({
   // Drag
   const dragIdx = useRef<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+
+  // Topic tag autocomplete
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
+  useEffect(() => {
+    fetch('/api/questions/tags')
+      .then((r) => r.ok ? r.json() : { tags: [] })
+      .then(({ tags }) => setAvailableTags((tags ?? []).map((t: { tag: string }) => t.tag)))
+      .catch(() => {});
+  }, []);
+
+  // Question bank picker
+  const [bankOpen, setBankOpen] = useState(false);
+
+  function addFromBank(bq: BankQuestion) {
+    const draft = {
+      _key: makeKey(),
+      text: bq.text,
+      type: bq.type,
+      options: bq.options ?? (bq.type === 'mcq' ? ['', ''] : []),
+      correct_answer: bq.correct_answer,
+      answer_tolerance: bq.answer_tolerance != null ? String(bq.answer_tolerance) : '',
+      dataset_column: bq.dataset_column ?? '',
+      visualisation_ids: bq.visualisation_ids ?? [],
+      explanation: bq.explanation ?? '',
+      time_limit_secs: bq.time_limit_secs ?? 30,
+      topic_tag: bq.topic_tag ?? '',
+    };
+    setQuestions((prev) => [...prev, draft]);
+    setExpanded((prev) => new Set([...prev, draft._key]));
+  }
 
   // Save
   const [saving, setSaving] = useState<'draft' | 'publish' | null>(null);
@@ -579,6 +626,7 @@ export default function QuizBuilder({
       visualisation_ids: q.visualisation_ids,
       explanation: q.explanation.trim() || null,
       time_limit_secs: isTimed ? q.time_limit_secs : 0,
+      topic_tag: q.topic_tag.trim() || null,
     })),
   });
 
@@ -617,6 +665,7 @@ export default function QuizBuilder({
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
+    <>
     <div className="max-w-3xl space-y-6">
 
       {/* Saved flash */}
@@ -764,6 +813,7 @@ export default function QuizBuilder({
             expanded={expanded.has(q._key)}
             columns={columns}
             visualisations={visualisations}
+            availableTags={availableTags}
             onToggle={() => toggleExpand(q._key)}
             onUpdate={(patch) => updateQuestion(q._key, patch)}
             onDelete={() => deleteQuestion(q._key)}
@@ -774,12 +824,20 @@ export default function QuizBuilder({
           />
         ))}
 
-        <button
-          onClick={addQuestion}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-violet-500/30 bg-violet-500/5 py-3 text-sm font-medium text-violet-400 transition hover:border-violet-500/60 hover:bg-violet-500/10"
-        >
-          <Plus className="size-4" /> Add question
-        </button>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={addQuestion}
+            className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-violet-500/30 bg-violet-500/5 py-3 text-sm font-medium text-violet-400 transition hover:border-violet-500/60 hover:bg-violet-500/10"
+          >
+            <Plus className="size-4" /> Add question
+          </button>
+          <button
+            onClick={() => setBankOpen(true)}
+            className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-[#35354a]/60 bg-[#0f0f1d]/40 py-3 text-sm font-medium text-[#6a6a80] transition hover:border-violet-500/30 hover:bg-violet-500/5 hover:text-violet-400"
+          >
+            <Library className="size-4" /> From bank
+          </button>
+        </div>
       </motion.div>
 
       {/* Errors */}
@@ -832,5 +890,17 @@ export default function QuizBuilder({
         </p>
       </motion.div>
     </div>
+
+    <AnimatePresence>
+      {bankOpen && (
+        <QuestionBankPicker
+          onAdd={addFromBank}
+          onClose={() => setBankOpen(false)}
+          excludeQuizId={quizId}
+          availableTags={availableTags}
+        />
+      )}
+    </AnimatePresence>
+    </>
   );
 }
