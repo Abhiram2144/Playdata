@@ -7,6 +7,7 @@ import {
   Trophy, Loader2, CheckCircle2, AlertCircle,
   LayoutDashboard, Users, UserCircle, Zap,
 } from 'lucide-react';
+import { ConnectionsSection } from '@/components/teacher/ConnectionsSection';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -204,6 +205,18 @@ export default function ProfilePage({ profile }: Props) {
             ))}
           </div>
         </motion.div>
+
+        {/* Drive connections — teachers only */}
+        {(profile.role === 'teacher' || profile.role === 'admin') && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6"
+          >
+            <ConnectionsSection />
+          </motion.div>
+        )}
 
         {/* Student upgrade notice */}
         {profile.role === 'student' && (

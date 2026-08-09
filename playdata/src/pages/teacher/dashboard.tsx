@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { GetServerSideProps, GetServerSidePropsResult } from 'next';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Database, BarChart3, BookOpen, Users,
   TrendingUp, Zap, UploadCloud, ArrowRight, Play, Trophy,
-  ChevronRight, Gamepad2, CheckCircle2, X,
+  Gamepad2, CheckCircle2, ChevronLeft, ChevronRight as ChevronRightIcon,
   Search,
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -76,8 +77,8 @@ export const getServerSideProps = withAuth(
     ]);
 
     const studentIds = new Set<string>();
-    (sessionParticipantRows ?? []).forEach((s: { session_participants: { student_id: string }[] }) => {
-      s.session_participants?.forEach((p) => studentIds.add(p.student_id));
+    (sessionParticipantRows ?? []).forEach((s: { session_participants: { student_id: string | null }[] }) => {
+      s.session_participants?.forEach((p) => { if (p.student_id) studentIds.add(p.student_id); });
     });
 
     const stats: Stats = {
@@ -190,60 +191,171 @@ const NAV_ITEMS = TEACHER_NAV;
 
 const WALKTHROUGH_KEY = 'playdata_walkthrough_seen_v1';
 
-const STEPS = [
+const TOUR_STEPS = [
   {
-    num: 1,
+    sidebarHref: '/teacher/datasets',
+    href: '/teacher/datasets/new',
     icon: UploadCloud,
     title: 'Upload a dataset',
-    body: 'Import a CSV or XLSX file. You can also connect Google Drive or Dropbox.',
-    href: '/teacher/datasets/new',
-    colour: 'text-violet-700 bg-violet-100 ring-violet-200',
-    hue: 'violet',
+    body: 'Import a CSV or XLSX file as the foundation for your visualisations and quizzes. You can also connect Google Drive or Dropbox.',
   },
   {
-    num: 2,
+    sidebarHref: '/teacher/visualisations',
+    href: '/teacher/visualisations',
     icon: BarChart3,
     title: 'Build a visualisation',
-    body: 'Turn your data into bar charts, scatter plots, and more — linked to quiz questions.',
-    href: '/teacher/visualisations',
-    colour: 'text-sky-700 bg-sky-100 ring-sky-200',
-    hue: 'sky',
+    body: 'Turn your data into bar charts, scatter plots, and more — linked directly to quiz questions.',
   },
   {
-    num: 3,
+    sidebarHref: '/teacher/quizzes',
+    href: '/teacher/quizzes',
     icon: BookOpen,
     title: 'Create a quiz',
-    body: 'Build MCQ, short answer, and numerical questions. Attach charts and set timers.',
-    href: '/teacher/quizzes',
-    colour: 'text-emerald-700 bg-emerald-100 ring-emerald-200',
-    hue: 'emerald',
+    body: 'Build MCQ, short-answer, and numerical questions. Attach charts and set answer timers.',
   },
   {
-    num: 4,
+    sidebarHref: '/teacher/sessions',
+    href: '/teacher/sessions',
     icon: Users,
     title: 'Run a live session',
-    body: 'Start a session and share a 6-character code. Students join in real time.',
-    href: '/teacher/sessions',
-    colour: 'text-amber-700 bg-amber-100 ring-amber-200',
-    hue: 'amber',
+    body: 'Start a session and share a 6-character code. Students join in real time from any device.',
   },
   {
-    num: 5,
+    sidebarHref: '/teacher/analytics',
+    href: '/teacher/analytics',
     icon: TrendingUp,
     title: 'Review results',
-    body: 'See scores, participation rates, and question breakdowns after the session ends.',
-    href: '/teacher/analytics',
-    colour: 'text-rose-700 bg-rose-100 ring-rose-200',
-    hue: 'rose',
+    body: 'See scores, participation rates, and per-question breakdowns after the session ends.',
   },
 ];
+
+function TourOverlay({ onDismiss }: { onDismiss: () => void }) {
+  const [stepIdx, setStepIdx] = useState(0);
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const step = TOUR_STEPS[stepIdx];
+    const el = document.querySelector(`a[data-tour-href="${step.sidebarHref}"]`);
+    if (el) setRect(el.getBoundingClientRect());
+    else setRect(null);
+  }, [stepIdx, mounted]);
+
+  if (!mounted) return null;
+
+  const step = TOUR_STEPS[stepIdx];
+  const Icon = step.icon;
+  const PAD = 8;
+  const spotX = rect ? rect.left - PAD : 0;
+  const spotY = rect ? rect.top - PAD : 0;
+  const spotW = rect ? rect.width + PAD * 2 : 0;
+  const spotH = rect ? rect.height + PAD * 2 : 0;
+
+  const tooltipStyle: React.CSSProperties = rect
+    ? { position: 'fixed', top: Math.min(rect.top - 4, window.innerHeight - 260), left: rect.right + 16, width: 300 }
+    : { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 300 };
+
+  return createPortal(
+    <div className="fixed inset-0 z-[60]">
+      {/* Spotlight overlay */}
+      <svg className="pointer-events-none" style={{ position: 'fixed', inset: 0, width: '100%', height: '100%' }}>
+        <defs>
+          <mask id="tour-mask">
+            <rect width="100%" height="100%" fill="white" />
+            {rect && <rect x={spotX} y={spotY} width={spotW} height={spotH} rx={10} fill="black" />}
+          </mask>
+        </defs>
+        <rect width="100%" height="100%" fill="rgba(0,0,0,0.6)" mask="url(#tour-mask)" />
+      </svg>
+
+      {/* Tooltip card */}
+      <motion.div
+        key={stepIdx}
+        initial={{ opacity: 0, x: -8 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.18 }}
+        style={tooltipStyle}
+        className="rounded-2xl border border-gray-200 bg-white shadow-2xl p-5 z-[61]"
+      >
+        {/* Progress dots */}
+        <div className="flex items-center gap-1.5 mb-4">
+          {TOUR_STEPS.map((_, i) => (
+            <div
+              key={i}
+              className={`h-1.5 rounded-full transition-all duration-300 ${i === stepIdx ? 'bg-violet-600 w-5' : 'bg-gray-200 w-1.5'}`}
+            />
+          ))}
+          <span className="ml-auto text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
+            {stepIdx + 1} / {TOUR_STEPS.length}
+          </span>
+        </div>
+
+        <div className="flex items-start gap-3 mb-4">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-100 ring-1 ring-violet-200">
+            <Icon className="size-4 text-violet-600" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-900">{step.title}</p>
+            <p className="mt-1 text-xs text-gray-500 leading-relaxed">{step.body}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <button
+            onClick={onDismiss}
+            className="text-xs text-gray-400 hover:text-gray-600 transition"
+          >
+            Skip tour
+          </button>
+          <div className="flex items-center gap-2">
+            {stepIdx > 0 && (
+              <button
+                onClick={() => setStepIdx((i) => i - 1)}
+                className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-100 transition"
+              >
+                <ChevronLeft className="size-3.5" /> Back
+              </button>
+            )}
+            {stepIdx < TOUR_STEPS.length - 1 ? (
+              <button
+                onClick={() => setStepIdx((i) => i + 1)}
+                className="flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-semibold text-white bg-violet-600 hover:bg-violet-700 transition"
+              >
+                Next <ChevronRightIcon className="size-3.5" />
+              </button>
+            ) : (
+              <button
+                onClick={onDismiss}
+                className="flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition"
+              >
+                <CheckCircle2 className="size-3.5" /> Done
+              </button>
+            )}
+          </div>
+        </div>
+
+        {step.href && (
+          <Link
+            href={step.href}
+            className="mt-3 flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-500 hover:border-violet-300 hover:text-violet-600 transition"
+          >
+            Open section <ArrowRight className="size-3" />
+          </Link>
+        )}
+      </motion.div>
+    </div>,
+    document.body
+  );
+}
 
 export default function TeacherDashboard({ profile, stats, leaderboard }: Props) {
   const firstName = profile.full_name?.split(' ')[0] || 'Teacher';
   const joinedDate = new Date(profile.created_at).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 
   const [showGuide, setShowGuide] = useState(false);
-  const [activeStep, setActiveStep] = useState(0);
   const [leaderboardScope, setLeaderboardScope] = useState<'all-time' | 'week'>('all-time');
   const [leaderboardQuery, setLeaderboardQuery] = useState('');
 
@@ -295,7 +407,7 @@ export default function TeacherDashboard({ profile, stats, leaderboard }: Props)
     },
     {
       label: 'Students', value: stats.studentCount, icon: Users,
-      sub: stats.studentCount === 0 ? 'Across all sessions' : `Across ${stats.sessionCount} session${stats.sessionCount !== 1 ? 's' : ''}`,
+      sub: stats.studentCount === 0 ? 'No students yet' : 'Unique students',
       href: null,
       colour: 'text-amber-600', iconBg: 'bg-amber-100 ring-1 ring-amber-200',
     },
@@ -393,7 +505,7 @@ export default function TeacherDashboard({ profile, stats, leaderboard }: Props)
                 </div>
               )}
               <button
-                onClick={() => { setShowGuide(true); setActiveStep(0); }}
+                onClick={() => setShowGuide(true)}
                 className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-white px-3 py-1 text-xs text-gray-500 hover:text-violet-700 hover:border-violet-300 transition"
               >
                 <Gamepad2 className="size-3" /> Getting started
@@ -402,134 +514,9 @@ export default function TeacherDashboard({ profile, stats, leaderboard }: Props)
           </div>
         </motion.div>
 
-        {/* Inline Getting Started Guide */}
+        {/* Tour overlay */}
         <AnimatePresence>
-          {showGuide && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.3 }}
-              className="overflow-hidden"
-            >
-              <div className="rounded-2xl border border-violet-200 bg-white shadow-sm overflow-hidden">
-                {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-100">
-                      <Gamepad2 className="size-4 text-violet-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">Getting Started</p>
-                      <p className="text-xs text-gray-400">Follow these 5 steps to get the most out of PlayData</p>
-                    </div>
-                  </div>
-                  <button onClick={dismissGuide} className="rounded-lg p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition">
-                    <X className="size-4" />
-                  </button>
-                </div>
-
-                {/* Steps */}
-                <div className="p-6">
-                  {/* Progress bar */}
-                  <div className="flex items-center gap-2 mb-6">
-                    {STEPS.map((s, i) => (
-                      <div key={s.num} className="flex items-center gap-2 flex-1">
-                        <button
-                          onClick={() => setActiveStep(i)}
-                          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-all ${
-                            i === activeStep
-                              ? 'bg-violet-600 text-white ring-2 ring-violet-200 ring-offset-1'
-                              : 'bg-gray-100 text-gray-400 hover:bg-violet-50 hover:text-violet-600'
-                          }`}
-                        >
-                          {s.num}
-                        </button>
-                        {i < STEPS.length - 1 && (
-                          <div className="flex-1 h-0.5 bg-gray-100" />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Active step detail */}
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={activeStep}
-                      initial={{ opacity: 0, x: 8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -8 }}
-                      transition={{ duration: 0.18 }}
-                      className="flex items-start gap-4"
-                    >
-                      {(() => {
-                        const step = STEPS[activeStep];
-                        const Icon = step.icon;
-                        return (
-                          <>
-                            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1 ${step.colour}`}>
-                              <Icon className="size-5" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-gray-900">{step.title}</p>
-                              <p className="mt-1 text-sm text-gray-500 leading-relaxed">{step.body}</p>
-                              <div className="mt-3 flex items-center gap-3">
-                                <Link
-                                  href={step.href}
-                                  className="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-500"
-                                >
-                                  Go <ArrowRight className="size-3.5" />
-                                </Link>
-                                {activeStep < STEPS.length - 1 && (
-                                  <button
-                                    onClick={() => setActiveStep((s) => s + 1)}
-                                    className="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-700 transition"
-                                  >
-                                    Next step <ChevronRight className="size-4" />
-                                  </button>
-                                )}
-                                {activeStep === STEPS.length - 1 && (
-                                  <button
-                                    onClick={dismissGuide}
-                                    className="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-700 transition"
-                                  >
-                                    <CheckCircle2 className="size-4 text-emerald-500" /> Done
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </motion.div>
-                  </AnimatePresence>
-
-                  {/* All steps mini list */}
-                  <div className="mt-5 grid grid-cols-3 gap-2 sm:grid-cols-5">
-                    {STEPS.map((s, i) => {
-                      const Icon = s.icon;
-                      return (
-                        <button
-                          key={s.num}
-                          onClick={() => setActiveStep(i)}
-                          className={`flex flex-col items-center gap-1.5 rounded-xl p-2.5 text-center transition ${
-                            i === activeStep
-                              ? 'bg-violet-50 ring-1 ring-violet-200'
-                              : 'hover:bg-gray-50'
-                          }`}
-                        >
-                          <div className={`flex h-8 w-8 items-center justify-center rounded-lg ring-1 ${s.colour}`}>
-                            <Icon className="size-3.5" />
-                          </div>
-                          <span className="text-[10px] font-medium text-gray-500 leading-tight">{s.title}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
+          {showGuide && <TourOverlay onDismiss={dismissGuide} />}
         </AnimatePresence>
 
         {/* Quick stats */}

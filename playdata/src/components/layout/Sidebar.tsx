@@ -75,7 +75,7 @@ export function Sidebar({ items, profile, isOpen, onClose }: SidebarProps) {
           }
 
           return (
-            <Link key={item.href} href={item.href} onClick={onClose}>
+            <Link key={item.href} href={item.href} onClick={onClose} data-tour-href={item.href} className="block">
               <motion.div
                 whileHover={{ x: 2 }}
                 transition={{ duration: 0.15 }}

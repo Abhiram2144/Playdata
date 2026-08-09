@@ -4,6 +4,10 @@ import {
   ArrowRight, BarChart2, Users, CheckCircle2, Activity,
   Clock, TrendingUp, BookOpen,
 } from 'lucide-react'
+import {
+  LineChart, Line, BarChart, Bar, XAxis, YAxis,
+  CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+} from 'recharts'
 import { GetServerSidePropsResult } from 'next'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { TEACHER_NAV } from '@/lib/teacher-nav'
@@ -237,6 +241,90 @@ export default function AnalyticsPage({ profile, sessions, summary }: Props) {
             </motion.div>
           ))}
         </div>
+
+        {/* Charts — only when there are enough sessions to be meaningful */}
+        {sessions.length >= 2 && (() => {
+          const chartData = [...sessions].reverse().map((s) => ({
+            label: s.ended_at
+              ? new Date(s.ended_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+              : '—',
+            score: s.total_questions > 0 && s.avg_score !== null
+              ? Math.round((s.avg_score / s.total_questions) * 100)
+              : undefined,
+            participation: s.participation_rate !== null
+              ? Math.round(s.participation_rate * 100)
+              : undefined,
+            completion: s.completion_rate !== null
+              ? Math.round(s.completion_rate * 100)
+              : undefined,
+            participants: s.participant_count,
+          }))
+
+          return (
+            <div className="grid gap-6 lg:grid-cols-2">
+              {/* Score trend */}
+              <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-5">
+                <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-gray-400">Avg score trend</p>
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                    <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                    <Tooltip
+                      formatter={(v) => [`${v ?? 0}%`, 'Avg score']}
+                      contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="score"
+                      stroke="#7c3aed"
+                      strokeWidth={2}
+                      dot={{ r: 3, fill: '#7c3aed' }}
+                      connectNulls
+                      name="Avg score"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Participation & completion */}
+              <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-5">
+                <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-gray-400">Participation & completion</p>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }} barCategoryGap="30%">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                    <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                    <Tooltip
+                      formatter={(v, name) => [`${v ?? 0}%`, String(name)]}
+                      contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Bar dataKey="participation" name="Participation" fill="#06b6d4" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="completion" name="Completion" fill="#10b981" radius={[3, 3, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Participant count over time */}
+              <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-5 lg:col-span-2">
+                <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-gray-400">Participants per session</p>
+                <ResponsiveContainer width="100%" height={160}>
+                  <BarChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }} barCategoryGap="40%">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                    <Tooltip
+                      formatter={(v) => [v ?? 0, 'Participants']}
+                      contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
+                    />
+                    <Bar dataKey="participants" name="Participants" fill="#7c3aed" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Sessions table */}
         {sessions.length === 0 ? (
