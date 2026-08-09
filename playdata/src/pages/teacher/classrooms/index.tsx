@@ -172,17 +172,84 @@ function CreateModal({
   );
 }
 
+// ── Classroom card grid ───────────────────────────────────────────────────────
+
+function ClassroomGrid({
+  classrooms,
+  toggling,
+  onToggleArchive,
+}: {
+  classrooms: Classroom[];
+  toggling: string | null;
+  onToggleArchive: (c: Classroom) => void;
+}) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {classrooms.map((classroom, i) => (
+        <motion.div
+          key={classroom.id}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: i * 0.04 }}
+          className={`group relative rounded-2xl border bg-white shadow-sm p-5 flex flex-col gap-3 transition-all ${
+            classroom.archived
+              ? 'border-gray-100 opacity-70'
+              : 'border-gray-100 hover:border-violet-200 hover:shadow-md'
+          }`}
+        >
+          <p className="text-sm font-semibold text-gray-800 leading-snug">
+            {classroom.name}
+          </p>
+
+          {classroom.description && (
+            <p className="text-xs text-gray-400 line-clamp-2">{classroom.description}</p>
+          )}
+
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
+              <Users className="size-3.5 text-gray-400" />
+              {classroom.student_count} {classroom.student_count === 1 ? 'student' : 'students'}
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
+              <BookOpen className="size-3.5 text-gray-400" />
+              {classroom.session_count} {classroom.session_count === 1 ? 'session' : 'sessions'}
+            </span>
+          </div>
+
+          <div className="mt-auto flex items-center justify-between pt-2 border-t border-gray-100">
+            <button
+              onClick={() => onToggleArchive(classroom)}
+              disabled={toggling === classroom.id}
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              {classroom.archived
+                ? <><ArchiveRestore className="size-3.5" /> Unarchive</>
+                : <><Archive className="size-3.5" /> Archive</>
+              }
+            </button>
+            <Link
+              href={`/teacher/classrooms/${classroom.id}`}
+              className="inline-flex items-center gap-1 text-xs font-medium text-violet-600 hover:text-violet-800 transition-colors"
+            >
+              View roster
+              <ChevronRight className="size-3.5" />
+            </Link>
+          </div>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ClassroomsPage({ profile, classrooms: initial }: Props) {
   const [list, setList] = useState<Classroom[]>(initial);
   const [showCreate, setShowCreate] = useState(false);
-  const [showArchived, setShowArchived] = useState(false);
   const [toggling, setToggling] = useState<string | null>(null);
 
   const active = list.filter((c) => !c.archived);
   const archived = list.filter((c) => c.archived);
-  const visible = showArchived ? list : active;
 
   function handleCreated(classroom: Classroom) {
     setList((prev) => [classroom, ...prev]);
@@ -235,18 +302,8 @@ export default function ClassroomsPage({ profile, classrooms: initial }: Props) 
           </button>
         </div>
 
-        {/* Archived toggle */}
-        {archived.length > 0 && (
-          <button
-            onClick={() => setShowArchived((v) => !v)}
-            className="text-sm text-gray-400 hover:text-gray-700 transition-colors"
-          >
-            {showArchived ? 'Hide archived' : `Show archived (${archived.length})`}
-          </button>
-        )}
-
-        {/* Grid */}
-        {visible.length === 0 ? (
+        {/* Active classrooms grid */}
+        {active.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="mb-4 rounded-full bg-gray-100 p-4">
               <GraduationCap className="size-8 text-gray-300" />
@@ -264,69 +321,19 @@ export default function ClassroomsPage({ profile, classrooms: initial }: Props) 
             </button>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {visible.map((classroom, i) => (
-              <motion.div
-                key={classroom.id}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04 }}
-                className={`group relative rounded-2xl border bg-white shadow-sm p-5 flex flex-col gap-3 transition-all ${
-                  classroom.archived
-                    ? 'border-gray-100 opacity-60'
-                    : 'border-gray-100 hover:border-violet-200 hover:shadow-md'
-                }`}
-              >
-                {classroom.archived && (
-                  <span className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
-                    <Archive className="size-3" />
-                    Archived
-                  </span>
-                )}
+          <ClassroomGrid classrooms={active} toggling={toggling} onToggleArchive={toggleArchive} />
+        )}
 
-                <p className="text-sm font-semibold text-gray-800 leading-snug pr-16">
-                  {classroom.name}
-                </p>
-
-                {classroom.description && (
-                  <p className="text-xs text-gray-400 line-clamp-2">{classroom.description}</p>
-                )}
-
-                {/* Stats */}
-                <div className="flex items-center gap-3">
-                  <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
-                    <Users className="size-3.5 text-gray-400" />
-                    {classroom.student_count} {classroom.student_count === 1 ? 'student' : 'students'}
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
-                    <BookOpen className="size-3.5 text-gray-400" />
-                    {classroom.session_count} {classroom.session_count === 1 ? 'session' : 'sessions'}
-                  </span>
-                </div>
-
-                {/* Footer */}
-                <div className="mt-auto flex items-center justify-between pt-2 border-t border-gray-100">
-                  <button
-                    onClick={() => toggleArchive(classroom)}
-                    disabled={toggling === classroom.id}
-                    className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-                  >
-                    {classroom.archived
-                      ? <><ArchiveRestore className="size-3.5" /> Unarchive</>
-                      : <><Archive className="size-3.5" /> Archive</>
-                    }
-                  </button>
-
-                  <Link
-                    href={`/teacher/classrooms/${classroom.id}`}
-                    className="inline-flex items-center gap-1 text-xs font-medium text-violet-600 hover:text-violet-800 transition-colors"
-                  >
-                    View roster
-                    <ChevronRight className="size-3.5" />
-                  </Link>
-                </div>
-              </motion.div>
-            ))}
+        {/* Archived classrooms */}
+        {archived.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Archive className="size-4 text-gray-400" />
+              <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                Archived ({archived.length})
+              </p>
+            </div>
+            <ClassroomGrid classrooms={archived} toggling={toggling} onToggleArchive={toggleArchive} />
           </div>
         )}
       </div>

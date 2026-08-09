@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GetServerSidePropsResult } from 'next';
 import {
   FolderPlus, BarChart3,
   BarChart2, TrendingUp, PieChart as PieIcon, Maximize2, AlignLeft,
-  Plus, Trash2, Eye, BookTemplate, Filter,
+  Plus, Trash2, Eye, BookTemplate, Filter, Database, X,
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { TEACHER_NAV } from '@/lib/teacher-nav';
@@ -110,6 +111,63 @@ const CHART_COLORS: Record<ChartType, string> = {
   histogram: 'text-rose-700 bg-rose-100 ring-rose-200',
 };
 
+// ── Dataset picker modal ──────────────────────────────────────────────────────
+function DatasetPickerModal({
+  datasets,
+  onPick,
+  onClose,
+}: {
+  datasets: DatasetSummary[];
+  onPick: (id: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-xl"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-semibold text-gray-900">Select a dataset</h3>
+          <button onClick={onClose} className="rounded-lg p-1 text-gray-400 hover:text-gray-600 transition-colors">
+            <X className="size-4" />
+          </button>
+        </div>
+
+        {datasets.length === 0 ? (
+          <div className="py-6 text-center">
+            <Database className="size-8 text-gray-300 mx-auto mb-3" />
+            <p className="text-sm text-gray-500 mb-3">No datasets yet.</p>
+            <Link
+              href="/teacher/datasets"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 hover:bg-violet-700 px-4 py-2 text-sm font-semibold text-white transition-colors"
+            >
+              <Plus className="size-4" />
+              Upload a dataset
+            </Link>
+          </div>
+        ) : (
+          <ul className="space-y-1 max-h-72 overflow-y-auto">
+            {datasets.map((d) => (
+              <li key={d.id}>
+                <button
+                  onClick={() => onPick(d.id)}
+                  className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-gray-700 hover:bg-violet-50 hover:text-violet-700 transition-colors"
+                >
+                  <Database className="size-4 text-gray-400 shrink-0" />
+                  {d.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </motion.div>
+    </div>
+  );
+}
+
 // ── Delete confirmation modal ─────────────────────────────────────────────────
 function DeleteModal({
   name,
@@ -158,11 +216,17 @@ function DeleteModal({
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function VisualisationsPage({ profile, visualisations: initial, datasets }: Props) {
+  const router = useRouter();
   const [list, setList] = useState<Visualisation[]>(initial);
   const [datasetFilter, setDatasetFilter] = useState('');
   const [chartFilter, setChartFilter] = useState('');
   const [pendingDelete, setPendingDelete] = useState<Visualisation | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [showDatasetPicker, setShowDatasetPicker] = useState(false);
+
+  function handlePickDataset(datasetId: string) {
+    void router.push(`/teacher/visualisations/new?dataset=${datasetId}`);
+  }
 
   const filtered = list.filter((v) => {
     if (datasetFilter && v.dataset_id !== datasetFilter) return false;
@@ -189,6 +253,13 @@ export default function VisualisationsPage({ profile, visualisations: initial, d
   return (
     <DashboardLayout profile={profile} navItems={TEACHER_NAV}>
       <AnimatePresence>
+        {showDatasetPicker && (
+          <DatasetPickerModal
+            datasets={datasets}
+            onPick={handlePickDataset}
+            onClose={() => setShowDatasetPicker(false)}
+          />
+        )}
         {pendingDelete && (
           <DeleteModal
             name={pendingDelete.name}
@@ -209,13 +280,13 @@ export default function VisualisationsPage({ profile, visualisations: initial, d
               {list.length} saved {list.length === 1 ? 'visualisation' : 'visualisations'}
             </p>
           </div>
-          <Link
-            href="/teacher/datasets"
+          <button
+            onClick={() => setShowDatasetPicker(true)}
             className="inline-flex items-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors"
           >
             <Plus className="size-4" />
             New visualisation
-          </Link>
+          </button>
         </div>
 
         {/* Filters */}

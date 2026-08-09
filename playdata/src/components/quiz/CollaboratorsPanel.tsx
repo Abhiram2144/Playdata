@@ -49,7 +49,6 @@ export default function CollaboratorsPanel({
   const [assignedTo, setAssignedTo] = useState<AssignedProfile | null>(initialAssignedTo);
   const [status, setStatus] = useState(initialStatus);
 
-  // Add collaborator UI
   const [collabSearch, setCollabSearch] = useState('');
   const [collabResults, setCollabResults] = useState<TeacherResult[]>([]);
   const [collabSearching, setCollabSearching] = useState(false);
@@ -57,7 +56,6 @@ export default function CollaboratorsPanel({
   const [removingCollab, setRemovingCollab] = useState<string | null>(null);
   const collabDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Assign UI
   const [assignSearch, setAssignSearch] = useState('');
   const [assignResults, setAssignResults] = useState<TeacherResult[]>([]);
   const [assignSearching, setAssignSearching] = useState(false);
@@ -65,9 +63,7 @@ export default function CollaboratorsPanel({
   const [clearingAssign, setClearingAssign] = useState(false);
   const assignDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Status update
   const [updatingStatus, setUpdatingStatus] = useState(false);
-
   const [flash, setFlash] = useState<{ type: 'ok' | 'err'; msg: string } | null>(null);
 
   function showFlash(type: 'ok' | 'err', msg: string) {
@@ -75,22 +71,17 @@ export default function CollaboratorsPanel({
     setTimeout(() => setFlash(null), 3000);
   }
 
-  // ── Collaborator search ──────────────────────────────────────────────────
   useEffect(() => {
     if (!isOwner) return;
     if (collabDebounce.current) clearTimeout(collabDebounce.current);
     if (!collabSearch.trim()) { setCollabResults([]); return; }
-
     collabDebounce.current = setTimeout(async () => {
       setCollabSearching(true);
-      const r = await fetch(
-        `/api/teacher/quizzes/search-teachers?q=${encodeURIComponent(collabSearch)}&quizId=${quizId}`
-      );
+      const r = await fetch(`/api/teacher/quizzes/search-teachers?q=${encodeURIComponent(collabSearch)}&quizId=${quizId}`);
       const d = await r.json();
       setCollabResults(d.teachers ?? []);
       setCollabSearching(false);
     }, 350);
-
     return () => { if (collabDebounce.current) clearTimeout(collabDebounce.current); };
   }, [collabSearch, isOwner, quizId]);
 
@@ -119,27 +110,17 @@ export default function CollaboratorsPanel({
     setCollaborators((prev) => prev.filter((c) => c.teacher_id !== tid));
   };
 
-  // ── Assign search ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isOwner) return;
     if (assignDebounce.current) clearTimeout(assignDebounce.current);
     if (!assignSearch.trim()) { setAssignResults([]); return; }
-
     assignDebounce.current = setTimeout(async () => {
       setAssignSearching(true);
-      const r = await fetch(
-        `/api/teacher/quizzes/search-teachers?q=${encodeURIComponent(assignSearch)}`
-      );
+      const r = await fetch(`/api/teacher/quizzes/search-teachers?q=${encodeURIComponent(assignSearch)}`);
       const d = await r.json();
-      // Exclude self and already-assigned
-      setAssignResults(
-        (d.teachers ?? []).filter((t: TeacherResult) =>
-          t.id !== currentUserId && t.id !== assignedTo?.id
-        )
-      );
+      setAssignResults((d.teachers ?? []).filter((t: TeacherResult) => t.id !== currentUserId && t.id !== assignedTo?.id));
       setAssignSearching(false);
     }, 350);
-
     return () => { if (assignDebounce.current) clearTimeout(assignDebounce.current); };
   }, [assignSearch, isOwner, currentUserId, assignedTo]);
 
@@ -174,7 +155,6 @@ export default function CollaboratorsPanel({
     setStatus('in_progress');
   };
 
-  // ── Mark complete ─────────────────────────────────────────────────────────
   const markComplete = async () => {
     setUpdatingStatus(true);
     const r = await fetch(`/api/teacher/quizzes/${quizId}/status`, {
@@ -190,10 +170,10 @@ export default function CollaboratorsPanel({
   };
 
   const STATUS_COLOUR: Record<string, string> = {
-    draft:       'bg-[#35354a]/60 text-[#8d8da0]',
-    in_progress: 'bg-amber-500/15 text-amber-400',
-    assigned:    'bg-blue-500/15 text-blue-400',
-    completed:   'bg-emerald-500/15 text-emerald-400',
+    draft:       'bg-gray-100 text-gray-500',
+    in_progress: 'bg-amber-100 text-amber-700',
+    assigned:    'bg-blue-100 text-blue-700',
+    completed:   'bg-emerald-100 text-emerald-700',
   };
   const STATUS_LABEL: Record<string, string> = {
     draft: 'Draft', in_progress: 'In progress', assigned: 'Assigned', completed: 'Completed',
@@ -204,7 +184,7 @@ export default function CollaboratorsPanel({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 }}
-      className="rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80 p-6 space-y-6"
+      className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm space-y-6"
     >
       {/* Flash */}
       <AnimatePresence>
@@ -215,8 +195,8 @@ export default function CollaboratorsPanel({
             exit={{ opacity: 0 }}
             className={`fixed top-6 right-6 z-50 flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm shadow-xl ${
               flash.type === 'ok'
-                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-                : 'border-red-500/30 bg-red-500/10 text-red-400'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                : 'border-red-200 bg-red-50 text-red-700'
             }`}
           >
             {flash.type === 'ok'
@@ -229,43 +209,43 @@ export default function CollaboratorsPanel({
 
       {/* Header */}
       <div className="flex items-center gap-2">
-        <Users className="size-4 text-violet-400" />
-        <span className="text-xs font-semibold uppercase tracking-widest text-[#6a6a80]">Collaboration</span>
-        <span className={`ml-auto rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOUR[status] ?? STATUS_COLOUR.draft}`}>
+        <Users className="size-4 text-violet-600" />
+        <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">Collaboration</span>
+        <span className={`ml-auto rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLOUR[status] ?? STATUS_COLOUR.draft}`}>
           {STATUS_LABEL[status] ?? status}
         </span>
       </div>
 
       {/* Collaborators list */}
       <div>
-        <p className="mb-2 text-xs font-semibold text-[#8d8da0] uppercase tracking-wide">Members</p>
-        <div className="divide-y divide-[#35354a]/40 rounded-xl border border-[#35354a]/60 overflow-hidden">
+        <p className="mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wide">Members</p>
+        <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 overflow-hidden">
           {collaborators.map((c) => (
-            <div key={c.teacher_id} className="flex items-center gap-3 px-4 py-2.5 bg-[#0d0d18]/40">
+            <div key={c.teacher_id} className="flex items-center gap-3 px-4 py-2.5 bg-gray-50">
               <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs ${
                 c.role === 'owner'
-                  ? 'bg-violet-500/15 ring-1 ring-violet-500/20'
-                  : 'bg-[#252538] ring-1 ring-[#35354a]'
+                  ? 'bg-violet-100 ring-1 ring-violet-200'
+                  : 'bg-gray-100 ring-1 ring-gray-200'
               }`}>
                 {c.role === 'owner'
-                  ? <Crown className="size-3.5 text-violet-400" />
-                  : <UserCheck className="size-3.5 text-[#6a6a80]" />}
+                  ? <Crown className="size-3.5 text-violet-600" />
+                  : <UserCheck className="size-3.5 text-gray-400" />}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-[#c9c9d4]">
+                <p className="truncate text-sm font-medium text-gray-800">
                   {c.full_name}
                   {c.teacher_id === currentUserId && (
-                    <span className="ml-1.5 text-xs text-[#6a6a80]">(you)</span>
+                    <span className="ml-1.5 text-xs text-gray-400">(you)</span>
                   )}
                 </p>
-                <p className="truncate text-xs text-[#4a4a60]">{c.email}</p>
+                <p className="truncate text-xs text-gray-400">{c.email}</p>
               </div>
-              <span className="shrink-0 text-xs text-[#4a4a60] capitalize">{c.role}</span>
+              <span className="shrink-0 text-xs text-gray-400 capitalize">{c.role}</span>
               {isOwner && c.role !== 'owner' && (
                 <button
                   onClick={() => removeCollaborator(c.teacher_id)}
                   disabled={removingCollab === c.teacher_id}
-                  className="ml-1 p-1 text-[#4a4a60] transition hover:text-red-400 disabled:opacity-40"
+                  className="ml-1 p-1 text-gray-400 transition hover:text-red-500 disabled:opacity-40"
                   title="Remove contributor"
                 >
                   <X className="size-3.5" />
@@ -279,16 +259,16 @@ export default function CollaboratorsPanel({
       {/* Add collaborator (owner only) */}
       {isOwner && (
         <div>
-          <p className="mb-2 text-xs font-semibold text-[#8d8da0] uppercase tracking-wide flex items-center gap-1">
+          <p className="mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1">
             <UserPlus className="size-3" /> Invite contributor
           </p>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-[#4a4a60]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-gray-400" />
             <input
               value={collabSearch}
               onChange={(e) => setCollabSearch(e.target.value)}
               placeholder="Search by name or email…"
-              className="w-full rounded-xl border border-[#35354a] bg-[#0d0d18] py-2 pl-9 pr-3 text-sm text-white placeholder-[#4a4a60] focus:border-violet-500/60 focus:outline-none"
+              className="w-full rounded-xl border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
             />
           </div>
           <AnimatePresence>
@@ -297,26 +277,26 @@ export default function CollaboratorsPanel({
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="mt-1 rounded-xl border border-[#35354a]/60 bg-[#0d0d18] overflow-hidden"
+                className="mt-1 rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm"
               >
                 {collabSearching && (
-                  <p className="px-4 py-2.5 text-xs text-[#6a6a80]">Searching…</p>
+                  <p className="px-4 py-2.5 text-xs text-gray-400">Searching…</p>
                 )}
                 {!collabSearching && collabResults.length === 0 && (
-                  <p className="px-4 py-2.5 text-xs text-[#6a6a80]">No teachers found</p>
+                  <p className="px-4 py-2.5 text-xs text-gray-400">No teachers found</p>
                 )}
                 {collabResults.map((t) => (
                   <button
                     key={t.id}
                     onClick={() => addCollaborator(t)}
                     disabled={addingCollab === t.id}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-violet-600/10 disabled:opacity-50 transition"
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-violet-50 disabled:opacity-50 transition"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm text-[#c9c9d4]">{t.full_name}</p>
-                      <p className="truncate text-xs text-[#6a6a80]">{t.email}</p>
+                      <p className="truncate text-sm text-gray-800">{t.full_name}</p>
+                      <p className="truncate text-xs text-gray-400">{t.email}</p>
                     </div>
-                    <ChevronRight className="size-3.5 text-[#4a4a60] shrink-0" />
+                    <ChevronRight className="size-3.5 text-gray-400 shrink-0" />
                   </button>
                 ))}
               </motion.div>
@@ -328,31 +308,31 @@ export default function CollaboratorsPanel({
       {/* Assign to teacher (owner only) */}
       {isOwner && (
         <div>
-          <p className="mb-2 text-xs font-semibold text-[#8d8da0] uppercase tracking-wide flex items-center gap-1">
+          <p className="mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1">
             <UserCheck className="size-3" /> Assign to teacher
           </p>
           {assignedTo ? (
-            <div className="flex items-center gap-3 rounded-xl border border-blue-500/20 bg-blue-500/5 px-4 py-2.5">
+            <div className="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-[#c9c9d4]">{assignedTo.full_name}</p>
-                <p className="text-xs text-[#6a6a80]">{assignedTo.email}</p>
+                <p className="text-sm font-medium text-gray-800">{assignedTo.full_name}</p>
+                <p className="text-xs text-gray-500">{assignedTo.email}</p>
               </div>
               <button
                 onClick={clearAssignment}
                 disabled={clearingAssign}
-                className="shrink-0 rounded-lg border border-[#35354a] px-3 py-1 text-xs text-[#8d8da0] transition hover:text-white disabled:opacity-40"
+                className="shrink-0 rounded-lg border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-500 transition hover:text-gray-800 disabled:opacity-40"
               >
                 {clearingAssign ? 'Clearing…' : 'Clear'}
               </button>
             </div>
           ) : (
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-[#4a4a60]" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-gray-400" />
               <input
                 value={assignSearch}
                 onChange={(e) => setAssignSearch(e.target.value)}
                 placeholder="Search teacher to assign…"
-                className="w-full rounded-xl border border-[#35354a] bg-[#0d0d18] py-2 pl-9 pr-3 text-sm text-white placeholder-[#4a4a60] focus:border-violet-500/60 focus:outline-none"
+                className="w-full rounded-xl border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
               />
               <AnimatePresence>
                 {(assignResults.length > 0 || assignSearching) && (
@@ -360,26 +340,26 @@ export default function CollaboratorsPanel({
                     initial={{ opacity: 0, y: -4 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
-                    className="absolute top-full left-0 right-0 mt-1 z-10 rounded-xl border border-[#35354a]/60 bg-[#0d0d18] overflow-hidden shadow-xl"
+                    className="absolute top-full left-0 right-0 mt-1 z-10 rounded-xl border border-gray-200 bg-white overflow-hidden shadow-lg"
                   >
                     {assignSearching && (
-                      <p className="px-4 py-2.5 text-xs text-[#6a6a80]">Searching…</p>
+                      <p className="px-4 py-2.5 text-xs text-gray-400">Searching…</p>
                     )}
                     {!assignSearching && assignResults.length === 0 && (
-                      <p className="px-4 py-2.5 text-xs text-[#6a6a80]">No teachers found</p>
+                      <p className="px-4 py-2.5 text-xs text-gray-400">No teachers found</p>
                     )}
                     {assignResults.map((t) => (
                       <button
                         key={t.id}
                         onClick={() => assign(t)}
                         disabled={assigning}
-                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-violet-600/10 disabled:opacity-50 transition"
+                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-violet-50 disabled:opacity-50 transition"
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm text-[#c9c9d4]">{t.full_name}</p>
-                          <p className="truncate text-xs text-[#6a6a80]">{t.email}</p>
+                          <p className="truncate text-sm text-gray-800">{t.full_name}</p>
+                          <p className="truncate text-xs text-gray-400">{t.email}</p>
                         </div>
-                        <ChevronRight className="size-3.5 text-[#4a4a60] shrink-0" />
+                        <ChevronRight className="size-3.5 text-gray-400 shrink-0" />
                       </button>
                     ))}
                   </motion.div>
@@ -390,9 +370,9 @@ export default function CollaboratorsPanel({
         </div>
       )}
 
-      {/* Mark complete (assignee or owner) */}
+      {/* Mark complete */}
       {(isAssigned || isOwner) && status !== 'completed' && status !== 'draft' && (
-        <div className="pt-1 border-t border-[#35354a]/40">
+        <div className="pt-1 border-t border-gray-100">
           <button
             onClick={markComplete}
             disabled={updatingStatus}
@@ -401,15 +381,12 @@ export default function CollaboratorsPanel({
             <CheckCircle className="size-4" />
             {updatingStatus ? 'Updating…' : 'Mark as completed'}
           </button>
-          {status === 'completed' && (
-            <p className="mt-1 text-xs text-emerald-400">This quiz has been completed.</p>
-          )}
         </div>
       )}
       {status === 'completed' && (
-        <div className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-2.5">
-          <CheckCircle className="size-4 text-emerald-400" />
-          <span className="text-sm text-emerald-400">This quiz has been completed.</span>
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5">
+          <CheckCircle className="size-4 text-emerald-600" />
+          <span className="text-sm text-emerald-700">This quiz has been completed.</span>
         </div>
       )}
     </motion.div>
