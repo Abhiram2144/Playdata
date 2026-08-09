@@ -5,10 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Trash2, GripVertical, ChevronDown, ChevronUp,
   Database, Hash, AlignLeft, List, AlertTriangle, Check,
-  Clock, BookOpen, X, CheckCircle, BarChart2, PenLine, Tag, Library,
+  Clock, BookOpen, X, CheckCircle, BarChart2, PenLine, Tag,
 } from 'lucide-react';
 import { TagCombobox } from '@/components/ui/TagCombobox';
-import QuestionBankPicker, { type BankQuestion } from './QuestionBankPicker';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export type QuestionType = 'mcq' | 'short_answer' | 'numerical';
@@ -526,26 +525,6 @@ export default function QuizBuilder({
       .catch(() => {});
   }, []);
 
-  // Question bank picker
-  const [bankOpen, setBankOpen] = useState(false);
-
-  function addFromBank(bq: BankQuestion) {
-    const draft = {
-      _key: makeKey(),
-      text: bq.text,
-      type: bq.type,
-      options: bq.options ?? (bq.type === 'mcq' ? ['', ''] : []),
-      correct_answer: bq.correct_answer,
-      answer_tolerance: bq.answer_tolerance != null ? String(bq.answer_tolerance) : '',
-      dataset_column: bq.dataset_column ?? '',
-      visualisation_ids: bq.visualisation_ids ?? [],
-      explanation: bq.explanation ?? '',
-      time_limit_secs: bq.time_limit_secs ?? 30,
-      topic_tag: bq.topic_tag ?? '',
-    };
-    setQuestions((prev) => [...prev, draft]);
-    setExpanded((prev) => new Set([...prev, draft._key]));
-  }
 
   // Save
   const [saving, setSaving] = useState<'draft' | 'publish' | null>(null);
@@ -665,7 +644,6 @@ export default function QuizBuilder({
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <>
     <div className="max-w-3xl space-y-6">
 
       {/* Saved flash */}
@@ -824,20 +802,12 @@ export default function QuizBuilder({
           />
         ))}
 
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={addQuestion}
-            className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-violet-500/30 bg-violet-500/5 py-3 text-sm font-medium text-violet-400 transition hover:border-violet-500/60 hover:bg-violet-500/10"
-          >
-            <Plus className="size-4" /> Add question
-          </button>
-          <button
-            onClick={() => setBankOpen(true)}
-            className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-[#35354a]/60 bg-[#0f0f1d]/40 py-3 text-sm font-medium text-[#6a6a80] transition hover:border-violet-500/30 hover:bg-violet-500/5 hover:text-violet-400"
-          >
-            <Library className="size-4" /> From bank
-          </button>
-        </div>
+        <button
+          onClick={addQuestion}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-violet-500/30 bg-violet-500/5 py-3 text-sm font-medium text-violet-400 transition hover:border-violet-500/60 hover:bg-violet-500/10"
+        >
+          <Plus className="size-4" /> Add question
+        </button>
       </motion.div>
 
       {/* Errors */}
@@ -891,16 +861,5 @@ export default function QuizBuilder({
       </motion.div>
     </div>
 
-    <AnimatePresence>
-      {bankOpen && (
-        <QuestionBankPicker
-          onAdd={addFromBank}
-          onClose={() => setBankOpen(false)}
-          excludeQuizId={quizId}
-          availableTags={availableTags}
-        />
-      )}
-    </AnimatePresence>
-    </>
   );
 }

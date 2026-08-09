@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  AlignLeft, Check, Hash, Library, List, Loader2,
-  Pencil, Search, Tag, X,
+  Check, Loader2, Pencil, Tag, X,
 } from 'lucide-react';
 import { GetServerSidePropsResult } from 'next';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -22,16 +21,6 @@ interface Profile {
 }
 
 interface TagEntry { tag: string; count: number }
-
-interface BankQuestion {
-  id: string;
-  quiz_id: string;
-  quiz_title: string | null;
-  text: string;
-  type: 'mcq' | 'short_answer' | 'numerical';
-  topic_tag: string | null;
-  correct_answer: string;
-}
 
 interface Props { profile: Profile }
 
@@ -56,12 +45,6 @@ export const getServerSideProps = withAuth(
 
 const NAV_ITEMS = TEACHER_NAV;
 
-const TYPE_PILL: Record<string, { label: string; colour: string; Icon: React.ElementType }> = {
-  mcq:          { label: 'MCQ',   colour: 'text-violet-400 bg-violet-500/10 ring-violet-500/20', Icon: List },
-  short_answer: { label: 'Short', colour: 'text-blue-400 bg-blue-500/10 ring-blue-500/20',       Icon: AlignLeft },
-  numerical:    { label: 'Num',   colour: 'text-emerald-400 bg-emerald-500/10 ring-emerald-500/20', Icon: Hash },
-};
-
 // ── Rename modal ──────────────────────────────────────────────────────────────
 function RenameModal({
   tag,
@@ -81,6 +64,12 @@ function RenameModal({
 
   useEffect(() => { inputRef.current?.select(); }, []);
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onClose]);
+
   const conflict = value.trim() !== tag.tag &&
     existingTags.some((t) => t.toLowerCase() === value.trim().toLowerCase() && t !== tag.tag);
 
@@ -94,12 +83,6 @@ function RenameModal({
     await onConfirm(tag.tag, to);
     setSaving(false);
   }
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, [onClose]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -164,48 +147,19 @@ function RenameModal({
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
-export default function QuestionBankPage({ profile }: Props) {
+export default function TagsPage({ profile }: Props) {
   const [tags, setTags] = useState<TagEntry[]>([]);
-  const [tagsLoading, setTagsLoading] = useState(true);
-
-  const [questions, setQuestions] = useState<BankQuestion[]>([]);
-  const [questionsLoading, setQuestionsLoading] = useState(true);
-  const [activeTag, setActiveTag] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
-  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
+  const [loading, setLoading] = useState(true);
   const [renaming, setRenaming] = useState<TagEntry | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   async function loadTags() {
     const r = await fetch('/api/questions/tags');
     if (r.ok) { const d = await r.json(); setTags(d.tags ?? []); }
-    setTagsLoading(false);
+    setLoading(false);
   }
 
-  async function loadQuestions(tag: string | null, q: string) {
-    setQuestionsLoading(true);
-    const params = new URLSearchParams();
-    if (tag) params.set('tag', tag);
-    if (q.trim()) params.set('q', q.trim());
-    const r = await fetch(`/api/questions/bank?${params}`);
-    if (r.ok) { const d = await r.json(); setQuestions(d.questions ?? []); }
-    setQuestionsLoading(false);
-  }
-
-  useEffect(() => { loadTags(); loadQuestions(null, ''); }, []);
-
-  function handleSearchChange(v: string) {
-    setSearch(v);
-    if (searchTimer.current) clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => loadQuestions(activeTag, v), 280);
-  }
-
-  function handleTagClick(tag: string | null) {
-    const next = activeTag === tag ? null : tag;
-    setActiveTag(next);
-    loadQuestions(next, search);
-  }
+  useEffect(() => { loadTags(); }, []);
 
   async function handleRename(from: string, to: string) {
     const r = await fetch('/api/questions/tags', {
@@ -217,31 +171,28 @@ export default function QuestionBankPage({ profile }: Props) {
       const d = await r.json();
       setRenaming(null);
       await loadTags();
-      if (activeTag === from) {
-        setActiveTag(d.tag);
-        await loadQuestions(d.tag, search);
-      } else {
-        await loadQuestions(activeTag, search);
-      }
-      setToast(`Renamed "${from}" → "${d.tag}"`);
-      setTimeout(() => setToast(null), 3000);
+      setToast(`"${from}" renamed to "${d.tag}" across ${d.updated} question${d.updated !== 1 ? 's' : ''}`);
+      setTimeout(() => setToast(null), 3500);
     }
   }
 
   return (
     <DashboardLayout navItems={NAV_ITEMS} profile={profile}>
-      <div className="max-w-4xl space-y-6">
+      <div className="max-w-2xl space-y-6">
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-1">
           <div className="flex items-center gap-2">
-            <Library className="size-5 text-violet-400" />
-            <h1 className="text-xl font-bold text-white">Question Bank</h1>
+            <Tag className="size-5 text-violet-400" />
+            <h1 className="text-xl font-bold text-white">Topic Tags</h1>
           </div>
-          <p className="text-sm text-[#6a6a80]">Manage topic tags and browse questions across all your quizzes.</p>
+          <p className="text-sm text-[#6a6a80]">
+            Tags are applied per-question in your quizzes and drive topic-breakdown analytics after each session.
+            Rename a tag here to merge fragmented variants across all your questions at once.
+          </p>
         </motion.div>
 
-        {/* ── Topic Tags ── */}
+        {/* Tag list */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -249,129 +200,49 @@ export default function QuestionBankPage({ profile }: Props) {
           className="rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80"
         >
           <div className="flex items-center justify-between border-b border-[#35354a]/40 px-5 py-3.5">
-            <div className="flex items-center gap-2">
-              <Tag className="size-3.5 text-violet-400" />
-              <span className="text-sm font-semibold text-[#c9c9d4]">Topic Tags</span>
-            </div>
-            {!tagsLoading && (
+            <span className="text-sm font-semibold text-[#c9c9d4]">Your tags</span>
+            {!loading && (
               <span className="rounded-full bg-violet-500/10 px-2 py-0.5 text-xs text-violet-400">
                 {tags.length}
               </span>
             )}
           </div>
 
-          {tagsLoading ? (
-            <div className="flex h-20 items-center justify-center">
+          {loading ? (
+            <div className="flex h-24 items-center justify-center">
               <Loader2 className="size-4 animate-spin text-[#4a4a60]" />
             </div>
           ) : tags.length === 0 ? (
-            <div className="px-5 py-8 text-center">
-              <p className="text-sm text-[#4a4a60]">No tags yet. Add topic tags when creating or editing questions.</p>
+            <div className="px-5 py-10 text-center">
+              <Tag className="mx-auto mb-2 size-6 text-[#35354a]" />
+              <p className="text-sm text-[#6a6a80]">No tags yet.</p>
+              <p className="mt-1 text-xs text-[#4a4a60]">
+                Open a quiz, expand Advanced options on any question, and set a Topic tag.
+              </p>
             </div>
           ) : (
-            <div className="divide-y divide-[#1a1a2e]">
+            <ul className="divide-y divide-[#1a1a2e]">
               {tags.map((t) => (
-                <div key={t.tag} className="flex items-center justify-between px-5 py-3 hover:bg-[#0f0f1d]/60 transition group">
-                  <button
-                    onClick={() => handleTagClick(t.tag)}
-                    className="flex items-center gap-2 text-left"
-                  >
-                    <span className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition ${
-                      activeTag === t.tag
-                        ? 'bg-violet-500/20 text-violet-300 ring-1 ring-violet-500/30'
-                        : 'bg-[#1a1a2e] text-[#8d8da0] group-hover:text-white'
-                    }`}>
+                <li
+                  key={t.tag}
+                  className="group flex items-center justify-between px-5 py-3 hover:bg-[#0f0f1d]/60 transition"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1.5 rounded-full bg-[#1a1a2e] px-2.5 py-0.5 text-xs font-medium text-[#8d8da0]">
                       <Tag className="size-2.5" /> {t.tag}
                     </span>
                     <span className="text-xs text-[#4a4a60]">
                       {t.count} question{t.count !== 1 ? 's' : ''}
                     </span>
-                  </button>
+                  </div>
                   <button
                     onClick={() => setRenaming(t)}
                     className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-[#4a4a60] opacity-0 transition hover:bg-[#1a1a2e] hover:text-[#c9c9d4] group-hover:opacity-100"
                   >
                     <Pencil className="size-3" /> Rename
                   </button>
-                </div>
+                </li>
               ))}
-            </div>
-          )}
-        </motion.div>
-
-        {/* ── Questions ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.08 }}
-          className="rounded-2xl border border-[#35354a]/60 bg-[#11111f]/80"
-        >
-          <div className="border-b border-[#35354a]/40 px-5 py-3.5 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-[#c9c9d4]">
-                Questions
-                {activeTag && (
-                  <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-xs text-violet-300">
-                    <Tag className="size-2.5" /> {activeTag}
-                    <button onClick={() => handleTagClick(null)} className="ml-0.5 hover:text-white">
-                      <X className="size-2.5" />
-                    </button>
-                  </span>
-                )}
-              </span>
-              {!questionsLoading && (
-                <span className="text-xs text-[#4a4a60]">
-                  {questions.length} question{questions.length !== 1 ? 's' : ''}
-                </span>
-              )}
-            </div>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#4a4a60]" />
-              <input
-                value={search}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                placeholder="Search questions…"
-                className="w-full rounded-xl border border-[#35354a] bg-[#0d0d18] py-1.5 pl-8 pr-3 text-sm text-white placeholder-[#4a4a60] focus:border-violet-500/60 focus:outline-none"
-              />
-            </div>
-          </div>
-
-          {questionsLoading ? (
-            <div className="flex h-24 items-center justify-center">
-              <Loader2 className="size-4 animate-spin text-[#4a4a60]" />
-            </div>
-          ) : questions.length === 0 ? (
-            <div className="flex h-24 items-center justify-center">
-              <p className="text-sm text-[#4a4a60]">
-                {search || activeTag ? 'No questions match your filters.' : 'No questions yet.'}
-              </p>
-            </div>
-          ) : (
-            <ul className="divide-y divide-[#1a1a2e]">
-              {questions.map((q) => {
-                const pill = TYPE_PILL[q.type] ?? TYPE_PILL.mcq;
-                const PIcon = pill.Icon;
-                return (
-                  <li key={q.id} className="flex items-start gap-3 px-5 py-3 hover:bg-[#0f0f1d]/40 transition">
-                    <div className="flex-1 min-w-0">
-                      <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                        <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ${pill.colour}`}>
-                          <PIcon className="size-2.5" /> {pill.label}
-                        </span>
-                        {q.topic_tag && (
-                          <span className="flex items-center gap-1 rounded-full bg-[#1a1a2e] px-2 py-0.5 text-[11px] text-[#6a6a80]">
-                            <Tag className="size-2.5" /> {q.topic_tag}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-[#c9c9d4] line-clamp-2">{q.text}</p>
-                      {q.quiz_title && (
-                        <p className="mt-0.5 text-xs text-[#4a4a60]">From: {q.quiz_title}</p>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
             </ul>
           )}
         </motion.div>
