@@ -553,6 +553,28 @@ function QuizQuestionChart({
 
   const columns = rows.length > 0 ? Object.keys(rows[0]) : []
 
+  // Determine which chart types are compatible with the teacher's configured columns.
+  // Sample a few values to check if a column looks numeric.
+  const isNumericCol = (col: string | undefined) => {
+    if (!col || rows.length === 0) return false
+    const sample = rows.slice(0, 20).map((r) => r[col]).filter((v) => v != null && v !== '')
+    return sample.length > 0 && sample.filter((v) => !isNaN(Number(v))).length / sample.length >= 0.7
+  }
+  const xIsNum = isNumericCol(vis.config.xAxis)
+  const hasX = !!vis.config.xAxis
+  const hasY = !!vis.config.yAxis
+
+  const supportedTypes: ChartType[] = rows.length === 0
+    ? CHART_TYPES
+    : CHART_TYPES.filter((ct) => {
+        if (ct === vis.chart_type) return true // always include teacher's pick
+        if (ct === 'scatter')   return hasX && hasY && xIsNum && isNumericCol(vis.config.yAxis)
+        if (ct === 'histogram') return hasX && xIsNum
+        if (ct === 'bar' || ct === 'line') return hasX && hasY && isNumericCol(vis.config.yAxis)
+        if (ct === 'pie')       return hasX
+        return false
+      })
+
   return (
     <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
       {/* Teacher chart header */}
@@ -572,9 +594,9 @@ function QuizQuestionChart({
 
       {expanded && (
         <div className="p-4 space-y-3">
-          {/* Chart type switcher */}
+          {/* Chart type switcher — only types compatible with the teacher's configured columns */}
           <div className="flex flex-wrap gap-1.5">
-            {CHART_TYPES.map((ct) => (
+            {supportedTypes.map((ct) => (
               <button
                 key={ct}
                 onClick={() => setSelectedType(ct)}

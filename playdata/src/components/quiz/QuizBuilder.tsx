@@ -8,6 +8,7 @@ import {
   Clock, BookOpen, X, CheckCircle, BarChart2, PenLine, Tag,
 } from 'lucide-react';
 import { TagCombobox } from '@/components/ui/TagCombobox';
+import { InlineChartBuilder, type CreatedVis } from '@/components/quiz/InlineChartBuilder';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export type QuestionType = 'mcq' | 'short_answer' | 'numerical';
@@ -98,7 +99,9 @@ const INPUT = 'w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 tex
 // ── Question card ─────────────────────────────────────────────────────────────
 function QuestionCard({
   q, idx, total, expanded, columns, visualisations, availableTags,
+  hasDataset,
   onToggle, onUpdate, onDelete, onDragStart, onDragOver, onDrop, isDragOver,
+  onOpenChartBuilder,
 }: {
   q: QuestionDraft;
   idx: number;
@@ -107,6 +110,7 @@ function QuestionCard({
   columns: ColumnSchema[];
   visualisations: VisualisationOption[];
   availableTags: string[];
+  hasDataset: boolean;
   onToggle: () => void;
   onUpdate: (patch: Partial<QuestionDraft>) => void;
   onDelete: () => void;
@@ -114,6 +118,7 @@ function QuestionCard({
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
   isDragOver: boolean;
+  onOpenChartBuilder: () => void;
 }) {
   const meta = TYPE_META[q.type];
   const Icon = meta.icon;
@@ -209,12 +214,22 @@ function QuestionCard({
               </div>
 
               {/* Visualisation attachments */}
-              {visualisations.length > 0 && (
-                <div>
-                  <label className="mb-1.5 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
+              <div>
+                <div className="mb-1.5 flex items-center justify-between">
+                  <label className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
                     <BarChart2 className="size-3" /> Linked charts
-                    <span className="ml-1 normal-case font-normal text-gray-400">(select one or more)</span>
                   </label>
+                  {hasDataset && (
+                    <button
+                      type="button"
+                      onClick={onOpenChartBuilder}
+                      className="flex items-center gap-1 rounded-lg border border-violet-200 bg-violet-50 px-2 py-1 text-xs font-medium text-violet-600 transition hover:border-violet-300 hover:bg-violet-100"
+                    >
+                      <Plus className="size-3" /> Create chart
+                    </button>
+                  )}
+                </div>
+                {visualisations.length > 0 ? (
                   <div className="grid gap-1.5 sm:grid-cols-2">
                     {visualisations.map((v) => {
                       const checked = q.visualisation_ids.includes(v.id);
@@ -239,20 +254,24 @@ function QuestionCard({
                             className="accent-violet-600 shrink-0"
                           />
                           <div className="min-w-0">
-                            <p className="text-xs font-medium text-gray-800 truncate">{v.name}</p>
-                            <p className="text-xs text-gray-400 capitalize">{v.chart_type}</p>
+                            <p className="truncate text-xs font-medium text-gray-800">{v.name}</p>
+                            <p className="text-xs capitalize text-gray-400">{v.chart_type}</p>
                           </div>
                         </label>
                       );
                     })}
                   </div>
-                  {q.visualisation_ids.length > 0 && (
-                    <p className="mt-1 text-xs text-gray-400">
-                      {q.visualisation_ids.length} chart{q.visualisation_ids.length !== 1 ? 's' : ''} will be shown alongside this question.
-                    </p>
-                  )}
-                </div>
-              )}
+                ) : hasDataset ? (
+                  <p className="text-xs text-gray-400">No charts yet — click &ldquo;Create chart&rdquo; to add one.</p>
+                ) : (
+                  <p className="text-xs text-gray-400">Select a dataset for this quiz to create and link charts.</p>
+                )}
+                {q.visualisation_ids.length > 0 && (
+                  <p className="mt-1 text-xs text-gray-400">
+                    {q.visualisation_ids.length} chart{q.visualisation_ids.length !== 1 ? 's' : ''} will be shown alongside this question.
+                  </p>
+                )}
+              </div>
 
               {/* Type selector */}
               <div>
@@ -495,6 +514,20 @@ export default function QuizBuilder({
   const dragIdx = useRef<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 
+  const [localVisualisations, setLocalVisualisations] = useState<VisualisationOption[]>(visualisations);
+  const [rows, setRows] = useState<Record<string, unknown>[]>([]);
+  const [loadingRows, setLoadingRows] = useState(false);
+  const [openChartFor, setOpenChartFor] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!datasetId) { setRows([]); return; }
+    setLoadingRows(true);
+    fetch(`/api/teacher/datasets/${datasetId}/rows?page=0&pageSize=200`)
+      .then((r) => (r.ok ? r.json() : { rows: [] }))
+      .then((d) => { setRows(d.rows ?? []); setLoadingRows(false); })
+      .catch(() => setLoadingRows(false));
+  }, [datasetId]);
+
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   useEffect(() => {
     fetch('/api/questions/tags')
@@ -557,6 +590,19 @@ export default function QuizBuilder({
     if (id !== datasetId) {
       setQuestions((prev) => prev.map((q) => ({ ...q, dataset_column: '' })));
     }
+  };
+
+  const handleChartCreated = (vis: CreatedVis) => {
+    setLocalVisualisations((prev) => [...prev, vis]);
+    if (openChartFor) {
+      updateQuestion(openChartFor, {
+        visualisation_ids: [
+          ...(questions.find((q) => q._key === openChartFor)?.visualisation_ids ?? []),
+          vis.id,
+        ],
+      });
+    }
+    setOpenChartFor(null);
   };
 
   const buildPayload = (status: 'draft' | 'in_progress') => ({
@@ -759,8 +805,9 @@ export default function QuizBuilder({
             total={questions.length}
             expanded={expanded.has(q._key)}
             columns={columns}
-            visualisations={visualisations}
+            visualisations={localVisualisations}
             availableTags={availableTags}
+            hasDataset={!!datasetId}
             onToggle={() => toggleExpand(q._key)}
             onUpdate={(patch) => updateQuestion(q._key, patch)}
             onDelete={() => deleteQuestion(q._key)}
@@ -768,6 +815,7 @@ export default function QuizBuilder({
             onDragOver={(e) => handleDragOver(e, idx)}
             onDrop={(e) => handleDrop(e, idx)}
             isDragOver={dragOverIdx === idx}
+            onOpenChartBuilder={() => setOpenChartFor(q._key)}
           />
         ))}
 
@@ -828,6 +876,21 @@ export default function QuizBuilder({
           Publish validates all questions have correct answers and MCQ has ≥2 options.
         </p>
       </motion.div>
+
+      {/* Inline chart builder modal */}
+      <AnimatePresence>
+        {openChartFor && datasetId && (
+          <InlineChartBuilder
+            key={openChartFor}
+            columns={columns}
+            rows={rows}
+            loadingRows={loadingRows}
+            datasetId={datasetId}
+            onCreated={handleChartCreated}
+            onClose={() => setOpenChartFor(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

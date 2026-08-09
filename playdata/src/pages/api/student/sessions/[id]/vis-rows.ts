@@ -77,13 +77,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let foundInQuiz = false
 
     if (quizIds.length > 0) {
+      // Fetch all questions in these quizzes and check in JS to avoid
+      // relying on the @> operator which can misbehave with JSONB vs native arrays.
       const { data: qs } = await admin
         .from('questions')
-        .select('id')
+        .select('id, visualisation_ids')
         .in('quiz_id', quizIds)
-        .contains('visualisation_ids', [visId])
 
-      foundInQuiz = (qs ?? []).length > 0
+      foundInQuiz = (qs ?? []).some(
+        (q: { visualisation_ids: string[] | null }) =>
+          Array.isArray(q.visualisation_ids) && q.visualisation_ids.includes(visId)
+      )
     }
 
     if (!foundInQuiz) return res.status(404).json({ error: 'Visualisation not found in session' })

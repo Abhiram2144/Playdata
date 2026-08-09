@@ -29,14 +29,14 @@ interface Props {
   questions: QuestionResult[]
 }
 
-// ── Re-use the same server-side logic as the API route ─────────────────────────
-
 export const getServerSideProps: GetServerSideProps<Props> = async (context) => {
   const supabase = createClientFromContext(context)
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { redirect: { destination: '/auth/login', permanent: false } }
 
-  const { data: profile } = await supabase
+  const admin = createAdminClient()
+
+  const { data: profile } = await admin
     .from('profiles')
     .select('id, full_name, email, role')
     .eq('id', user.id)
@@ -48,29 +48,108 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
   }
 
   const sessionId = context.params?.id as string
-  const proto = context.req.headers['x-forwarded-proto'] ?? 'http'
-  const host = context.req.headers.host
-  const base = `${proto}://${host}`
 
-  const res = await fetch(`${base}/api/student/results/${sessionId}`, {
-    headers: { cookie: context.req.headers.cookie ?? '' },
-  })
+  const { data: session } = await admin
+    .from('sessions')
+    .select('id, title, status, started_at, ended_at')
+    .eq('id', sessionId)
+    .single()
 
-  if (res.status === 403 || res.status === 404) {
-    return { redirect: { destination: '/student/results', permanent: false } }
+  if (!session) return { redirect: { destination: '/student/results', permanent: false } }
+
+  const { data: participant } = await admin
+    .from('session_participants')
+    .select('id, score')
+    .eq('session_id', sessionId)
+    .eq('student_id', user.id)
+    .maybeSingle()
+
+  if (!participant) return { redirect: { destination: '/student/results', permanent: false } }
+
+  const { data: rawItems } = await admin
+    .from('session_items')
+    .select('id, type, reference_id, order_index')
+    .eq('session_id', sessionId)
+    .order('order_index')
+
+  const items = rawItems ?? []
+  const quizIds = items.filter((i) => i.type === 'quiz').map((i) => i.reference_id as string)
+  const questionIds = items.filter((i) => i.type === 'question').map((i) => i.reference_id as string)
+
+  type QuizRow = {
+    id: string
+    title: string
+    questions: { id: string; text: string; type: string; options: unknown; correct_answer: string; order_index: number }[]
   }
-  if (!res.ok) return { redirect: { destination: '/student/results', permanent: false } }
+  type StandaloneQ = { id: string; text: string; type: string; options: unknown; correct_answer: string }
 
-  const data = await res.json()
+  const [quizzesRes, standaloneRes, responsesRes] = await Promise.all([
+    quizIds.length > 0
+      ? admin.from('quizzes').select('id, title, questions(id, text, type, options, correct_answer, order_index)').in('id', quizIds)
+      : { data: [] as QuizRow[] },
+    questionIds.length > 0
+      ? admin.from('questions').select('id, text, type, options, correct_answer').in('id', questionIds)
+      : { data: [] as StandaloneQ[] },
+    admin.from('student_responses').select('question_id, answer, is_correct').eq('session_id', sessionId).eq('student_id', user.id),
+  ])
+
+  const quizMap = new Map(((quizzesRes.data ?? []) as QuizRow[]).map((q) => [q.id, q]))
+  const standaloneMap = new Map(((standaloneRes.data ?? []) as StandaloneQ[]).map((q) => [q.id, q]))
+  const responseMap = new Map(((responsesRes.data ?? []) as { question_id: string; answer: string; is_correct: boolean | null }[]).map((r) => [r.question_id, r]))
+
+  const questionResults: QuestionResult[] = []
+
+  for (const item of items) {
+    const ref = item.reference_id as string
+    const itemOrder = item.order_index as number
+
+    if (item.type === 'quiz') {
+      const quiz = quizMap.get(ref) as QuizRow | undefined
+      if (!quiz) continue
+      const sortedQs = [...(Array.isArray(quiz.questions) ? quiz.questions : [])].sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
+      for (let qi = 0; qi < sortedQs.length; qi++) {
+        const q = sortedQs[qi]
+        const resp = responseMap.get(q.id)
+        questionResults.push({
+          id: q.id,
+          text: q.text,
+          type: q.type,
+          options: Array.isArray(q.options) ? (q.options as string[]) : null,
+          correct_answer: q.correct_answer,
+          student_answer: resp?.answer ?? null,
+          is_correct: resp?.is_correct ?? null,
+          group_title: quiz.title,
+          group_order: itemOrder,
+          question_order: qi,
+        })
+      }
+    } else if (item.type === 'question') {
+      const q = standaloneMap.get(ref) as StandaloneQ | undefined
+      if (!q) continue
+      const resp = responseMap.get(q.id)
+      questionResults.push({
+        id: q.id,
+        text: q.text,
+        type: q.type,
+        options: Array.isArray(q.options) ? (q.options as string[]) : null,
+        correct_answer: q.correct_answer,
+        student_answer: resp?.answer ?? null,
+        is_correct: resp?.is_correct ?? null,
+        group_title: 'Session Questions',
+        group_order: itemOrder,
+        question_order: 0,
+      })
+    }
+  }
 
   return {
     props: {
       profile,
-      session: data.session,
-      score: data.score,
-      total_questions: data.total_questions,
-      correct_count: data.correct_count,
-      questions: data.questions,
+      session,
+      score: participant.score ?? 0,
+      total_questions: questionResults.length,
+      correct_count: questionResults.filter((q) => q.is_correct === true).length,
+      questions: questionResults,
     },
   }
 }
