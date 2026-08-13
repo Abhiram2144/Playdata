@@ -205,7 +205,7 @@ function SummaryPanel({ summary, onDone }: { summary: AddSummary; onDone: () => 
         {summary.skipped > 0 && (
           <div className="flex items-center gap-2.5">
             <span className="inline-flex size-6 items-center justify-center rounded-full bg-gray-100">
-              <span className="text-xs font-bold text-gray-400">—</span>
+              <span className="text-xs font-bold text-gray-500">—</span>
             </span>
             <span className="text-sm text-gray-500">
               <span className="font-semibold">{summary.skipped}</span>
@@ -362,7 +362,7 @@ function AddStudentsModal({
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-base font-semibold text-gray-900">Add students</h3>
-          <button onClick={onClose} className="rounded-lg p-1 text-gray-400 hover:text-gray-600 transition-colors">
+          <button onClick={onClose} className="rounded-lg p-1 text-gray-500 hover:text-gray-600 transition-colors">
             <X className="size-4" />
           </button>
         </div>
@@ -399,7 +399,7 @@ function AddStudentsModal({
                     placeholder={`alice@example.com\nbob@example.com, carol@example.com`}
                     className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-400/40 resize-none font-mono"
                   />
-                  <p className="mt-1 text-xs text-gray-400">
+                  <p className="mt-1 text-xs text-gray-500">
                     Separate with commas, spaces, or new lines. Duplicates are ignored.
                   </p>
                 </div>
@@ -463,14 +463,14 @@ function AddStudentsModal({
                           <p className="text-sm font-medium text-gray-800 truncate max-w-[280px]">
                             {file.name}
                           </p>
-                          <p className="text-xs text-gray-400 mt-0.5">
+                          <p className="text-xs text-gray-500 mt-0.5">
                             {(file.size / 1024).toFixed(1)} KB
                           </p>
                         </div>
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
-                          className="mt-1 text-xs text-gray-400 hover:text-red-500 transition-colors"
+                          className="mt-1 text-xs text-gray-500 hover:text-red-500 transition-colors"
                         >
                           Remove
                         </button>
@@ -482,7 +482,7 @@ function AddStudentsModal({
                           <p className="text-sm font-medium text-gray-700">
                             Drop your file here
                           </p>
-                          <p className="text-xs text-gray-400 mt-0.5">
+                          <p className="text-xs text-gray-500 mt-0.5">
                             or <span className="text-violet-600 underline underline-offset-2">browse to choose</span>
                           </p>
                         </div>
@@ -572,7 +572,7 @@ function StartSessionModal({
       >
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-base font-semibold text-gray-900">Start a quiz for this class</h3>
-          <button onClick={onClose} className="rounded-lg p-1 text-gray-400 hover:text-gray-600 transition-colors">
+          <button onClick={onClose} className="rounded-lg p-1 text-gray-500 hover:text-gray-600 transition-colors">
             <X className="size-4" />
           </button>
         </div>
@@ -628,7 +628,7 @@ function StartSessionModal({
                 placeholder="e.g. Week 3 — Data distributions"
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-400/40"
               />
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs text-gray-500">
                 Invites are sent automatically when you click &ldquo;Start&rdquo; on the live page.
                 The join code is still shown as a fallback.
               </p>
@@ -689,10 +689,10 @@ function RemoveModal({
         <p className="text-sm text-gray-500 mb-1">
           <span className="font-medium text-gray-800">{student.full_name ?? student.email}</span>
           {student.full_name && (
-            <span className="text-gray-400"> · {student.email}</span>
+            <span className="text-gray-500"> · {student.email}</span>
           )}
         </p>
-        <p className="text-sm text-gray-400 mb-6">
+        <p className="text-sm text-gray-500 mb-6">
           Their history is kept. You can re-add them later.
         </p>
         <div className="flex gap-3 justify-end">
@@ -811,7 +811,7 @@ export default function ClassroomRosterPage({ profile, classroom, students: init
     return (
       <button
         onClick={() => handleSort(col)}
-        className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-gray-400 hover:text-gray-700 transition-colors"
+        className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-700 transition-colors"
       >
         {label}
         <SortIcon col={col} />
@@ -852,17 +852,17 @@ export default function ClassroomRosterPage({ profile, classroom, students: init
         <div>
           <Link
             href="/teacher/classrooms"
-            className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-700 transition-colors mb-3"
+            className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors mb-3"
           >
             <ArrowLeft className="size-3.5" />
             All classrooms
           </Link>
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Classroom</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Classroom</p>
               <h1 className="mt-0.5 text-2xl font-bold text-gray-900">{classroom.name}</h1>
               {classroom.description && (
-                <p className="mt-0.5 text-sm text-gray-400">{classroom.description}</p>
+                <p className="mt-0.5 text-sm text-gray-500">{classroom.description}</p>
               )}
             </div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -896,24 +896,24 @@ export default function ClassroomRosterPage({ profile, classroom, students: init
           <div className="inline-flex items-center gap-2 rounded-xl bg-white border border-gray-100 shadow-sm px-4 py-2.5">
             <Users className="size-4 text-violet-500" />
             <span className="text-sm font-semibold text-gray-800">{students.length}</span>
-            <span className="text-xs text-gray-400">total</span>
+            <span className="text-xs text-gray-500">total</span>
           </div>
           <div className="inline-flex items-center gap-2 rounded-xl bg-white border border-gray-100 shadow-sm px-4 py-2.5">
             <MailCheck className="size-4 text-emerald-500" />
             <span className="text-sm font-semibold text-gray-800">{activeCount}</span>
-            <span className="text-xs text-gray-400">active</span>
+            <span className="text-xs text-gray-500">active</span>
           </div>
           <div className="inline-flex items-center gap-2 rounded-xl bg-white border border-gray-100 shadow-sm px-4 py-2.5">
             <MailX className="size-4 text-amber-500" />
             <span className="text-sm font-semibold text-gray-800">{invitedCount}</span>
-            <span className="text-xs text-gray-400">invited</span>
+            <span className="text-xs text-gray-500">invited</span>
           </div>
         </div>
 
         {/* Search */}
         {students.length > 0 && (
           <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-500 pointer-events-none" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -923,7 +923,7 @@ export default function ClassroomRosterPage({ profile, classroom, students: init
             {search && (
               <button
                 onClick={() => setSearch('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-600"
               >
                 <X className="size-3.5" />
               </button>
@@ -937,7 +937,7 @@ export default function ClassroomRosterPage({ profile, classroom, students: init
           {sessions.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-5 py-10 text-center">
               <PlayCircle className="mx-auto size-7 text-gray-300 mb-2" />
-              <p className="text-sm text-gray-400">No sessions run for this classroom yet.</p>
+              <p className="text-sm text-gray-500">No sessions run for this classroom yet.</p>
             </div>
           ) : (
             <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden divide-y divide-gray-50">
@@ -955,24 +955,24 @@ export default function ClassroomRosterPage({ profile, classroom, students: init
                         </span>
                       ) : (
                         <span className="flex size-8 items-center justify-center rounded-full bg-gray-100">
-                          <CheckCircle2 className="size-4 text-gray-400" />
+                          <CheckCircle2 className="size-4 text-gray-500" />
                         </span>
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-gray-800 truncate">{s.title}</p>
                       <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-gray-500">
                           {s.participant_count} student{s.participant_count !== 1 ? 's' : ''}
                         </span>
                         <span className="text-gray-200">·</span>
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-gray-500">
                           {s.item_count} item{s.item_count !== 1 ? 's' : ''}
                         </span>
                         {date && (
                           <>
                             <span className="text-gray-200">·</span>
-                            <span className="inline-flex items-center gap-1 text-xs text-gray-400">
+                            <span className="inline-flex items-center gap-1 text-xs text-gray-500">
                               <Clock className="size-3" />
                               {new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                             </span>
@@ -1015,7 +1015,7 @@ export default function ClassroomRosterPage({ profile, classroom, students: init
               <Users className="size-8 text-gray-300" />
             </div>
             <p className="text-base font-medium text-gray-700">No students yet</p>
-            <p className="mt-1 text-sm text-gray-400">
+            <p className="mt-1 text-sm text-gray-500">
               Add student emails to invite them to this classroom.
             </p>
             <button
@@ -1056,7 +1056,7 @@ export default function ClassroomRosterPage({ profile, classroom, students: init
                       {student.full_name ? (
                         <div>
                           <p className="font-medium text-gray-800 text-sm">{student.full_name}</p>
-                          <p className="text-xs text-gray-400 sm:hidden">{student.email}</p>
+                          <p className="text-xs text-gray-500 sm:hidden">{student.email}</p>
                         </div>
                       ) : (
                         <p className="text-gray-500 italic text-sm">No account yet</p>
@@ -1084,7 +1084,7 @@ export default function ClassroomRosterPage({ profile, classroom, students: init
                     </td>
 
                     {/* Invited at */}
-                    <td className="px-5 py-3.5 hidden md:table-cell text-xs text-gray-400">
+                    <td className="px-5 py-3.5 hidden md:table-cell text-xs text-gray-500">
                       {new Date(student.invited_at).toLocaleDateString('en-GB', {
                         day: 'numeric',
                         month: 'short',
@@ -1096,7 +1096,7 @@ export default function ClassroomRosterPage({ profile, classroom, students: init
                     <td className="px-5 py-3.5 text-right">
                       <button
                         onClick={() => setPendingRemove(student)}
-                        className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                        className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-500 hover:text-red-500 hover:bg-red-50 transition-colors"
                       >
                         Remove
                       </button>

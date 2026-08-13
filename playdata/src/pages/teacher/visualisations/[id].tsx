@@ -17,6 +17,10 @@ import { TEACHER_NAV } from '@/lib/teacher-nav';
 import { withAuth } from '@/lib/auth';
 import { createClientFromContext } from '@/lib/supabase/server-props';
 import { createAdminClient } from '@/lib/supabase/admin';
+import {
+  categoricalColor, CHART_PIE_STROKE, CHART_PRIMARY,
+  CHART_TOOLTIP_STYLE, CHART_AXIS_STYLE,
+} from '@/lib/chart-colors';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type ChartType = 'bar' | 'line' | 'pie' | 'scatter' | 'histogram';
@@ -160,19 +164,6 @@ function buildHistBins(rows: Record<string, unknown>[], col: string) {
   return bins;
 }
 
-const VIZ_COLORS = ['#7c3aed', '#a78bfa', '#6d28d9', '#c4b5fd', '#8b5cf6', '#4c1d95', '#ddd6fe'];
-
-const TOOLTIP_STYLE = {
-  backgroundColor: '#ffffff',
-  border: '1px solid #e4e0f8',
-  borderRadius: '12px',
-  color: '#374151',
-  fontSize: 12,
-  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-};
-
-const AXIS_STYLE = { fill: '#9ca3af', fontSize: 11 };
-
 const CHART_LABELS: Record<ChartType, string> = {
   bar: 'Bar', line: 'Line', pie: 'Pie', scatter: 'Scatter', histogram: 'Histogram',
 };
@@ -213,7 +204,7 @@ function ChartRenderer({ chartType, config, rows }: {
   if (!xAxis) {
     return (
       <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50">
-        <p className="text-sm text-gray-400">No axis configured for this chart</p>
+        <p className="text-sm text-gray-500">No axis configured for this chart</p>
       </div>
     );
   }
@@ -221,7 +212,7 @@ function ChartRenderer({ chartType, config, rows }: {
   if (chartType === 'scatter') {
     if (!yAxis) return (
       <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50">
-        <p className="text-sm text-gray-400">Scatter requires both X and Y axes</p>
+        <p className="text-sm text-gray-500">Scatter requires both X and Y axes</p>
       </div>
     );
     const data = filtered
@@ -231,10 +222,10 @@ function ChartRenderer({ chartType, config, rows }: {
       <ResponsiveContainer width="100%" height={360}>
         <ScatterChart>
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f0ff" />
-          <XAxis type="number" dataKey="x" name={xAxis} tick={AXIS_STYLE} />
-          <YAxis type="number" dataKey="y" name={yAxis} tick={AXIS_STYLE} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ strokeDasharray: '3 3' }} />
-          <Scatter data={data} fill="#7c3aed" fillOpacity={0.7} />
+          <XAxis type="number" dataKey="x" name={xAxis} tick={CHART_AXIS_STYLE} />
+          <YAxis type="number" dataKey="y" name={yAxis} tick={CHART_AXIS_STYLE} />
+          <Tooltip contentStyle={CHART_TOOLTIP_STYLE} cursor={{ strokeDasharray: '3 3' }} />
+          <Scatter data={data} fill={CHART_PRIMARY} fillOpacity={0.7} />
         </ScatterChart>
       </ResponsiveContainer>
     );
@@ -246,10 +237,10 @@ function ChartRenderer({ chartType, config, rows }: {
       <ResponsiveContainer width="100%" height={360}>
         <BarChart data={data} barCategoryGap="2%">
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f0ff" />
-          <XAxis dataKey="bin" tick={AXIS_STYLE} label={{ value: xAxis, position: 'insideBottom', offset: -2, fill: '#9ca3af', fontSize: 11 }} />
-          <YAxis tick={AXIS_STYLE} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} />
-          <Bar dataKey="count" fill="#7c3aed" radius={[3, 3, 0, 0]} />
+          <XAxis dataKey="bin" tick={CHART_AXIS_STYLE} label={{ value: xAxis, position: 'insideBottom', offset: -2, fill: CHART_AXIS_STYLE.fill, fontSize: 11 }} />
+          <YAxis tick={CHART_AXIS_STYLE} />
+          <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+          <Bar dataKey="count" fill={CHART_PRIMARY} radius={[3, 3, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     );
@@ -271,9 +262,9 @@ function ChartRenderer({ chartType, config, rows }: {
         <PieChart>
           <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={130}
             label={({ name, percent = 0 }) => `${name} (${(percent * 100).toFixed(0)}%)`} labelLine={false}>
-            {data.map((_, i) => <Cell key={i} fill={VIZ_COLORS[i % VIZ_COLORS.length]} />)}
+            {data.map((_, i) => <Cell key={i} fill={categoricalColor(i)} stroke={CHART_PIE_STROKE} strokeWidth={1} />)}
           </Pie>
-          <Tooltip contentStyle={TOOLTIP_STYLE} />
+          <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
           <Legend wrapperStyle={{ color: '#6b7280', fontSize: 11 }} />
         </PieChart>
       </ResponsiveContainer>
@@ -282,7 +273,7 @@ function ChartRenderer({ chartType, config, rows }: {
 
   if (!yAxis) return (
     <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50">
-      <p className="text-sm text-gray-400">Y axis not configured</p>
+      <p className="text-sm text-gray-500">Y axis not configured</p>
     </div>
   );
 
@@ -293,10 +284,10 @@ function ChartRenderer({ chartType, config, rows }: {
       <ResponsiveContainer width="100%" height={360}>
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f0ff" />
-          <XAxis dataKey="name" tick={AXIS_STYLE} />
-          <YAxis tick={AXIS_STYLE} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} />
-          <Line type="monotone" dataKey="value" stroke="#7c3aed" strokeWidth={2.5} dot={data.length < 30} />
+          <XAxis dataKey="name" tick={CHART_AXIS_STYLE} />
+          <YAxis tick={CHART_AXIS_STYLE} />
+          <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+          <Line type="monotone" dataKey="value" stroke={CHART_PRIMARY} strokeWidth={2.5} dot={data.length < 30} />
         </LineChart>
       </ResponsiveContainer>
     );
@@ -306,10 +297,10 @@ function ChartRenderer({ chartType, config, rows }: {
     <ResponsiveContainer width="100%" height={360}>
       <BarChart data={data}>
         <CartesianGrid strokeDasharray="3 3" stroke="#f1f0ff" />
-        <XAxis dataKey="name" tick={AXIS_STYLE} />
-        <YAxis tick={AXIS_STYLE} />
-        <Tooltip contentStyle={TOOLTIP_STYLE} />
-        <Bar dataKey="value" fill="#7c3aed" radius={[4, 4, 0, 0]} />
+        <XAxis dataKey="name" tick={CHART_AXIS_STYLE} />
+        <YAxis tick={CHART_AXIS_STYLE} />
+        <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+        <Bar dataKey="value" fill={CHART_PRIMARY} radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -368,7 +359,7 @@ export default function VisualisationView({ profile, visualisation }: Props) {
         <div className="flex items-center justify-between">
           <button
             onClick={() => router.push('/teacher/visualisations')}
-            className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-violet-600 transition-colors"
+            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-violet-600 transition-colors"
           >
             <ArrowLeft className="size-3.5" /> Back to Visualisations
           </button>
@@ -421,7 +412,7 @@ export default function VisualisationView({ profile, visualisation }: Props) {
                 </div>
               )}
 
-              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-400">
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
                 {dataset && (
                   <span className="flex items-center gap-1">
                     <Database className="size-3" />
@@ -461,7 +452,7 @@ export default function VisualisationView({ profile, visualisation }: Props) {
           <div className="mb-4 flex items-center justify-between">
             <p className="text-sm font-semibold text-gray-800">{cfg.title || nameInput}</p>
             {cfg.filterColumn && cfg.filterValue && (
-              <span className="text-xs text-gray-400 bg-gray-100 rounded-full px-2.5 py-1">
+              <span className="text-xs text-gray-500 bg-gray-100 rounded-full px-2.5 py-1">
                 Filter: {cfg.filterColumn} {cfg.filterOperator} {cfg.filterValue}
               </span>
             )}
@@ -469,13 +460,13 @@ export default function VisualisationView({ profile, visualisation }: Props) {
 
           {!dataset ? (
             <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50">
-              <p className="text-sm text-gray-400">No dataset linked to this visualisation</p>
+              <p className="text-sm text-gray-500">No dataset linked to this visualisation</p>
             </div>
           ) : loadingRows ? (
             <div className="flex h-64 items-center justify-center">
               <div className="flex flex-col items-center gap-3">
                 <div className="h-8 w-8 animate-spin rounded-full border-2 border-violet-200 border-t-violet-600" />
-                <p className="text-sm text-gray-400">Loading data…</p>
+                <p className="text-sm text-gray-500">Loading data…</p>
               </div>
             </div>
           ) : rowError ? (
@@ -486,7 +477,7 @@ export default function VisualisationView({ profile, visualisation }: Props) {
             <ChartRenderer chartType={visualisation.chart_type} config={cfg} rows={rows} />
           ) : (
             <div className="flex h-64 items-center justify-center">
-              <p className="text-sm text-gray-400">Rendering…</p>
+              <p className="text-sm text-gray-500">Rendering…</p>
             </div>
           )}
 
@@ -505,29 +496,29 @@ export default function VisualisationView({ profile, visualisation }: Props) {
             transition={{ delay: 0.1 }}
             className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5"
           >
-            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">Configuration</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-3">Configuration</p>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {cfg.xAxis && (
                 <div className="rounded-xl bg-gray-50 px-3 py-2.5">
-                  <p className="text-[10px] uppercase tracking-wider text-gray-400">X Axis</p>
+                  <p className="text-[10px] uppercase tracking-wider text-gray-500">X Axis</p>
                   <p className="mt-0.5 text-sm font-semibold text-gray-800 truncate">{cfg.xAxis}</p>
                 </div>
               )}
               {cfg.yAxis && (
                 <div className="rounded-xl bg-gray-50 px-3 py-2.5">
-                  <p className="text-[10px] uppercase tracking-wider text-gray-400">Y Axis</p>
+                  <p className="text-[10px] uppercase tracking-wider text-gray-500">Y Axis</p>
                   <p className="mt-0.5 text-sm font-semibold text-gray-800 truncate">{cfg.yAxis}</p>
                 </div>
               )}
               {cfg.aggregation && (
                 <div className="rounded-xl bg-gray-50 px-3 py-2.5">
-                  <p className="text-[10px] uppercase tracking-wider text-gray-400">Aggregation</p>
+                  <p className="text-[10px] uppercase tracking-wider text-gray-500">Aggregation</p>
                   <p className="mt-0.5 text-sm font-semibold text-gray-800 capitalize">{cfg.aggregation}</p>
                 </div>
               )}
               {cfg.filterColumn && (
                 <div className="rounded-xl bg-gray-50 px-3 py-2.5">
-                  <p className="text-[10px] uppercase tracking-wider text-gray-400">Filter</p>
+                  <p className="text-[10px] uppercase tracking-wider text-gray-500">Filter</p>
                   <p className="mt-0.5 text-sm font-semibold text-gray-800 truncate">{cfg.filterColumn}</p>
                 </div>
               )}

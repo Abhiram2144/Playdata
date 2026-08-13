@@ -10,6 +10,10 @@ import {
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
+import {
+  categoricalColor, CHART_PIE_STROKE, CHART_PRIMARY,
+  CHART_TOOLTIP_STYLE, CHART_AXIS_STYLE,
+} from '@/lib/chart-colors';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type ChartType = 'bar' | 'line' | 'pie' | 'scatter' | 'histogram';
@@ -108,14 +112,6 @@ const CHART_TYPES: { type: ChartType; label: string; icon: React.ElementType }[]
   { type: 'histogram', label: 'Histogram', icon: AlignLeft  },
 ];
 
-const VIZ_COLORS = ['#8b5cf6','#a78bfa','#6d28d9','#c4b5fd','#7c3aed','#ede9fe','#4c1d95'];
-const TT_STYLE = {
-  backgroundColor: '#ffffff', border: '1px solid #e4e0f8',
-  borderRadius: '12px', color: '#374151', fontSize: 12,
-  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-};
-const AX_STYLE = { fill: '#9ca3af', fontSize: 11 };
-
 const FIELD_META: Record<ChartType, { x: string; y: string | null; showAgg: boolean }> = {
   bar:       { x: 'X axis (category)',      y: 'Y axis (numeric)',   showAgg: true  },
   line:      { x: 'X axis',                 y: 'Y axis (numeric)',   showAgg: true  },
@@ -144,7 +140,7 @@ function EmptyHint({ chartType, hasX, hasY }: { chartType: ChartType; hasX: bool
     : 'Choose a Y axis column';
   return (
     <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50">
-      <p className="px-6 text-center text-sm text-gray-400">{msg}</p>
+      <p className="px-6 text-center text-sm text-gray-500">{msg}</p>
     </div>
   );
 }
@@ -167,10 +163,10 @@ function ChartPreview({
       <ResponsiveContainer width="100%" height={264}>
         <ScatterChart>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-          <XAxis type="number" dataKey="x" name={config.xAxis} tick={AX_STYLE} />
-          <YAxis type="number" dataKey="y" name={config.yAxis} tick={AX_STYLE} />
-          <Tooltip contentStyle={TT_STYLE} cursor={{ strokeDasharray: '3 3' }} />
-          <Scatter data={data} fill="#8b5cf6" fillOpacity={0.7} />
+          <XAxis type="number" dataKey="x" name={config.xAxis} tick={CHART_AXIS_STYLE} />
+          <YAxis type="number" dataKey="y" name={config.yAxis} tick={CHART_AXIS_STYLE} />
+          <Tooltip contentStyle={CHART_TOOLTIP_STYLE} cursor={{ strokeDasharray: '3 3' }} />
+          <Scatter data={data} fill={CHART_PRIMARY} fillOpacity={0.7} />
         </ScatterChart>
       </ResponsiveContainer>
     );
@@ -184,10 +180,10 @@ function ChartPreview({
       <ResponsiveContainer width="100%" height={264}>
         <BarChart data={data} barCategoryGap="2%">
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-          <XAxis dataKey="bin" tick={AX_STYLE} />
-          <YAxis tick={AX_STYLE} />
-          <Tooltip contentStyle={TT_STYLE} />
-          <Bar dataKey="count" fill="#8b5cf6" radius={[2, 2, 0, 0]} />
+          <XAxis dataKey="bin" tick={CHART_AXIS_STYLE} />
+          <YAxis tick={CHART_AXIS_STYLE} />
+          <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+          <Bar dataKey="count" fill={CHART_PRIMARY} radius={[2, 2, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     );
@@ -218,10 +214,10 @@ function ChartPreview({
             label={({ name, percent = 0 }) => `${name} (${(percent * 100).toFixed(0)}%)`}
             labelLine={false}
           >
-            {data.map((_, i) => <Cell key={i} fill={VIZ_COLORS[i % VIZ_COLORS.length]} />)}
+            {data.map((_, i) => <Cell key={i} fill={categoricalColor(i)} stroke={CHART_PIE_STROKE} strokeWidth={1} />)}
           </Pie>
-          <Tooltip contentStyle={TT_STYLE} />
-          <Legend wrapperStyle={{ color: '#9ca3af', fontSize: 11 }} />
+          <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+          <Legend wrapperStyle={{ color: CHART_AXIS_STYLE.fill, fontSize: 11 }} />
         </PieChart>
       </ResponsiveContainer>
     );
@@ -236,10 +232,10 @@ function ChartPreview({
       <ResponsiveContainer width="100%" height={264}>
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-          <XAxis dataKey="name" tick={AX_STYLE} />
-          <YAxis tick={AX_STYLE} />
-          <Tooltip contentStyle={TT_STYLE} />
-          <Line type="monotone" dataKey="value" stroke="#8b5cf6" strokeWidth={2} dot={data.length < 30} />
+          <XAxis dataKey="name" tick={CHART_AXIS_STYLE} />
+          <YAxis tick={CHART_AXIS_STYLE} />
+          <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+          <Line type="monotone" dataKey="value" stroke={CHART_PRIMARY} strokeWidth={2} dot={data.length < 30} />
         </LineChart>
       </ResponsiveContainer>
     );
@@ -249,10 +245,10 @@ function ChartPreview({
     <ResponsiveContainer width="100%" height={264}>
       <BarChart data={data}>
         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-        <XAxis dataKey="name" tick={AX_STYLE} />
-        <YAxis tick={AX_STYLE} />
-        <Tooltip contentStyle={TT_STYLE} />
-        <Bar dataKey="value" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+        <XAxis dataKey="name" tick={CHART_AXIS_STYLE} />
+        <YAxis tick={CHART_AXIS_STYLE} />
+        <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+        <Bar dataKey="value" fill={CHART_PRIMARY} radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -329,12 +325,12 @@ export function InlineChartBuilder({
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-6 py-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Create chart</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Create chart</p>
             <h2 className="mt-0.5 text-base font-semibold text-gray-900">Configure and link a chart to this question</h2>
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+            className="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-600"
           >
             <X className="size-4" />
           </button>
@@ -347,7 +343,7 @@ export function InlineChartBuilder({
 
             {/* Chart type */}
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">Chart type</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-500">Chart type</p>
               <div className="grid grid-cols-5 gap-1">
                 {CHART_TYPES.map(({ type, label, icon: Icon }) => (
                   <button
@@ -368,7 +364,7 @@ export function InlineChartBuilder({
 
             {/* Name */}
             <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-widest text-gray-400">
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-widest text-gray-500">
                 Chart name <span className="text-red-400">*</span>
               </label>
               <input
@@ -381,7 +377,7 @@ export function InlineChartBuilder({
 
             {/* Field mapping */}
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Field mapping</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Field mapping</p>
 
               <div>
                 <label className="mb-1 block text-xs text-gray-500">{fm.x}</label>
@@ -419,7 +415,7 @@ export function InlineChartBuilder({
 
             {/* Filter */}
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Filter (optional)</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Filter (optional)</p>
               <select
                 value={config.filterColumn}
                 onChange={(e) => patch({ filterColumn: e.target.value, filterValue: '' })}
@@ -457,14 +453,14 @@ export function InlineChartBuilder({
 
           {/* Preview panel */}
           <div className="flex flex-1 flex-col overflow-y-auto p-6">
-            <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-gray-400">Live preview</p>
+            <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-gray-500">Live preview</p>
             {loadingRows ? (
               <div className="flex flex-1 items-center justify-center">
                 <Loader2 className="size-5 animate-spin text-gray-300" />
               </div>
             ) : rows.length === 0 ? (
               <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50">
-                <p className="px-6 text-center text-sm text-gray-400">No dataset rows available.</p>
+                <p className="px-6 text-center text-sm text-gray-500">No dataset rows available.</p>
               </div>
             ) : (
               <>
@@ -472,7 +468,7 @@ export function InlineChartBuilder({
                   <p className="mb-3 text-sm font-semibold text-gray-800">{config.title}</p>
                 )}
                 <ChartPreview chartType={chartType} config={config} rows={rows} />
-                <p className="mt-3 text-xs text-gray-400">Preview uses first {rows.length.toLocaleString()} rows.</p>
+                <p className="mt-3 text-xs text-gray-500">Preview uses first {rows.length.toLocaleString()} rows.</p>
               </>
             )}
           </div>

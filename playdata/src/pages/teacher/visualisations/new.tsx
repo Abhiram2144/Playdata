@@ -19,6 +19,10 @@ import { TEACHER_NAV } from '@/lib/teacher-nav';
 import { withAuth } from '@/lib/auth';
 import { createClientFromContext } from '@/lib/supabase/server-props';
 import { createAdminClient } from '@/lib/supabase/admin';
+import {
+  categoricalColor, CHART_PIE_STROKE, CHART_PRIMARY,
+  CHART_TOOLTIP_STYLE, CHART_AXIS_STYLE,
+} from '@/lib/chart-colors';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type ChartType = 'bar' | 'line' | 'pie' | 'scatter' | 'histogram';
@@ -117,19 +121,6 @@ const CHART_TYPES: { type: ChartType; label: string; icon: React.ElementType }[]
   { type: 'histogram', label: 'Histogram', icon: AlignLeft },
 ];
 
-const VIZ_COLORS = ['#8b5cf6', '#a78bfa', '#6d28d9', '#c4b5fd', '#7c3aed', '#ede9fe', '#4c1d95'];
-
-const TOOLTIP_STYLE = {
-  backgroundColor: '#ffffff',
-  border: '1px solid #e4e0f8',
-  borderRadius: '12px',
-  color: '#374151',
-  fontSize: 12,
-  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-};
-
-const AXIS_STYLE = { fill: '#9ca3af', fontSize: 11 };
-
 // ── Smart number parser ──────────────────────────────────────────────────────
 function smartParseNumber(v: unknown): number {
   if (typeof v === 'number') return v;
@@ -220,7 +211,7 @@ function EmptyChart({ chartType, hasX, hasY }: { chartType: ChartType; hasX: boo
   }
   return (
     <div className="flex h-[320px] items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50">
-      <p className="text-sm text-gray-400 text-center px-4">{msg}</p>
+      <p className="text-sm text-gray-500 text-center px-4">{msg}</p>
     </div>
   );
 }
@@ -257,10 +248,10 @@ function ChartPane({
       <ResponsiveContainer width="100%" height={320}>
         <ScatterChart>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-          <XAxis type="number" dataKey="x" name={config.xAxis} tick={AXIS_STYLE} />
-          <YAxis type="number" dataKey="y" name={config.yAxis} tick={AXIS_STYLE} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ strokeDasharray: '3 3' }} />
-          <Scatter data={data} fill="#8b5cf6" fillOpacity={0.7} />
+          <XAxis type="number" dataKey="x" name={config.xAxis} tick={CHART_AXIS_STYLE} />
+          <YAxis type="number" dataKey="y" name={config.yAxis} tick={CHART_AXIS_STYLE} />
+          <Tooltip contentStyle={CHART_TOOLTIP_STYLE} cursor={{ strokeDasharray: '3 3' }} />
+          <Scatter data={data} fill={CHART_PRIMARY} fillOpacity={0.7} />
         </ScatterChart>
       </ResponsiveContainer>
     );
@@ -274,10 +265,10 @@ function ChartPane({
       <ResponsiveContainer width="100%" height={320}>
         <BarChart data={data} barCategoryGap="2%">
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-          <XAxis dataKey="bin" tick={AXIS_STYLE} label={{ value: config.xAxis, position: 'insideBottom', offset: -2, fill: '#9ca3af', fontSize: 11 }} />
-          <YAxis tick={AXIS_STYLE} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} />
-          <Bar dataKey="count" fill="#8b5cf6" radius={[2, 2, 0, 0]} />
+          <XAxis dataKey="bin" tick={CHART_AXIS_STYLE} label={{ value: config.xAxis, position: 'insideBottom', offset: -2, fill: CHART_AXIS_STYLE.fill, fontSize: 11 }} />
+          <YAxis tick={CHART_AXIS_STYLE} />
+          <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+          <Bar dataKey="count" fill={CHART_PRIMARY} radius={[2, 2, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     );
@@ -304,11 +295,11 @@ function ChartPane({
         <PieChart>
           <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110} label={({ name, percent = 0 }) => `${name} (${(percent * 100).toFixed(0)}%)`} labelLine={false}>
             {data.map((_, i) => (
-              <Cell key={i} fill={VIZ_COLORS[i % VIZ_COLORS.length]} />
+              <Cell key={i} fill={categoricalColor(i)} stroke={CHART_PIE_STROKE} strokeWidth={1} />
             ))}
           </Pie>
-          <Tooltip contentStyle={TOOLTIP_STYLE} />
-          <Legend wrapperStyle={{ color: '#9ca3af', fontSize: 11 }} />
+          <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+          <Legend wrapperStyle={{ color: CHART_AXIS_STYLE.fill, fontSize: 11 }} />
         </PieChart>
       </ResponsiveContainer>
     );
@@ -323,10 +314,10 @@ function ChartPane({
       <ResponsiveContainer width="100%" height={320}>
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-          <XAxis dataKey="name" tick={AXIS_STYLE} />
-          <YAxis tick={AXIS_STYLE} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} />
-          <Line type="monotone" dataKey="value" stroke="#8b5cf6" strokeWidth={2} dot={data.length < 30} />
+          <XAxis dataKey="name" tick={CHART_AXIS_STYLE} />
+          <YAxis tick={CHART_AXIS_STYLE} />
+          <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+          <Line type="monotone" dataKey="value" stroke={CHART_PRIMARY} strokeWidth={2} dot={data.length < 30} />
         </LineChart>
       </ResponsiveContainer>
     );
@@ -335,11 +326,11 @@ function ChartPane({
   return (
     <ResponsiveContainer width="100%" height={320}>
       <BarChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#2a2a3d" />
-        <XAxis dataKey="name" tick={AXIS_STYLE} />
-        <YAxis tick={AXIS_STYLE} />
-        <Tooltip contentStyle={TOOLTIP_STYLE} />
-        <Bar dataKey="value" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+        <XAxis dataKey="name" tick={CHART_AXIS_STYLE} />
+        <YAxis tick={CHART_AXIS_STYLE} />
+        <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+        <Bar dataKey="value" fill={CHART_PRIMARY} radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -393,7 +384,7 @@ function ColSelect({
     <div>
       <label className="mb-1 block text-xs font-medium text-gray-500">
         {label}
-        {hint && <span className="ml-1 text-gray-400">({hint})</span>}
+        {hint && <span className="ml-1 text-gray-500">({hint})</span>}
       </label>
       <select
         value={value}
@@ -575,14 +566,14 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
         <div className="flex items-center justify-between">
           <button
             onClick={() => router.push(`/teacher/datasets/${dataset.id}`)}
-            className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-violet-600 transition-colors"
+            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-violet-600 transition-colors"
           >
             <ArrowLeft className="size-3.5" /> Back to {dataset.name}
           </button>
           <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-500">
             {dataset.row_count.toLocaleString()} rows
             {rows.length < dataset.row_count && rows.length > 0 && (
-              <span className="ml-1 text-gray-400">(preview: first {rows.length})</span>
+              <span className="ml-1 text-gray-500">(preview: first {rows.length})</span>
             )}
           </span>
         </div>
@@ -597,7 +588,7 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
 
             {/* Chart type */}
             <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-400">Chart type</p>
+              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-500">Chart type</p>
               <div className="grid grid-cols-5 gap-1.5">
                 {CHART_TYPES.map(({ type, label, icon: Icon }) => (
                   <button
@@ -618,7 +609,7 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
 
             {/* Title */}
             <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-widest text-gray-400">
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-widest text-gray-500">
                 Display title
               </label>
               <input
@@ -633,8 +624,8 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
             <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Column source</p>
-                  <p className="mt-0.5 text-xs text-gray-400">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Column source</p>
+                  <p className="mt-0.5 text-xs text-gray-500">
                     {useVisibleOnly
                       ? `Student-visible only (${visibleColumns.length} of ${schema.length})`
                       : `All columns (${schema.length})`}
@@ -652,7 +643,7 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
 
             {/* Field mapping */}
             <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Field mapping</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Field mapping</p>
 
               <div>
                 <ColSelect
@@ -663,7 +654,7 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
                   coercibleNames={coercibleCols}
                 />
                 {config.xAxis && xUniqueCount !== null && (chartType === 'bar' || chartType === 'pie' || chartType === 'line') && (
-                  <p className="mt-1 text-xs text-gray-400">→ {xUniqueCount} unique values</p>
+                  <p className="mt-1 text-xs text-gray-500">→ {xUniqueCount} unique values</p>
                 )}
               </div>
 
@@ -706,7 +697,7 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
 
             {/* Filter */}
             <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Filter (optional)</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Filter (optional)</p>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-500">Column</label>
                 <select
@@ -758,7 +749,7 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
 
             {/* Save options */}
             <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Save</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Save</p>
 
               <label className="flex cursor-pointer items-start gap-3">
                 <input
@@ -769,7 +760,7 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
                 />
                 <div>
                   <p className="text-sm font-medium text-gray-800">Save as template</p>
-                  <p className="text-xs text-gray-400">Reuse this chart config with other datasets of the same shape.</p>
+                  <p className="text-xs text-gray-500">Reuse this chart config with other datasets of the same shape.</p>
                 </div>
               </label>
 
@@ -804,7 +795,7 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
 
               {loadingRows ? (
                 <div className="flex h-[320px] items-center justify-center">
-                  <p className="text-sm text-gray-400">Loading data…</p>
+                  <p className="text-sm text-gray-500">Loading data…</p>
                 </div>
               ) : rowError ? (
                 <div className="flex h-[320px] items-center justify-center">
@@ -814,12 +805,12 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
                 <ChartPane chartType={chartType} config={config} rows={rows} />
               ) : (
                 <div className="flex h-[320px] items-center justify-center">
-                  <p className="text-sm text-gray-400">Rendering…</p>
+                  <p className="text-sm text-gray-500">Rendering…</p>
                 </div>
               )}
 
               {rows.length > 0 && (
-                <div className="mt-3 flex items-center gap-1 text-xs text-gray-400">
+                <div className="mt-3 flex items-center gap-1 text-xs text-gray-500">
                   <Info className="size-3 shrink-0" />
                   Preview uses first {rows.length.toLocaleString()} of {dataset.row_count.toLocaleString()} rows.
                 </div>

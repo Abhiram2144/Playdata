@@ -14,6 +14,10 @@ import {
 } from 'recharts'
 import { io as ioClient, Socket } from 'socket.io-client'
 import { toast } from 'sonner'
+import {
+  categoricalColor, CHART_PIE_STROKE, CHART_PRIMARY,
+  CHART_TOOLTIP_STYLE, CHART_AXIS_STYLE,
+} from '@/lib/chart-colors'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -84,12 +88,6 @@ interface Session {
 
 // ── Chart constants ───────────────────────────────────────────────────────────
 
-const VIZ_COLORS = ['#7c3aed', '#a78bfa', '#6d28d9', '#c4b5fd', '#8b5cf6', '#4c1d95', '#ddd6fe']
-const TOOLTIP_STYLE = {
-  backgroundColor: '#ffffff', border: '1px solid #e4e0f8', borderRadius: '12px',
-  color: '#374151', fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-}
-const AXIS_STYLE = { fill: '#9ca3af', fontSize: 11 }
 const CHART_TYPES: ChartType[] = ['bar', 'line', 'pie', 'scatter', 'histogram']
 const CHART_LABELS: Record<ChartType, string> = { bar: 'Bar', line: 'Line', pie: 'Pie', scatter: 'Scatter', histogram: 'Histogram' }
 const CHART_ICONS: Record<ChartType, React.ReactNode> = {
@@ -158,10 +156,10 @@ function ChartRenderer({ chartType, config, rows }: { chartType: ChartType; conf
       <ResponsiveContainer width="100%" height={240}>
         <ScatterChart>
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f0ff" />
-          <XAxis dataKey="x" name={xAxis} tick={AXIS_STYLE} axisLine={false} tickLine={false} />
-          <YAxis dataKey="y" name={yAxis} tick={AXIS_STYLE} axisLine={false} tickLine={false} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ strokeDasharray: '3 3' }} />
-          <Scatter data={pts} fill="#7c3aed" />
+          <XAxis dataKey="x" name={xAxis} tick={CHART_AXIS_STYLE} axisLine={false} tickLine={false} />
+          <YAxis dataKey="y" name={yAxis} tick={CHART_AXIS_STYLE} axisLine={false} tickLine={false} />
+          <Tooltip contentStyle={CHART_TOOLTIP_STYLE} cursor={{ strokeDasharray: '3 3' }} />
+          <Scatter data={pts} fill={CHART_PRIMARY} />
         </ScatterChart>
       </ResponsiveContainer>
     )
@@ -169,7 +167,7 @@ function ChartRenderer({ chartType, config, rows }: { chartType: ChartType; conf
 
   if (chartType === 'histogram') {
     const vals = filtered.map((r) => smartParseNumber(r[xAxis])).filter((v) => !isNaN(v))
-    if (vals.length === 0) return <div className="flex h-48 items-center justify-center text-xs text-gray-400">No numeric data</div>
+    if (vals.length === 0) return <div className="flex h-48 items-center justify-center text-xs text-gray-500">No numeric data</div>
     const min = Math.min(...vals), max = Math.max(...vals), bins = 10, binW = (max - min) / bins || 1
     const counts = Array.from({ length: bins }, (_, i) => ({
       name: `${(min + i * binW).toFixed(1)}`,
@@ -179,10 +177,10 @@ function ChartRenderer({ chartType, config, rows }: { chartType: ChartType; conf
       <ResponsiveContainer width="100%" height={240}>
         <BarChart data={counts}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f0ff" vertical={false} />
-          <XAxis dataKey="name" tick={AXIS_STYLE} axisLine={false} tickLine={false} />
-          <YAxis tick={AXIS_STYLE} axisLine={false} tickLine={false} allowDecimals={false} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} />
-          <Bar dataKey="count" fill="#7c3aed" radius={[3, 3, 0, 0]} />
+          <XAxis dataKey="name" tick={CHART_AXIS_STYLE} axisLine={false} tickLine={false} />
+          <YAxis tick={CHART_AXIS_STYLE} axisLine={false} tickLine={false} allowDecimals={false} />
+          <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+          <Bar dataKey="count" fill={CHART_PRIMARY} radius={[3, 3, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     )
@@ -196,9 +194,9 @@ function ChartRenderer({ chartType, config, rows }: { chartType: ChartType; conf
       <ResponsiveContainer width="100%" height={240}>
         <PieChart>
           <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label={({ name, percent = 0 }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-            {pieData.map((_, i) => <Cell key={i} fill={VIZ_COLORS[i % VIZ_COLORS.length]} />)}
+            {pieData.map((_, i) => <Cell key={i} fill={categoricalColor(i)} stroke={CHART_PIE_STROKE} strokeWidth={1} />)}
           </Pie>
-          <Tooltip contentStyle={TOOLTIP_STYLE} />
+          <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
         </PieChart>
       </ResponsiveContainer>
     )
@@ -210,10 +208,10 @@ function ChartRenderer({ chartType, config, rows }: { chartType: ChartType; conf
       <ResponsiveContainer width="100%" height={240}>
         <LineChart data={aggData}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f0ff" vertical={false} />
-          <XAxis dataKey="name" tick={AXIS_STYLE} axisLine={false} tickLine={false} />
-          <YAxis tick={AXIS_STYLE} axisLine={false} tickLine={false} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} />
-          <Line type="monotone" dataKey="value" stroke="#7c3aed" strokeWidth={2} dot={{ fill: '#7c3aed', r: 3 }} />
+          <XAxis dataKey="name" tick={CHART_AXIS_STYLE} axisLine={false} tickLine={false} />
+          <YAxis tick={CHART_AXIS_STYLE} axisLine={false} tickLine={false} />
+          <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+          <Line type="monotone" dataKey="value" stroke={CHART_PRIMARY} strokeWidth={2} dot={{ fill: CHART_PRIMARY, r: 3 }} />
         </LineChart>
       </ResponsiveContainer>
     )
@@ -223,11 +221,11 @@ function ChartRenderer({ chartType, config, rows }: { chartType: ChartType; conf
     <ResponsiveContainer width="100%" height={240}>
       <BarChart data={aggData} barCategoryGap="30%">
         <CartesianGrid strokeDasharray="3 3" stroke="#f1f0ff" vertical={false} />
-        <XAxis dataKey="name" tick={AXIS_STYLE} axisLine={false} tickLine={false} />
-        <YAxis tick={AXIS_STYLE} axisLine={false} tickLine={false} />
-        <Tooltip contentStyle={TOOLTIP_STYLE} />
+        <XAxis dataKey="name" tick={CHART_AXIS_STYLE} axisLine={false} tickLine={false} />
+        <YAxis tick={CHART_AXIS_STYLE} axisLine={false} tickLine={false} />
+        <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
         <Legend />
-        <Bar dataKey="value" fill="#7c3aed" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="value" fill={CHART_PRIMARY} radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   )
@@ -267,7 +265,7 @@ function VisPanel({ item, sessionId, guestToken }: { item: SessionItem; sessionI
       </div>
       {!item.dataset_id ? (
         <div className="flex h-48 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50">
-          <p className="text-sm text-gray-400">No dataset linked to this visualisation</p>
+          <p className="text-sm text-gray-500">No dataset linked to this visualisation</p>
         </div>
       ) : loading ? (
         <div className="flex h-48 items-center justify-center rounded-xl border border-gray-100 bg-gray-50">
@@ -279,7 +277,7 @@ function VisPanel({ item, sessionId, guestToken }: { item: SessionItem; sessionI
         </div>
       ) : rows.length === 0 ? (
         <div className="flex h-48 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50">
-          <p className="text-sm text-gray-400">No data available</p>
+          <p className="text-sm text-gray-500">No data available</p>
         </div>
       ) : mounted ? (
         <div className="rounded-xl border border-gray-100 bg-white p-4">
@@ -320,7 +318,7 @@ function QuizQuestionChart({ vis, sessionId, guestToken }: { vis: QuizQuestionVi
           <BarChart2 className="size-3.5 text-sky-500" />
           <span className="text-xs font-semibold text-gray-700">{vis.name}</span>
         </div>
-        <button onClick={() => setExpanded((v) => !v)} className="rounded-md p-1 text-gray-400 hover:text-gray-600 transition">
+        <button onClick={() => setExpanded((v) => !v)} className="rounded-md p-1 text-gray-500 hover:text-gray-600 transition">
           {expanded ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
         </button>
       </div>
@@ -336,7 +334,7 @@ function QuizQuestionChart({ vis, sessionId, guestToken }: { vis: QuizQuestionVi
           </div>
           {!vis.dataset_id ? (
             <div className="flex h-48 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50">
-              <p className="text-xs text-gray-400">No dataset linked</p>
+              <p className="text-xs text-gray-500">No dataset linked</p>
             </div>
           ) : loading ? (
             <div className="flex h-48 items-center justify-center"><Loader2 className="size-5 animate-spin text-violet-500" /></div>
@@ -346,7 +344,7 @@ function QuizQuestionChart({ vis, sessionId, guestToken }: { vis: QuizQuestionVi
             </div>
           ) : rows.length === 0 ? (
             <div className="flex h-48 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50">
-              <p className="text-xs text-gray-400">No data available</p>
+              <p className="text-xs text-gray-500">No data available</p>
             </div>
           ) : mounted ? (
             <div className="rounded-xl border border-gray-100 bg-white p-3">
@@ -590,7 +588,7 @@ export default function GuestSession() {
         )}
         <p className="text-base font-semibold text-gray-900 leading-relaxed">{questionText}</p>
         {timeLimitSecs > 0 && timeLeft !== null && !submitted && <TimerBar timeLeft={timeLeft} total={timeLimitSecs} />}
-        {timeLimitSecs <= 0 && <div className="flex items-center gap-1.5 text-xs text-gray-400"><Clock className="size-3" /> Untimed</div>}
+        {timeLimitSecs <= 0 && <div className="flex items-center gap-1.5 text-xs text-gray-500"><Clock className="size-3" /> Untimed</div>}
         {isTimedOut && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">Time&apos;s up! No answer submitted.</div>}
         {submitted && (
           <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
@@ -629,7 +627,7 @@ export default function GuestSession() {
         {submitted && questionType === 'mcq' && Array.isArray(options) && (
           <div className="grid grid-cols-1 gap-2">
             {options.map((opt) => (
-              <div key={opt} className={`rounded-xl border px-4 py-2.5 text-sm font-medium ${opt === response?.answer && response?.is_correct === true ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : opt === response?.answer && response?.is_correct === false ? 'border-red-200 bg-red-50 text-red-700' : 'border-gray-100 bg-gray-50 text-gray-400'}`}>
+              <div key={opt} className={`rounded-xl border px-4 py-2.5 text-sm font-medium ${opt === response?.answer && response?.is_correct === true ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : opt === response?.answer && response?.is_correct === false ? 'border-red-200 bg-red-50 text-red-700' : 'border-gray-100 bg-gray-50 text-gray-500'}`}>
                 {opt}
               </div>
             ))}
@@ -660,7 +658,7 @@ export default function GuestSession() {
       <main className="min-h-screen bg-[#f5f3ff] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="size-8 animate-spin text-violet-500" />
-          <p className="text-sm text-gray-400">Loading session…</p>
+          <p className="text-sm text-gray-500">Loading session…</p>
         </div>
       </main>
     )
@@ -703,7 +701,7 @@ export default function GuestSession() {
               ))}
             </div>
             <div className="rounded-xl border border-gray-200 bg-white shadow-sm px-5 py-3">
-              <p className="text-xs text-gray-400">Session</p>
+              <p className="text-xs text-gray-500">Session</p>
               <p className="text-base font-semibold text-gray-900">{session.title}</p>
             </div>
           </motion.div>
@@ -757,7 +755,7 @@ export default function GuestSession() {
             {sortedItems.map((_, i) => (
               <div key={i} className={`rounded-full transition-all duration-300 ${i === currentItemIdx ? 'h-2 w-6 bg-violet-500' : i < currentItemIdx ? 'h-2 w-2 bg-violet-300' : 'h-2 w-2 bg-gray-200'}`} />
             ))}
-            <span className="ml-2 text-xs text-gray-400">{currentItemIdx + 1} / {sortedItems.length}</span>
+            <span className="ml-2 text-xs text-gray-500">{currentItemIdx + 1} / {sortedItems.length}</span>
           </motion.div>
         )}
 
@@ -784,7 +782,7 @@ export default function GuestSession() {
 
             <div className="p-5 md:p-6">
               {!activeItem ? (
-                <p className="py-8 text-center text-sm text-gray-400">No items in this session.</p>
+                <p className="py-8 text-center text-sm text-gray-500">No items in this session.</p>
               ) : activeItem.type === 'visualisation' ? (
                 <VisPanel item={activeItem} sessionId={session.id} guestToken={guestToken!} />
               ) : activeItem.type === 'quiz' ? (
@@ -809,21 +807,21 @@ export default function GuestSession() {
                         </div>
                         <div className="flex items-center justify-center gap-6">
                           <div className="text-center">
-                            <p className="text-2xl font-black text-emerald-600">
+                            <p className="text-2xl font-black text-emerald-700">
                               {activeItem.quizQuestions.filter((q) =>
                                 myResponses.find((r) => r.question_id === q.id)?.is_correct === true
                               ).length}
                             </p>
-                            <p className="text-xs text-gray-400">Correct</p>
+                            <p className="text-xs text-gray-500">Correct</p>
                           </div>
                           <div className="h-8 w-px bg-gray-200" />
                           <div className="text-center">
-                            <p className="text-2xl font-black text-red-500">
+                            <p className="text-2xl font-black text-red-600">
                               {activeItem.quizQuestions.filter((q) =>
                                 myResponses.find((r) => r.question_id === q.id)?.is_correct === false
                               ).length}
                             </p>
-                            <p className="text-xs text-gray-400">Incorrect</p>
+                            <p className="text-xs text-gray-500">Incorrect</p>
                           </div>
                         </div>
                         <div className="flex items-center justify-center gap-3 pt-2">
@@ -851,7 +849,7 @@ export default function GuestSession() {
                               className={`rounded-full transition-all duration-200 ${i === quizQIdx ? 'h-2.5 w-6 bg-violet-500' : answered ? 'h-2 w-2 bg-emerald-400' : 'h-2 w-2 bg-gray-200'}`} />
                           )
                         })}
-                        <span className="ml-2 text-xs text-gray-400">Q{quizQIdx + 1} / {activeItem.quizQuestions.length}</span>
+                        <span className="ml-2 text-xs text-gray-500">Q{quizQIdx + 1} / {activeItem.quizQuestions.length}</span>
                       </div>
                       {activeQuizQuestion && renderQuestion(
                         activeQuizQuestion.id, activeQuizQuestion.text, activeQuizQuestion.type,
@@ -871,7 +869,7 @@ export default function GuestSession() {
                     </>
                     )
                   ) : (
-                    <p className="text-sm text-gray-400">This quiz has no questions.</p>
+                    <p className="text-sm text-gray-500">This quiz has no questions.</p>
                   )}
                 </div>
               ) : (
@@ -904,7 +902,7 @@ function GuestTopBar({ sessionTitle, guestName, score }: { sessionTitle: string;
       <div className="flex shrink-0 items-center gap-2">
         {guestName && (
           <div className="hidden items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 sm:flex">
-            <UserCircle className="size-3.5 text-gray-400" />
+            <UserCircle className="size-3.5 text-gray-500" />
             <span className="text-xs text-gray-600 max-w-[100px] truncate">{guestName}</span>
             <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-600">Guest</span>
           </div>

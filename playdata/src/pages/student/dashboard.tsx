@@ -14,6 +14,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { createClientFromContext } from '@/lib/supabase/server-props'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { STUDENT_NAV } from '@/lib/student-nav'
+import { CHART_PRIMARY, CHART_AXIS_STYLE } from '@/lib/chart-colors'
 
 interface Profile {
   id: string
@@ -211,7 +212,7 @@ export default function StudentDashboard({ profile, analytics }: Props) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-gray-400">Activity</h2>
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-gray-500">Activity</h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {[
               {
@@ -254,7 +255,7 @@ export default function StudentDashboard({ profile, analytics }: Props) {
                   </div>
                 </div>
                 <p className={`text-2xl font-bold ${empty ? 'text-gray-300' : 'text-gray-900'}`}>{value}</p>
-                <p className="mt-1 text-xs text-gray-400">{label}</p>
+                <p className="mt-1 text-xs text-gray-500">{label}</p>
               </div>
             ))}
           </div>
@@ -268,7 +269,7 @@ export default function StudentDashboard({ profile, analytics }: Props) {
             transition={{ delay: 0.14 }}
           >
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-gray-400">Score history</h2>
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-gray-500">Score history</h2>
               <button
                 onClick={() => router.push('/student/results')}
                 className="flex items-center gap-1 text-xs text-violet-600 hover:text-violet-500 transition-colors"
@@ -277,15 +278,15 @@ export default function StudentDashboard({ profile, analytics }: Props) {
               </button>
             </div>
             <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
-              <p className="text-xs text-gray-400 mb-4">Correct answers per session (last {chartData.length})</p>
+              <p className="text-xs text-gray-500 mb-4">Correct answers per session (last {chartData.length})</p>
               {mounted ? (
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={chartData} barCategoryGap="30%">
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f0ff" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                    <XAxis dataKey="name" tick={CHART_AXIS_STYLE} axisLine={false} tickLine={false} />
+                    <YAxis tick={CHART_AXIS_STYLE} axisLine={false} tickLine={false} allowDecimals={false} />
                     <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: '#f5f3ff' }} />
-                    <Bar dataKey="correct" name="Correct" fill="#7c3aed" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="correct" name="Correct" fill={CHART_PRIMARY} radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -303,7 +304,7 @@ export default function StudentDashboard({ profile, analytics }: Props) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.18 }}
         >
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-gray-400">Live Sessions</h2>
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-gray-500">Live Sessions</h2>
           <motion.button
             whileHover={{ y: -2 }}
             transition={{ duration: 0.15 }}
@@ -331,7 +332,7 @@ export default function StudentDashboard({ profile, analytics }: Props) {
             transition={{ delay: 0.22 }}
           >
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-gray-400">Recent sessions</h2>
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-gray-500">Recent sessions</h2>
               <button
                 onClick={() => router.push('/student/results')}
                 className="flex items-center gap-1 text-xs text-violet-600 hover:text-violet-500 transition-colors"
@@ -350,17 +351,17 @@ export default function StudentDashboard({ profile, analytics }: Props) {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-gray-800 truncate">{s.title}</p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <Calendar className="size-3 text-gray-400" />
-                        <span className="text-xs text-gray-400">{dateStr}</span>
+                        <Calendar className="size-3 text-gray-500" />
+                        <span className="text-xs text-gray-500">{dateStr}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {s.answered > 0 && (
                         <div className="hidden items-center gap-2 text-xs sm:flex">
-                          <span className="flex items-center gap-1 text-emerald-600">
+                          <span className="flex items-center gap-1 text-emerald-700">
                             <CheckCircle2 className="size-3" />{s.correct}
                           </span>
-                          <span className="flex items-center gap-1 text-red-500">
+                          <span className="flex items-center gap-1 text-red-600">
                             <XCircle className="size-3" />{s.incorrect}
                           </span>
                         </div>
@@ -392,7 +393,7 @@ export default function StudentDashboard({ profile, analytics }: Props) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.26 }}
         >
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-gray-400">Account</h2>
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-gray-500">Account</h2>
           <div className="rounded-2xl border border-gray-200 bg-white shadow-sm divide-y divide-gray-100">
             {[
               { label: 'Full name', value: profile.full_name },
@@ -402,7 +403,7 @@ export default function StudentDashboard({ profile, analytics }: Props) {
               { label: 'Member since', value: joinedDate },
             ].map(({ label, value }) => (
               <div key={label} className="flex items-center justify-between px-6 py-3.5">
-                <span className="text-sm text-gray-400">{label}</span>
+                <span className="text-sm text-gray-500">{label}</span>
                 <span className="text-sm font-medium text-gray-700">{value}</span>
               </div>
             ))}

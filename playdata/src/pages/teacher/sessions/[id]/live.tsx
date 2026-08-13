@@ -203,7 +203,7 @@ function TimerBar({ timeLeft, total }: { timeLeft: number; total: number }) {
 
   return (
     <div className="flex items-center gap-3">
-      <Clock className={`size-4 shrink-0 ${isLow ? 'text-red-400 animate-pulse' : isMid ? 'text-amber-400' : 'text-emerald-400'}`} />
+      <Clock className={`size-4 shrink-0 ${isLow ? 'text-red-700 animate-pulse' : isMid ? 'text-amber-700' : 'text-emerald-700'}`} />
       <div className="flex-1">
         <div className="h-2.5 rounded-full bg-gray-100 overflow-hidden ring-1 ring-gray-200">
           <motion.div
@@ -220,7 +220,7 @@ function TimerBar({ timeLeft, total }: { timeLeft: number; total: number }) {
         </div>
       </div>
       <span
-        className={`text-sm font-mono font-bold tabular-nums w-8 text-right ${isLow ? 'text-red-400' : isMid ? 'text-amber-400' : 'text-emerald-400'}`}
+        className={`text-sm font-mono font-bold tabular-nums w-8 text-right ${isLow ? 'text-red-700' : isMid ? 'text-amber-700' : 'text-emerald-700'}`}
         style={isLow ? { filter: 'drop-shadow(0 0 6px rgba(239,68,68,0.8))' } : undefined}
       >
         {timeLeft}s
@@ -266,7 +266,7 @@ function TimerBar({ timeLeft, total }: { timeLeft: number; total: number }) {
 
         <div className="p-5">
           {leaderboard.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-amber-200 bg-white/70 px-4 py-10 text-center text-sm text-gray-400">
+            <div className="rounded-xl border border-dashed border-amber-200 bg-white/70 px-4 py-10 text-center text-sm text-gray-500">
               Rankings will appear here once the scoring engine broadcasts the first podium.
             </div>
           ) : (
@@ -318,7 +318,7 @@ function TimerBar({ timeLeft, total }: { timeLeft: number; total: number }) {
               {nextSeven.length > 0 && (
                 <div className="rounded-2xl border border-white bg-white/80 shadow-sm overflow-hidden">
                   <div className="border-b border-gray-100 px-4 py-3">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Next 7</p>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Next 7</p>
                   </div>
                   <div className="divide-y divide-gray-50">
                     {nextSeven.map((entry) => {
@@ -588,7 +588,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
             {/* Item display */}
             <div className="rounded-2xl border border-gray-200 bg-white min-h-64 overflow-hidden shadow-sm">
               <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
-                <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                <span className="text-xs font-semibold uppercase tracking-widest text-gray-500">
                   Item {sortedItems.length > 0 ? currentItem + 1 : 0} of {sortedItems.length}
                 </span>
                 <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -611,7 +611,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
                 >
                   {!activeItem ? (
                     <div className="py-12 text-center">
-                      <p className="text-gray-400">No items in this session</p>
+                      <p className="text-gray-500">No items in this session</p>
                     </div>
                   ) : activeItem.type === 'quiz' ? (
                     <div className="space-y-4">
@@ -622,7 +622,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
                         </span>
                         <div>
                           <p className="text-base font-bold text-gray-900">{activeItem.title}</p>
-                          <p className="text-xs text-gray-400">{activeItem.quizQuestions?.length ?? 0} questions</p>
+                          <p className="text-xs text-gray-500">{activeItem.quizQuestions?.length ?? 0} questions</p>
                         </div>
                       </div>
 
@@ -643,7 +643,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
                                 }`}
                               />
                             ))}
-                            <span className="ml-2 text-xs text-gray-400">
+                            <span className="ml-2 text-xs text-gray-500">
                               Q{quizQuestionIndex + 1} / {activeItem.quizQuestions.length}
                             </span>
                           </div>
@@ -653,7 +653,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
                             <TimerBar timeLeft={timeLeft} total={activeQuizQuestion.time_limit_secs} />
                           )}
                           {activeQuizQuestion && activeQuizQuestion.time_limit_secs <= 0 && (
-                            <div className="flex items-center gap-2 text-xs text-gray-400">
+                            <div className="flex items-center gap-2 text-xs text-gray-500">
                               <Clock className="size-3" /> Untimed question
                             </div>
                           )}
@@ -666,23 +666,31 @@ export default function LiveSession({ profile, session: initialSession, items, p
                               </p>
                               {activeQuizQuestion.type === 'mcq' && Array.isArray(activeQuizQuestion.options) && (
                                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                                  {(activeQuizQuestion.options as string[]).map((opt) => (
-                                    <div
-                                      key={opt}
-                                      className={`rounded-xl border px-3 py-2.5 text-sm transition ${
-                                        opt === activeQuizQuestion.correct_answer
-                                          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                                          : 'border-gray-200 bg-gray-50 text-gray-700'
-                                      }`}
-                                    >
-                                      {opt}
-                                    </div>
-                                  ))}
+                                  {(activeQuizQuestion.options as string[]).map((opt) => {
+                                    const isCorrect = opt === activeQuizQuestion.correct_answer
+                                    return (
+                                      <div
+                                        key={opt}
+                                        className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-sm transition ${
+                                          isCorrect
+                                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                            : 'border-gray-200 bg-gray-50 text-gray-700'
+                                        }`}
+                                      >
+                                        <span>{opt}</span>
+                                        {isCorrect && (
+                                          <span className="flex shrink-0 items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                                            <CheckCircle2 className="size-3.5" /> Correct
+                                          </span>
+                                        )}
+                                      </div>
+                                    )
+                                  })}
                                 </div>
                               )}
                               {activeQuizQuestion.type !== 'mcq' && (
-                                <p className="text-xs text-gray-400">
-                                  Answer: <span className="text-emerald-600 font-medium">{activeQuizQuestion.correct_answer}</span>
+                                <p className="text-xs text-gray-500">
+                                  Answer: <span className="text-emerald-700 font-medium">{activeQuizQuestion.correct_answer}</span>
                                 </p>
                               )}
                             </div>
@@ -697,7 +705,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
                             >
                               <ChevronLeft className="size-3" /> Prev Q
                             </button>
-                            <span className="flex-1 text-center text-xs text-gray-400 hidden sm:block">preview only — students navigate independently</span>
+                            <span className="flex-1 text-center text-xs text-gray-500 hidden sm:block">preview only — students navigate independently</span>
                             <button
                               onClick={() => navigateQuizQuestion(quizQuestionIndex + 1)}
                               disabled={quizQuestionIndex >= (activeItem.quizQuestions.length - 1)}
@@ -719,7 +727,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
                         </span>
                         <div>
                           <p className="text-lg font-bold text-gray-900">{activeItem.title}</p>
-                          <p className="text-sm text-gray-400 capitalize">{activeItem.subtitle} chart</p>
+                          <p className="text-sm text-gray-500 capitalize">{activeItem.subtitle} chart</p>
                         </div>
                       </div>
                       <p className="text-sm text-gray-500 mt-4">This visualisation is now displayed on student screens.</p>
@@ -730,22 +738,30 @@ export default function LiveSession({ profile, session: initialSession, items, p
                       <p className="text-base font-semibold text-gray-900 leading-relaxed">{activeItem.title}</p>
                       {Array.isArray(activeItem.options) && activeItem.options.length > 0 && (
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                          {(activeItem.options as string[]).map((opt) => (
-                            <div
-                              key={opt}
-                              className={`rounded-xl border px-4 py-2.5 text-sm transition ${
-                                opt === activeItem.correct_answer
-                                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                                  : 'border-gray-200 bg-gray-50 text-gray-700'
-                              }`}
-                            >
-                              {opt}
-                            </div>
-                          ))}
+                          {(activeItem.options as string[]).map((opt) => {
+                            const isCorrect = opt === activeItem.correct_answer
+                            return (
+                              <div
+                                key={opt}
+                                className={`flex items-center justify-between gap-2 rounded-xl border px-4 py-2.5 text-sm transition ${
+                                  isCorrect
+                                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                    : 'border-gray-200 bg-gray-50 text-gray-700'
+                                }`}
+                              >
+                                <span>{opt}</span>
+                                {isCorrect && (
+                                  <span className="flex shrink-0 items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                                    <CheckCircle2 className="size-3.5" /> Correct
+                                  </span>
+                                )}
+                              </div>
+                            )
+                          })}
                         </div>
                       )}
                       {activeItem.correct_answer && !Array.isArray(activeItem.options) && (
-                        <p className="text-xs text-gray-400">
+                        <p className="text-xs text-gray-500">
                           Answer: <span className="text-emerald-600 font-medium">{activeItem.correct_answer}</span>
                         </p>
                       )}
@@ -818,28 +834,28 @@ export default function LiveSession({ profile, session: initialSession, items, p
             {/* Participants */}
             <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">Students</span>
+                <span className="text-xs font-semibold uppercase tracking-widest text-gray-500">Students</span>
                 <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-bold text-violet-700">
                   {activeParticipants.length}
                 </span>
               </div>
               <div className="divide-y divide-gray-100 max-h-72 overflow-y-auto">
                 {activeParticipants.length === 0 ? (
-                  <p className="py-6 text-center text-xs text-gray-400">Waiting for students…</p>
+                  <p className="py-6 text-center text-xs text-gray-500">Waiting for students…</p>
                 ) : (
                   [...activeParticipants].sort((a, b) => b.score - a.score).map((p, rank) => (
                     <div key={p.id} className="flex items-center gap-2.5 px-4 py-2.5">
                       <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                        rank === 0 ? 'bg-amber-100 text-amber-600' :
+                        rank === 0 ? 'bg-amber-100 text-amber-700' :
                         rank === 1 ? 'bg-gray-100 text-gray-500' :
-                        rank === 2 ? 'bg-orange-100 text-orange-600' :
-                        'bg-gray-50 text-gray-400'
+                        rank === 2 ? 'bg-orange-100 text-orange-700' :
+                        'bg-gray-50 text-gray-500'
                       }`}>
                         {rank < 3 ? <Trophy className="size-3" /> : rank + 1}
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-medium text-gray-900">{profileName(p)}</p>
-                        <p className="truncate text-xs text-gray-400">Score: {p.score}</p>
+                        <p className="truncate text-xs text-gray-500">Score: {p.score}</p>
                         {p.current_streak > 0 && (
                           <p className="mt-0.5 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-rose-600">
                             <Flame className="size-3 fill-current" />
@@ -861,7 +877,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
             {activeItem?.type !== 'visualisation' && (
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-center">
-                  <p className="text-2xl font-bold text-emerald-600">{correctCount}</p>
+                  <p className="text-2xl font-bold text-emerald-700">{correctCount}</p>
                   <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">Correct</p>
                 </div>
                 <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-center">
@@ -874,7 +890,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
             {/* Response list */}
             <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                <span className="text-xs font-semibold uppercase tracking-widest text-gray-500">
                   {activeQuizQuestion ? `Q${quizQuestionIndex + 1} Responses` : 'Responses'}
                 </span>
                 <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-bold text-gray-500">
@@ -883,7 +899,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
               </div>
               <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto">
                 {activeResponses.length === 0 ? (
-                  <p className="py-6 text-center text-xs text-gray-400">
+                  <p className="py-6 text-center text-xs text-gray-500">
                     {activeItem?.type === 'visualisation' ? 'No responses for charts' : 'No responses yet'}
                   </p>
                 ) : (
@@ -898,7 +914,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
                       )}
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-medium text-gray-700">{r.answer}</p>
-                        <p className="text-xs text-gray-400">{new Date(r.submitted_at).toLocaleTimeString()}</p>
+                        <p className="text-xs text-gray-500">{new Date(r.submitted_at).toLocaleTimeString()}</p>
                       </div>
                     </div>
                   ))
@@ -910,7 +926,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
             {activeItem?.type !== 'visualisation' && activeParticipants.length > 0 && (
               <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
                 <div className="flex items-center justify-between text-xs mb-1.5">
-                  <span className="text-gray-400">Answered</span>
+                  <span className="text-gray-500">Answered</span>
                   <span className="text-gray-600 font-medium">{activeResponses.length} / {activeParticipants.length}</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-gray-200 overflow-hidden">

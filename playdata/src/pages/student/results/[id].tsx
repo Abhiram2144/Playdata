@@ -167,7 +167,7 @@ function QuestionCard({ q, index }: { q: QuestionResult; index: number }) {
   const notAnswered = q.student_answer === null
 
   const statusIcon = notAnswered
-    ? <Minus className="size-4 text-gray-400" />
+    ? <Minus className="size-4 text-gray-500" />
     : q.is_correct === true
       ? <CheckCircle2 className="size-4 text-emerald-500" />
       : <XCircle className="size-4 text-red-500" />
@@ -194,7 +194,7 @@ function QuestionCard({ q, index }: { q: QuestionResult; index: number }) {
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-100">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-gray-400">Q{index + 1}</span>
+          <span className="text-xs font-bold text-gray-500">Q{index + 1}</span>
           <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ring-inset ${
             q.type === 'mcq' ? 'bg-violet-100 text-violet-700 ring-violet-200' :
             q.type === 'numerical' ? 'bg-sky-100 text-sky-700 ring-sky-200' :
@@ -232,7 +232,7 @@ function QuestionCard({ q, index }: { q: QuestionResult; index: number }) {
                 classes += 'border-red-300 bg-red-50 text-red-800'
               } else {
                 // neutral
-                classes += 'border-gray-100 bg-gray-50 text-gray-400'
+                classes += 'border-gray-100 bg-gray-50 text-gray-500'
               }
 
               return (
@@ -268,16 +268,16 @@ function QuestionCard({ q, index }: { q: QuestionResult; index: number }) {
               notAnswered ? 'border-gray-100 bg-gray-50' :
               q.is_correct === true ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50'
             }`}>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Your answer</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Your answer</p>
               <p className={`text-sm font-semibold ${
-                notAnswered ? 'text-gray-400 italic' :
+                notAnswered ? 'text-gray-500 italic' :
                 q.is_correct === true ? 'text-emerald-700' : 'text-red-700'
               }`}>
                 {q.student_answer ?? 'Not answered'}
               </p>
             </div>
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Correct answer</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Correct answer</p>
               <p className="text-sm font-semibold text-emerald-700">{q.correct_answer}</p>
             </div>
           </div>
@@ -332,7 +332,7 @@ export default function SessionResultDetail({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           onClick={() => router.push('/student/results')}
-          className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-violet-600 transition-colors"
+          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-violet-600 transition-colors"
         >
           <ArrowLeft className="size-3.5" /> Back to Results
         </motion.button>
@@ -351,7 +351,7 @@ export default function SessionResultDetail({
               <span className="text-xs font-bold uppercase tracking-[0.2em] text-violet-600">Session Review</span>
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-1">{session.title}</h1>
-            <div className="flex items-center gap-2 text-sm text-gray-400">
+            <div className="flex items-center gap-2 text-sm text-gray-500">
               <Calendar className="size-3.5" />
               <span>{dateStr}</span>
             </div>
@@ -376,7 +376,7 @@ export default function SessionResultDetail({
                 <Icon className={`size-4 ${color}`} />
               </div>
               <p className="text-2xl font-bold text-gray-900">{value}</p>
-              <p className="mt-1 text-xs text-gray-400">{label}</p>
+              <p className="mt-1 text-xs text-gray-500">{label}</p>
             </div>
           ))}
         </motion.div>
@@ -389,7 +389,7 @@ export default function SessionResultDetail({
             transition={{ delay: 0.14 }}
             className="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3"
           >
-            <Minus className="size-4 text-gray-400 shrink-0" />
+            <Minus className="size-4 text-gray-500 shrink-0" />
             <p className="text-sm text-gray-500">
               <span className="font-semibold text-gray-700">{skippedCount}</span> question{skippedCount !== 1 ? 's' : ''} not answered
             </p>
@@ -404,7 +404,7 @@ export default function SessionResultDetail({
             className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50 py-16 gap-4"
           >
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-100 ring-1 ring-gray-200">
-              <Zap className="size-6 text-gray-400" />
+              <Zap className="size-6 text-gray-500" />
             </div>
             <p className="text-sm text-gray-500">This session had no questions to review.</p>
           </motion.div>
@@ -424,7 +424,7 @@ export default function SessionResultDetail({
                     <BookOpen className="size-3.5 text-violet-600" />
                   </div>
                   <h2 className="text-sm font-bold text-gray-800">{group.title}</h2>
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-gray-500">
                     ({group.questions.filter(q => q.is_correct === true).length}/{group.questions.length} correct)
                   </span>
                 </div>

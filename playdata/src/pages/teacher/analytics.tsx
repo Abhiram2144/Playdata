@@ -14,6 +14,7 @@ import { TEACHER_NAV } from '@/lib/teacher-nav'
 import { withAuth } from '@/lib/auth'
 import { createClientFromContext } from '@/lib/supabase/server-props'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { categoricalColor, CHART_PRIMARY, CHART_AXIS_STYLE } from '@/lib/chart-colors'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -174,7 +175,8 @@ function ScoreBar({ value, max }: { value: number; max: number }) {
       <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
         <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
       </div>
-      <span className="text-xs text-gray-500 w-9 text-right">{pct}%</span>
+      {/* value is always shown as text so the colour above is reinforcement, not the only signal */}
+      <span className="text-xs text-gray-600 w-9 text-right">{pct}%</span>
     </div>
   )
 }
@@ -190,7 +192,7 @@ export default function AnalyticsPage({ profile, sessions, summary }: Props) {
       <div className="p-6 max-w-6xl mx-auto space-y-8">
         {/* Header */}
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Analytics</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Analytics</p>
           <h1 className="mt-0.5 text-2xl font-bold text-gray-900">Analytics</h1>
           <p className="mt-1 text-sm text-gray-500">Cross-session overview of all ended sessions</p>
         </div>
@@ -264,12 +266,12 @@ export default function AnalyticsPage({ profile, sessions, summary }: Props) {
             <div className="grid gap-6 lg:grid-cols-2">
               {/* Score trend */}
               <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-5">
-                <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-gray-400">Avg score trend</p>
+                <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-gray-500">Avg score trend</p>
                 <ResponsiveContainer width="100%" height={200}>
                   <LineChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#9ca3af' }} />
-                    <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                    <XAxis dataKey="label" tick={CHART_AXIS_STYLE} />
+                    <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={CHART_AXIS_STYLE} />
                     <Tooltip
                       formatter={(v) => [`${v ?? 0}%`, 'Avg score']}
                       contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
@@ -277,9 +279,9 @@ export default function AnalyticsPage({ profile, sessions, summary }: Props) {
                     <Line
                       type="monotone"
                       dataKey="score"
-                      stroke="#7c3aed"
+                      stroke={CHART_PRIMARY}
                       strokeWidth={2}
-                      dot={{ r: 3, fill: '#7c3aed' }}
+                      dot={{ r: 3, fill: CHART_PRIMARY }}
                       connectNulls
                       name="Avg score"
                     />
@@ -289,36 +291,38 @@ export default function AnalyticsPage({ profile, sessions, summary }: Props) {
 
               {/* Participation & completion */}
               <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-5">
-                <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-gray-400">Participation & completion</p>
+                <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-gray-500">Participation & completion</p>
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }} barCategoryGap="30%">
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#9ca3af' }} />
-                    <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                    <XAxis dataKey="label" tick={CHART_AXIS_STYLE} />
+                    <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={CHART_AXIS_STYLE} />
                     <Tooltip
                       formatter={(v, name) => [`${v ?? 0}%`, String(name)]}
                       contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
                     />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
-                    <Bar dataKey="participation" name="Participation" fill="#06b6d4" radius={[3, 3, 0, 0]} />
-                    <Bar dataKey="completion" name="Completion" fill="#10b981" radius={[3, 3, 0, 0]} />
+                    {/* Two series distinguished by an Okabe-Ito pair (orange/blue) rather than
+                        cyan-vs-emerald, which sit too close together under deuteranopia. */}
+                    <Bar dataKey="participation" name="Participation" fill={categoricalColor(0)} radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="completion" name="Completion" fill={categoricalColor(4)} radius={[3, 3, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
 
               {/* Participant count over time */}
               <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-5 lg:col-span-2">
-                <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-gray-400">Participants per session</p>
+                <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-gray-500">Participants per session</p>
                 <ResponsiveContainer width="100%" height={160}>
                   <BarChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }} barCategoryGap="40%">
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#9ca3af' }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                    <XAxis dataKey="label" tick={CHART_AXIS_STYLE} />
+                    <YAxis allowDecimals={false} tick={CHART_AXIS_STYLE} />
                     <Tooltip
                       formatter={(v) => [v ?? 0, 'Participants']}
                       contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
                     />
-                    <Bar dataKey="participants" name="Participants" fill="#7c3aed" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="participants" name="Participants" fill={CHART_PRIMARY} radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -331,7 +335,7 @@ export default function AnalyticsPage({ profile, sessions, summary }: Props) {
           <div className="rounded-xl border border-gray-100 bg-white p-12 text-center shadow-sm">
             <BarChart2 className="mx-auto h-10 w-10 text-gray-300 mb-3" />
             <p className="text-gray-500 text-sm">No ended sessions yet.</p>
-            <p className="text-gray-400 text-xs mt-1">
+            <p className="text-gray-500 text-xs mt-1">
               Analytics are computed automatically when you end a session.
             </p>
           </div>
@@ -340,33 +344,33 @@ export default function AnalyticsPage({ profile, sessions, summary }: Props) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Session
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider hidden sm:table-cell">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
                     Date
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider hidden md:table-cell">
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
                     <span className="flex items-center justify-end gap-1">
                       <Clock className="h-3 w-3" /> Dur.
                     </span>
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <span className="flex items-center justify-end gap-1">
                       <Users className="h-3 w-3" /> Participants
                     </span>
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider min-w-[140px] hidden lg:table-cell">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px] hidden lg:table-cell">
                     <span className="flex items-center gap-1">
                       <TrendingUp className="h-3 w-3" /> Avg score
                     </span>
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider hidden lg:table-cell">
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
                     <span className="flex items-center justify-end gap-1">
                       <CheckCircle2 className="h-3 w-3" /> Participation
                     </span>
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider hidden xl:table-cell">
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider hidden xl:table-cell">
                     Completion
                   </th>
                   <th className="px-2 py-3" />
@@ -383,7 +387,7 @@ export default function AnalyticsPage({ profile, sessions, summary }: Props) {
                   >
                     <td className="px-4 py-3">
                       <p className="font-medium text-gray-900 leading-snug">{s.title}</p>
-                      <p className="text-gray-400 text-xs font-mono mt-0.5">{s.join_code}</p>
+                      <p className="text-gray-500 text-xs font-mono mt-0.5">{s.join_code}</p>
                     </td>
                     <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">
                       {formatDate(s.ended_at)}
@@ -405,11 +409,11 @@ export default function AnalyticsPage({ profile, sessions, summary }: Props) {
                       <span
                         className={
                           s.participation_rate === null
-                            ? 'text-gray-300'
+                            ? 'text-gray-500'
                             : s.participation_rate >= 0.7
-                            ? 'text-emerald-600'
+                            ? 'text-emerald-700'
                             : s.participation_rate >= 0.4
-                            ? 'text-amber-600'
+                            ? 'text-amber-700'
                             : 'text-rose-600'
                         }
                       >
@@ -436,7 +440,7 @@ export default function AnalyticsPage({ profile, sessions, summary }: Props) {
 
         {/* Score trend note */}
         {sessions.length >= 3 && (
-          <p className="text-xs text-gray-400 text-center">
+          <p className="text-xs text-gray-500 text-center">
             Showing {sessions.length} sessions — most recent first
           </p>
         )}

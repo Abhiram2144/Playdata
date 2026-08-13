@@ -15,6 +15,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { STUDENT_NAV } from '@/lib/student-nav'
 import { createClientFromContext } from '@/lib/supabase/server-props'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { CHART_PRIMARY, CHART_PRIMARY_MUTED, CHART_AXIS_STYLE } from '@/lib/chart-colors'
 
 interface Profile {
   id: string
@@ -197,7 +198,7 @@ export default function StudentResults({ profile, results, summary }: Props) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.08 }}
         >
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-gray-400">Summary</h2>
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-gray-500">Summary</h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {[
               { label: 'Sessions', value: summary.totalSessions.toString(), icon: Users, iconBg: 'bg-violet-100 ring-violet-200', iconColor: 'text-violet-600' },
@@ -210,7 +211,7 @@ export default function StudentResults({ profile, results, summary }: Props) {
                   <Icon className={`size-4 ${iconColor}`} />
                 </div>
                 <p className="text-2xl font-bold text-gray-900">{value}</p>
-                <p className="mt-1 text-xs text-gray-400">{label}</p>
+                <p className="mt-1 text-xs text-gray-500">{label}</p>
               </div>
             ))}
           </div>
@@ -224,34 +225,34 @@ export default function StudentResults({ profile, results, summary }: Props) {
             transition={{ delay: 0.12 }}
           >
             <div className="mb-4 flex items-center gap-2">
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-gray-400">Accuracy trend</h2>
-              <TrendingUp className="size-3.5 text-gray-400" />
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-gray-500">Accuracy trend</h2>
+              <TrendingUp className="size-3.5 text-gray-500" />
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
-                <p className="text-xs text-gray-400 mb-4">Accuracy % per session</p>
+                <p className="text-xs text-gray-500 mb-4">Accuracy % per session</p>
                 {mounted ? (
                   <ResponsiveContainer width="100%" height={180}>
                     <LineChart data={trendData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f1f0ff" />
-                      <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 10 }} axisLine={false} tickLine={false} />
-                      <YAxis domain={[0, 100]} tick={{ fill: '#9ca3af', fontSize: 10 }} axisLine={false} tickLine={false} unit="%" />
+                      <XAxis dataKey="name" tick={{ ...CHART_AXIS_STYLE, fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <YAxis domain={[0, 100]} tick={{ ...CHART_AXIS_STYLE, fontSize: 10 }} axisLine={false} tickLine={false} unit="%" />
                       <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => [`${v}%`, 'Accuracy']} />
-                      <Line type="monotone" dataKey="accuracy" stroke="#7c3aed" strokeWidth={2.5} dot={trendData.length < 10} />
+                      <Line type="monotone" dataKey="accuracy" stroke={CHART_PRIMARY} strokeWidth={2.5} dot={trendData.length < 10} />
                     </LineChart>
                   </ResponsiveContainer>
                 ) : <div className="h-[180px]" />}
               </div>
               <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
-                <p className="text-xs text-gray-400 mb-4">Score per session</p>
+                <p className="text-xs text-gray-500 mb-4">Score per session</p>
                 {mounted ? (
                   <ResponsiveContainer width="100%" height={180}>
                     <BarChart data={trendData} barCategoryGap="30%">
                       <CartesianGrid strokeDasharray="3 3" stroke="#f1f0ff" vertical={false} />
-                      <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 10 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: '#9ca3af', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                      <XAxis dataKey="name" tick={{ ...CHART_AXIS_STYLE, fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ ...CHART_AXIS_STYLE, fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
                       <Tooltip contentStyle={TOOLTIP_STYLE} />
-                      <Bar dataKey="score" name="Score" fill="#a78bfa" radius={[3, 3, 0, 0]} />
+                      <Bar dataKey="score" name="Score" fill={CHART_PRIMARY_MUTED} radius={[3, 3, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : <div className="h-[180px]" />}
@@ -266,18 +267,18 @@ export default function StudentResults({ profile, results, summary }: Props) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.16 }}
         >
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-gray-400">
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-gray-500">
             All sessions {results.length > 0 && <span className="text-gray-300 normal-case tracking-normal">({results.length})</span>}
           </h2>
 
           {results.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center py-16 gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-100 ring-1 ring-gray-200">
-                <BarChart3 className="size-6 text-gray-400" />
+                <BarChart3 className="size-6 text-gray-500" />
               </div>
               <div className="text-center">
                 <p className="text-sm font-semibold text-gray-500">No sessions yet</p>
-                <p className="text-xs text-gray-400 mt-1">Join a live session to see results here.</p>
+                <p className="text-xs text-gray-500 mt-1">Join a live session to see results here.</p>
               </div>
             </div>
           ) : (
@@ -299,8 +300,8 @@ export default function StudentResults({ profile, results, summary }: Props) {
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-gray-800 truncate">{r.title}</p>
                         <div className="flex items-center gap-2 mt-1">
-                          <Calendar className="size-3 text-gray-400" />
-                          <span className="text-xs text-gray-400">{dateStr}</span>
+                          <Calendar className="size-3 text-gray-500" />
+                          <span className="text-xs text-gray-500">{dateStr}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
@@ -331,7 +332,7 @@ export default function StudentResults({ profile, results, summary }: Props) {
                                 style={{ width: `${acc}%` }}
                               />
                             </div>
-                            <span className="text-xs text-gray-400 w-10 text-right">{acc}%</span>
+                            <span className="text-xs text-gray-500 w-10 text-right">{acc}%</span>
                           </div>
                         )}
                         <div className="flex items-center gap-4 text-xs">
@@ -343,13 +344,13 @@ export default function StudentResults({ profile, results, summary }: Props) {
                             <XCircle className="size-3" />
                             {r.incorrect} wrong
                           </span>
-                          <span className="text-gray-400">{r.answered} answered</span>
+                          <span className="text-gray-500">{r.answered} answered</span>
                         </div>
                       </div>
                     )}
 
                     {r.answered === 0 && (
-                      <p className="mt-2 text-xs text-gray-400">No answers submitted in this session.</p>
+                      <p className="mt-2 text-xs text-gray-500">No answers submitted in this session.</p>
                     )}
 
                     {/* Review link */}

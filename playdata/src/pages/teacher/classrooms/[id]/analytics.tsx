@@ -13,6 +13,7 @@ import { TEACHER_NAV } from '@/lib/teacher-nav';
 import { withAuth } from '@/lib/auth';
 import { createClientFromContext } from '@/lib/supabase/server-props';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { CHART_PRIMARY } from '@/lib/chart-colors';
 import type {
   ClassroomAnalytics, StudentStat, TrendPoint,
 } from '@/types/classroom-analytics';
@@ -154,9 +155,9 @@ function StatCard({
     <div className={`rounded-2xl border bg-white p-5 shadow-sm flex items-start gap-4 ${borderColour}`}>
       <div className="mt-0.5 shrink-0">{icon}</div>
       <div className="min-w-0">
-        <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">{label}</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">{label}</p>
         <p className="mt-0.5 text-2xl font-bold text-gray-900 leading-tight">{value}</p>
-        {sub && <div className="text-xs text-gray-400 mt-0.5">{sub}</div>}
+        {sub && <div className="text-xs text-gray-500 mt-0.5">{sub}</div>}
       </div>
     </div>
   );
@@ -172,8 +173,8 @@ function TrendCard({ trend, deltaPp }: { trend: 'up' | 'down' | 'flat' | null; d
           <Minus className="size-5 text-gray-300" />
         </div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Trend</p>
-          <p className="mt-0.5 text-sm text-gray-400">Need 4+ sessions</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Trend</p>
+          <p className="mt-0.5 text-sm text-gray-500">Need 4+ sessions</p>
           <p className="text-xs text-gray-300 mt-0.5">last 3 vs prior 3</p>
         </div>
       </div>
@@ -185,7 +186,7 @@ function TrendCard({ trend, deltaPp }: { trend: 'up' | 'down' | 'flat' | null; d
       icon: <TrendingUp className="size-5 text-emerald-500" />,
       label: 'Improving',
       labelColour: 'text-emerald-700',
-      deltaColour: 'text-emerald-600 bg-emerald-50',
+      deltaColour: 'text-emerald-700 bg-emerald-50',
       border: 'border-emerald-100',
     },
     down: {
@@ -199,7 +200,7 @@ function TrendCard({ trend, deltaPp }: { trend: 'up' | 'down' | 'flat' | null; d
       icon: <Minus className="size-5 text-amber-500" />,
       label: 'Stable',
       labelColour: 'text-amber-700',
-      deltaColour: 'text-amber-600 bg-amber-50',
+      deltaColour: 'text-amber-700 bg-amber-50',
       border: 'border-amber-100',
     },
   } as const;
@@ -210,7 +211,7 @@ function TrendCard({ trend, deltaPp }: { trend: 'up' | 'down' | 'flat' | null; d
     <div className={`rounded-2xl border bg-white p-5 shadow-sm flex items-start gap-4 ${c.border}`}>
       <div className="mt-0.5 shrink-0">{c.icon}</div>
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Trend</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Trend</p>
         <div className="mt-0.5 flex items-baseline gap-2 flex-wrap">
           <span className={`text-2xl font-bold ${c.labelColour}`}>{c.label}</span>
           {deltaPp !== null && (
@@ -219,7 +220,7 @@ function TrendCard({ trend, deltaPp }: { trend: 'up' | 'down' | 'flat' | null; d
             </span>
           )}
         </div>
-        <p className="text-xs text-gray-400 mt-0.5">last 3 vs prior 3 sessions</p>
+        <p className="text-xs text-gray-500 mt-0.5">last 3 vs prior 3 sessions</p>
       </div>
     </div>
   );
@@ -260,15 +261,15 @@ function TrendChart({ data, avgScore }: { data: TrendPoint[]; avgScore: number |
           <Line
             type="monotone"
             dataKey="score"
-            stroke="#7c3aed"
+            stroke={CHART_PRIMARY}
             strokeWidth={2.5}
-            dot={{ r: 4, fill: '#7c3aed', strokeWidth: 0 }}
+            dot={{ r: 4, fill: CHART_PRIMARY, strokeWidth: 0 }}
             activeDot={{ r: 6, strokeWidth: 0 }}
           />
         </LineChart>
       </ResponsiveContainer>
       {avgScore !== null && (
-        <p className="text-right text-[11px] text-violet-400 pr-1">
+        <p className="text-right text-[11px] text-violet-600 pr-1">
           Overall avg: {avgScore.toFixed(1)}%
         </p>
       )}
@@ -288,9 +289,10 @@ function TopicBar({
   rank: number;
 }) {
   const pct = Math.round(accuracyPct);
-  // Colour: red for weak, amber for mid, green for strong
+  // Colour: red for weak, amber for mid, green for strong (700-weight so the
+  // label text itself clears WCAG AA 4.5:1 on white, not just the bar fill)
   const barColour = pct < 45 ? 'bg-rose-500' : pct < 70 ? 'bg-amber-400' : 'bg-emerald-500';
-  const labelColour = pct < 45 ? 'text-rose-600' : pct < 70 ? 'text-amber-600' : 'text-emerald-600';
+  const labelColour = pct < 45 ? 'text-rose-700' : pct < 70 ? 'text-amber-700' : 'text-emerald-700';
 
   return (
     <div className="flex items-center gap-3 group">
@@ -389,7 +391,7 @@ function StudentTable({
       <th className={`px-4 py-3 text-left whitespace-nowrap ${cls}`}>
         <button
           onClick={() => toggleSort(col)}
-          className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-gray-400 hover:text-gray-700 transition-colors"
+          className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-700 transition-colors"
         >
           {label}
           <SortIcon col={col} />
@@ -400,7 +402,7 @@ function StudentTable({
 
   if (students.length === 0) {
     return (
-      <div className="py-12 flex flex-col items-center gap-2 text-gray-400">
+      <div className="py-12 flex flex-col items-center gap-2 text-gray-500">
         <Users className="size-8" />
         <p className="text-sm">No active students yet</p>
       </div>
@@ -455,12 +457,12 @@ function StudentTable({
                     {s.full_name ? (
                       <div>
                         <p className="font-medium text-gray-800 leading-snug">{s.full_name}</p>
-                        <p className="text-xs text-gray-400">{s.email}</p>
+                        <p className="text-xs text-gray-500">{s.email}</p>
                       </div>
                     ) : (
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-gray-400 italic text-sm">No account</span>
-                        <span className="text-xs text-gray-400">· {s.email}</span>
+                        <span className="text-gray-500 italic text-sm">No account</span>
+                        <span className="text-xs text-gray-500">· {s.email}</span>
                       </div>
                     )}
                   </td>
@@ -486,7 +488,7 @@ function StudentTable({
                   </td>
 
                   {/* Last active */}
-                  <td className="px-4 py-3.5 hidden md:table-cell text-xs text-gray-400 tabular-nums">
+                  <td className="px-4 py-3.5 hidden md:table-cell text-xs text-gray-500 tabular-nums">
                     {fmtDate(s.last_session_date)}
                   </td>
 
@@ -494,8 +496,8 @@ function StudentTable({
                   {hasStreak && (
                     <td className="px-4 py-3.5 hidden lg:table-cell">
                       {s.current_streak !== null ? (
-                        <span className="inline-flex items-center gap-1 text-sm font-semibold text-orange-600">
-                          <Zap className="size-3.5 text-orange-400" />
+                        <span className="inline-flex items-center gap-1 text-sm font-semibold text-orange-700">
+                          <Zap className="size-3.5 text-orange-500" />
                           {s.current_streak}
                         </span>
                       ) : (
@@ -573,7 +575,7 @@ export default function ClassroomAnalyticsPage({ profile, classroom }: Props) {
 
         {/* Header */}
         <div>
-          <div className="flex items-center gap-2 mb-2 text-xs text-gray-400">
+          <div className="flex items-center gap-2 mb-2 text-xs text-gray-500">
             <Link href="/teacher/classrooms" className="hover:text-gray-700 transition-colors">
               Classrooms
             </Link>
@@ -589,14 +591,14 @@ export default function ClassroomAnalyticsPage({ profile, classroom }: Props) {
               <div className="flex items-center gap-2">
                 <Link
                   href={`/teacher/classrooms/${classroom.id}`}
-                  className="inline-flex items-center gap-1.5 text-gray-400 hover:text-gray-700 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-gray-500 hover:text-gray-700 transition-colors"
                 >
                   <ArrowLeft className="size-4" />
                 </Link>
                 <h1 className="text-2xl font-bold text-gray-900">{classroom.name}</h1>
               </div>
               {classroom.description && (
-                <p className="text-sm text-gray-400 mt-0.5 ml-6">{classroom.description}</p>
+                <p className="text-sm text-gray-500 mt-0.5 ml-6">{classroom.description}</p>
               )}
             </div>
           </div>
@@ -620,7 +622,7 @@ export default function ClassroomAnalyticsPage({ profile, classroom }: Props) {
               <BookOpen className="size-9 text-gray-300" />
             </div>
             <p className="text-base font-semibold text-gray-700">No sessions run yet</p>
-            <p className="text-sm text-gray-400 max-w-xs">
+            <p className="text-sm text-gray-500 max-w-xs">
               Run a quiz session for this classroom and analytics will appear here automatically.
             </p>
             <Link
@@ -667,10 +669,10 @@ export default function ClassroomAnalyticsPage({ profile, classroom }: Props) {
               <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-1">
                   <h2 className="text-sm font-semibold text-gray-800">Score over time</h2>
-                  <span className="text-xs text-gray-400">avg accuracy per session</span>
+                  <span className="text-xs text-gray-500">avg accuracy per session</span>
                 </div>
                 {analytics.trend.length < 2 ? (
-                  <div className="flex flex-col items-center justify-center h-[220px] gap-2 text-gray-400">
+                  <div className="flex flex-col items-center justify-center h-[220px] gap-2 text-gray-500">
                     <BarChart2 className="size-8 text-gray-200" />
                     <p className="text-sm">Need at least 2 sessions with responses</p>
                   </div>
@@ -687,9 +689,9 @@ export default function ClassroomAnalyticsPage({ profile, classroom }: Props) {
                     weakest first
                   </span>
                 </div>
-                <p className="text-xs text-gray-400 mb-4">where the class is struggling — topics with lowest correct-answer rate surface first</p>
+                <p className="text-xs text-gray-500 mb-4">where the class is struggling — topics with lowest correct-answer rate surface first</p>
                 {analytics.topics.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-[180px] gap-2 text-gray-400">
+                  <div className="flex flex-col items-center justify-center h-[180px] gap-2 text-gray-500">
                     <BarChart2 className="size-8 text-gray-200" />
                     <p className="text-sm">No question responses yet</p>
                   </div>
@@ -714,7 +716,7 @@ export default function ClassroomAnalyticsPage({ profile, classroom }: Props) {
             <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
               <div className="mb-4">
                 <h2 className="text-sm font-semibold text-gray-800">Student breakdown</h2>
-                <p className="text-xs text-gray-400 mt-0.5">all active roster members · click column headers to sort</p>
+                <p className="text-xs text-gray-500 mt-0.5">all active roster members · click column headers to sort</p>
               </div>
               <StudentTable
                 students={analytics.students}

@@ -279,9 +279,9 @@ function StatCard({ label, value, sub, colour }: {
   }
   return (
     <div className={`rounded-2xl border border-gray-100 bg-white shadow-sm p-5 ring-1 ${cls[colour]}`}>
-      <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">{label}</p>
+      <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">{label}</p>
       <p className={`mt-1 text-3xl font-bold ${cls[colour].split(' ')[0]}`}>{value}</p>
-      {sub && <p className="mt-0.5 text-xs text-gray-400">{sub}</p>}
+      {sub && <p className="mt-0.5 text-xs text-gray-500">{sub}</p>}
     </div>
   )
 }
@@ -336,13 +336,13 @@ export default function SessionResults({ profile, session, analytics, questions,
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
-            <Link href="/teacher/sessions" className="mt-1 rounded-lg border border-gray-200 p-1.5 text-gray-400 transition hover:text-gray-700 hover:border-gray-300">
+            <Link href="/teacher/sessions" className="mt-1 rounded-lg border border-gray-200 p-1.5 text-gray-500 transition hover:text-gray-700 hover:border-gray-300">
               <ArrowLeft className="size-4" />
             </Link>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Session Results</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Session Results</p>
               <h1 className="mt-0.5 text-2xl font-bold text-gray-900">{session.title}</h1>
-              <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-gray-400">
+              <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-gray-500">
                 <span className="font-mono font-bold tracking-widest text-violet-600">{session.join_code}</span>
                 {session.ended_at && (
                   <span className="flex items-center gap-1">
@@ -418,7 +418,7 @@ export default function SessionResults({ profile, session, analytics, questions,
               {questions.length === 0 ? (
                 <div className="rounded-2xl border border-gray-100 bg-white shadow-sm py-16 text-center">
                   <BookOpen className="mx-auto size-8 text-gray-200 mb-3" />
-                  <p className="text-sm text-gray-400">No questions in this session</p>
+                  <p className="text-sm text-gray-500">No questions in this session</p>
                 </div>
               ) : (
                 Array.from(byQuiz.entries()).map(([qid, group]) => (
@@ -428,7 +428,7 @@ export default function SessionResults({ profile, session, analytics, questions,
                         <BookOpen className="size-4 text-violet-600" />
                       </span>
                       <p className="text-sm font-semibold text-gray-800">{group.title}</p>
-                      <span className="ml-auto text-xs text-gray-400">{group.qs.length} q</span>
+                      <span className="ml-auto text-xs text-gray-500">{group.qs.length} q</span>
                     </div>
                     <div className="divide-y divide-gray-50">
                       {group.qs.map((q) => (
@@ -439,8 +439,8 @@ export default function SessionResults({ profile, session, analytics, questions,
                             </span>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-gray-800 leading-relaxed">{q.text}</p>
-                              <p className="mt-0.5 text-xs text-gray-400">
-                                Answer: <span className="text-emerald-600 font-medium">{q.correct_answer}</span>
+                              <p className="mt-0.5 text-xs text-gray-500">
+                                Answer: <span className="text-emerald-700 font-medium">{q.correct_answer}</span>
                               </p>
                             </div>
                             <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold ${
@@ -451,15 +451,15 @@ export default function SessionResults({ profile, session, analytics, questions,
                           </div>
                           <div className="grid grid-cols-3 gap-3 pl-11">
                             <div className="space-y-1">
-                              <div className="flex items-center gap-1 text-xs text-emerald-600"><CheckCircle2 className="size-3" /> Correct</div>
+                              <div className="flex items-center gap-1 text-xs text-emerald-700"><CheckCircle2 className="size-3" /> Correct</div>
                               <HorizBar value={q.correct_count} total={analytics.participant_count} cls="bg-emerald-500" />
                             </div>
                             <div className="space-y-1">
-                              <div className="flex items-center gap-1 text-xs text-red-500"><XCircle className="size-3" /> Wrong</div>
+                              <div className="flex items-center gap-1 text-xs text-red-600"><XCircle className="size-3" /> Wrong</div>
                               <HorizBar value={q.incorrect_count} total={analytics.participant_count} cls="bg-red-500" />
                             </div>
                             <div className="space-y-1">
-                              <div className="flex items-center gap-1 text-xs text-gray-400"><Minus className="size-3" /> No answer</div>
+                              <div className="flex items-center gap-1 text-xs text-gray-500"><Minus className="size-3" /> No answer</div>
                               <HorizBar value={q.no_answer_count} total={analytics.participant_count} cls="bg-gray-300" />
                             </div>
                           </div>
@@ -472,7 +472,7 @@ export default function SessionResults({ profile, session, analytics, questions,
 
               {visItems.length > 0 && (
                 <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5">
-                  <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-400">Charts shown</p>
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-500">Charts shown</p>
                   <div className="space-y-2">
                     {visItems.map((v) => (
                       <div key={v.id} className="flex items-center gap-2.5 text-sm text-gray-600">
@@ -493,23 +493,23 @@ export default function SessionResults({ profile, session, analytics, questions,
                 {sorted.length === 0 ? (
                   <div className="py-16 text-center">
                     <Users className="mx-auto size-8 text-gray-200 mb-3" />
-                    <p className="text-sm text-gray-400">No students joined</p>
+                    <p className="text-sm text-gray-500">No students joined</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
                       <thead>
                         <tr className="border-b border-gray-100 bg-gray-50">
-                          <th className="py-3 pl-5 pr-2 text-left text-xs font-semibold uppercase tracking-widest text-gray-400 w-10">#</th>
-                          <th className="py-3 px-3 text-left text-xs font-semibold uppercase tracking-widest text-gray-400">Student</th>
+                          <th className="py-3 pl-5 pr-2 text-left text-xs font-semibold uppercase tracking-widest text-gray-500 w-10">#</th>
+                          <th className="py-3 px-3 text-left text-xs font-semibold uppercase tracking-widest text-gray-500">Student</th>
                           {questions.map((q) => (
                             <th key={q.id} title={q.text}
-                              className="py-3 px-2 text-center text-xs font-semibold uppercase tracking-widest text-gray-400 min-w-[2.5rem]">
+                              className="py-3 px-2 text-center text-xs font-semibold uppercase tracking-widest text-gray-500 min-w-[2.5rem]">
                               {q.label}
                             </th>
                           ))}
-                          <th className="py-3 px-3 text-right text-xs font-semibold uppercase tracking-widest text-gray-400">Score</th>
-                          <th className="py-3 pl-3 pr-5 text-right text-xs font-semibold uppercase tracking-widest text-gray-400">%</th>
+                          <th className="py-3 px-3 text-right text-xs font-semibold uppercase tracking-widest text-gray-500">Score</th>
+                          <th className="py-3 pl-3 pr-5 text-right text-xs font-semibold uppercase tracking-widest text-gray-500">%</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
@@ -517,17 +517,17 @@ export default function SessionResults({ profile, session, analytics, questions,
                           <tr key={p.id} className="hover:bg-violet-50/40 transition">
                             <td className="py-3 pl-5 pr-2">
                               <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
-                                rank === 0 ? 'bg-amber-100 text-amber-600' :
+                                rank === 0 ? 'bg-amber-100 text-amber-700' :
                                 rank === 1 ? 'bg-gray-100 text-gray-500' :
-                                rank === 2 ? 'bg-orange-100 text-orange-600' :
-                                'bg-gray-100 text-gray-400'
+                                rank === 2 ? 'bg-orange-100 text-orange-700' :
+                                'bg-gray-100 text-gray-500'
                               }`}>
                                 {rank < 3 ? <Trophy className="size-3" /> : rank + 1}
                               </span>
                             </td>
                             <td className="py-3 px-3">
                               <p className="font-medium text-gray-800">{p.display_name}</p>
-                              {p.email && <p className="text-xs text-gray-400">{p.email}</p>}
+                              {p.email && <p className="text-xs text-gray-500">{p.email}</p>}
                             </td>
                             {questions.map((q) => {
                               const r = p.responses[q.id]
@@ -540,7 +540,7 @@ export default function SessionResults({ profile, session, analytics, questions,
                                   ) : r.is_correct === false ? (
                                     <XCircle className="size-3.5 text-red-500 mx-auto" />
                                   ) : (
-                                    <span className="text-xs text-gray-400">?</span>
+                                    <span className="text-xs text-gray-500">?</span>
                                   )}
                                 </td>
                               )
@@ -549,7 +549,7 @@ export default function SessionResults({ profile, session, analytics, questions,
                               {p.correct_count}/{questions.length}
                             </td>
                             <td className="py-3 pl-3 pr-5 text-right">
-                              <span className={`font-bold ${p.pct_correct >= 75 ? 'text-emerald-600' : p.pct_correct >= 50 ? 'text-amber-600' : 'text-red-500'}`}>
+                              <span className={`font-bold ${p.pct_correct >= 75 ? 'text-emerald-700' : p.pct_correct >= 50 ? 'text-amber-700' : 'text-red-600'}`}>
                                 {p.pct_correct}%
                               </span>
                             </td>
@@ -566,11 +566,11 @@ export default function SessionResults({ profile, session, analytics, questions,
 
         {/* Discussion notes */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-400 flex items-center gap-2">
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-500 flex items-center gap-2">
             <MessageSquare className="size-3.5" /> Discussion Notes
           </h2>
           <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5 space-y-3">
-            <p className="text-xs text-gray-400">Capture talking points or follow-up actions from this session.</p>
+            <p className="text-xs text-gray-500">Capture talking points or follow-up actions from this session.</p>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -590,7 +590,7 @@ export default function SessionResults({ profile, session, analytics, questions,
               >
                 Save notes
               </button>
-              <p className="text-xs text-gray-400">Saved in your browser only.</p>
+              <p className="text-xs text-gray-500">Saved in your browser only.</p>
             </div>
           </div>
         </motion.div>

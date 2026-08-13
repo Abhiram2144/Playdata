@@ -21,6 +21,10 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { BadgeCard } from '@/components/gamification/BadgeCard'
 import { STUDENT_NAV } from '@/lib/student-nav'
 import { createClientFromContext } from '@/lib/supabase/server-props'
+import {
+  categoricalColor, CHART_PIE_STROKE, CHART_PRIMARY,
+  CHART_TOOLTIP_STYLE, CHART_AXIS_STYLE,
+} from '@/lib/chart-colors'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -176,19 +180,6 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
 
 // ── Chart constants ────────────────────────────────────────────────────────────
 
-const VIZ_COLORS = ['#7c3aed', '#a78bfa', '#6d28d9', '#c4b5fd', '#8b5cf6', '#4c1d95', '#ddd6fe']
-
-const TOOLTIP_STYLE = {
-  backgroundColor: '#ffffff',
-  border: '1px solid #e4e0f8',
-  borderRadius: '12px',
-  color: '#374151',
-  fontSize: 12,
-  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-}
-
-const AXIS_STYLE = { fill: '#9ca3af', fontSize: 11 }
-
 const CHART_TYPES: ChartType[] = ['bar', 'line', 'pie', 'scatter', 'histogram']
 
 const CHART_LABELS: Record<ChartType, string> = {
@@ -286,7 +277,7 @@ function ChartRenderer({ chartType, config, rows }: {
   if (!xAxis) {
     return (
       <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50">
-        <p className="text-sm text-gray-400">No axis configured for this chart</p>
+        <p className="text-sm text-gray-500">No axis configured for this chart</p>
       </div>
     )
   }
@@ -294,7 +285,7 @@ function ChartRenderer({ chartType, config, rows }: {
   if (chartType === 'scatter') {
     if (!yAxis) return (
       <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50">
-        <p className="text-sm text-gray-400">Scatter requires both X and Y axes</p>
+        <p className="text-sm text-gray-500">Scatter requires both X and Y axes</p>
       </div>
     )
     const data = filtered
@@ -304,10 +295,10 @@ function ChartRenderer({ chartType, config, rows }: {
       <ResponsiveContainer width="100%" height={300}>
         <ScatterChart>
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f0ff" />
-          <XAxis type="number" dataKey="x" name={xAxis} tick={AXIS_STYLE} />
-          <YAxis type="number" dataKey="y" name={yAxis} tick={AXIS_STYLE} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ strokeDasharray: '3 3' }} />
-          <Scatter data={data} fill="#7c3aed" fillOpacity={0.7} />
+          <XAxis type="number" dataKey="x" name={xAxis} tick={CHART_AXIS_STYLE} />
+          <YAxis type="number" dataKey="y" name={yAxis} tick={CHART_AXIS_STYLE} />
+          <Tooltip contentStyle={CHART_TOOLTIP_STYLE} cursor={{ strokeDasharray: '3 3' }} />
+          <Scatter data={data} fill={CHART_PRIMARY} fillOpacity={0.7} />
         </ScatterChart>
       </ResponsiveContainer>
     )
@@ -319,10 +310,10 @@ function ChartRenderer({ chartType, config, rows }: {
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={data} barCategoryGap="2%">
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f0ff" />
-          <XAxis dataKey="bin" tick={AXIS_STYLE} label={{ value: xAxis, position: 'insideBottom', offset: -2, fill: '#9ca3af', fontSize: 11 }} />
-          <YAxis tick={AXIS_STYLE} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} />
-          <Bar dataKey="count" fill="#7c3aed" radius={[3, 3, 0, 0]} />
+          <XAxis dataKey="bin" tick={CHART_AXIS_STYLE} label={{ value: xAxis, position: 'insideBottom', offset: -2, fill: CHART_AXIS_STYLE.fill, fontSize: 11 }} />
+          <YAxis tick={CHART_AXIS_STYLE} />
+          <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+          <Bar dataKey="count" fill={CHART_PRIMARY} radius={[3, 3, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     )
@@ -347,9 +338,9 @@ function ChartRenderer({ chartType, config, rows }: {
         <PieChart>
           <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110}
             label={({ name, percent }) => `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`} labelLine={false}>
-            {data.map((_, i) => <Cell key={i} fill={VIZ_COLORS[i % VIZ_COLORS.length]} />)}
+            {data.map((_, i) => <Cell key={i} fill={categoricalColor(i)} stroke={CHART_PIE_STROKE} strokeWidth={1} />)}
           </Pie>
-          <Tooltip contentStyle={TOOLTIP_STYLE} />
+          <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
           <Legend wrapperStyle={{ color: '#6b7280', fontSize: 11 }} />
         </PieChart>
       </ResponsiveContainer>
@@ -358,7 +349,7 @@ function ChartRenderer({ chartType, config, rows }: {
 
   if (!yAxis) return (
     <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50">
-      <p className="text-sm text-gray-400">Y axis not configured for this chart</p>
+      <p className="text-sm text-gray-500">Y axis not configured for this chart</p>
     </div>
   )
 
@@ -369,10 +360,10 @@ function ChartRenderer({ chartType, config, rows }: {
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f0ff" />
-          <XAxis dataKey="name" tick={AXIS_STYLE} />
-          <YAxis tick={AXIS_STYLE} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} />
-          <Line type="monotone" dataKey="value" stroke="#7c3aed" strokeWidth={2.5} dot={data.length < 30} />
+          <XAxis dataKey="name" tick={CHART_AXIS_STYLE} />
+          <YAxis tick={CHART_AXIS_STYLE} />
+          <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+          <Line type="monotone" dataKey="value" stroke={CHART_PRIMARY} strokeWidth={2.5} dot={data.length < 30} />
         </LineChart>
       </ResponsiveContainer>
     )
@@ -382,10 +373,10 @@ function ChartRenderer({ chartType, config, rows }: {
     <ResponsiveContainer width="100%" height={300}>
       <BarChart data={data}>
         <CartesianGrid strokeDasharray="3 3" stroke="#f1f0ff" />
-        <XAxis dataKey="name" tick={AXIS_STYLE} />
-        <YAxis tick={AXIS_STYLE} />
-        <Tooltip contentStyle={TOOLTIP_STYLE} />
-        <Bar dataKey="value" fill="#7c3aed" radius={[4, 4, 0, 0]} />
+        <XAxis dataKey="name" tick={CHART_AXIS_STYLE} />
+        <YAxis tick={CHART_AXIS_STYLE} />
+        <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+        <Bar dataKey="value" fill={CHART_PRIMARY} radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   )
@@ -400,7 +391,7 @@ function TimerBar({ timeLeft, total }: { timeLeft: number; total: number }) {
 
   return (
     <div className="flex items-center gap-3">
-      <Clock className={`size-4 shrink-0 ${isLow ? 'text-red-500 animate-pulse' : isMid ? 'text-amber-500' : 'text-emerald-500'}`} />
+      <Clock className={`size-4 shrink-0 ${isLow ? 'text-red-700 animate-pulse' : isMid ? 'text-amber-700' : 'text-emerald-700'}`} />
       <div className="flex-1">
         <div className="h-2 rounded-full bg-gray-100 overflow-hidden ring-1 ring-gray-200">
           <motion.div
@@ -412,7 +403,7 @@ function TimerBar({ timeLeft, total }: { timeLeft: number; total: number }) {
           />
         </div>
       </div>
-      <span className={`text-sm font-mono font-bold w-8 text-right tabular-nums ${isLow ? 'text-red-500' : isMid ? 'text-amber-500' : 'text-emerald-500'}`}>
+      <span className={`text-sm font-mono font-bold w-8 text-right tabular-nums ${isLow ? 'text-red-700' : isMid ? 'text-amber-700' : 'text-emerald-700'}`}>
         {timeLeft}s
       </span>
     </div>
@@ -452,7 +443,7 @@ function VisPanel({ item, sessionId }: { item: SessionItem; sessionId: string })
     <div className="space-y-4">
       {/* Chart type selector */}
       <div className="space-y-2">
-        <p className="text-xs text-gray-400 font-medium">Chart type</p>
+        <p className="text-xs text-gray-500 font-medium">Chart type</p>
         <div className="flex flex-wrap gap-2">
           {CHART_TYPES.map((ct) => (
             <button
@@ -481,13 +472,13 @@ function VisPanel({ item, sessionId }: { item: SessionItem; sessionId: string })
       {/* Chart area */}
       {!item.dataset_id ? (
         <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50">
-          <p className="text-sm text-gray-400">No dataset linked to this visualisation</p>
+          <p className="text-sm text-gray-500">No dataset linked to this visualisation</p>
         </div>
       ) : loading ? (
         <div className="flex h-64 items-center justify-center rounded-xl border border-gray-100 bg-gray-50">
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="size-6 animate-spin text-violet-500" />
-            <p className="text-sm text-gray-400">Loading chart data…</p>
+            <p className="text-sm text-gray-500">Loading chart data…</p>
           </div>
         </div>
       ) : error ? (
@@ -496,7 +487,7 @@ function VisPanel({ item, sessionId }: { item: SessionItem; sessionId: string })
         </div>
       ) : rows.length === 0 ? (
         <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50">
-          <p className="text-sm text-gray-400">No data available</p>
+          <p className="text-sm text-gray-500">No data available</p>
         </div>
       ) : mounted ? (
         <div className="rounded-xl border border-gray-100 bg-white p-4">
@@ -586,7 +577,7 @@ function QuizQuestionChart({
         </div>
         <button
           onClick={() => setExpanded((v) => !v)}
-          className="rounded-md p-1 text-gray-400 hover:text-gray-600 transition"
+          className="rounded-md p-1 text-gray-500 hover:text-gray-600 transition"
         >
           {expanded ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
         </button>
@@ -618,7 +609,7 @@ function QuizQuestionChart({
           {/* Chart area */}
           {!vis.dataset_id ? (
             <div className="flex h-48 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50">
-              <p className="text-xs text-gray-400">No dataset linked</p>
+              <p className="text-xs text-gray-500">No dataset linked</p>
             </div>
           ) : loading ? (
             <div className="flex h-48 items-center justify-center">
@@ -630,7 +621,7 @@ function QuizQuestionChart({
             </div>
           ) : rows.length === 0 ? (
             <div className="flex h-48 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50">
-              <p className="text-xs text-gray-400">No data available</p>
+              <p className="text-xs text-gray-500">No data available</p>
             </div>
           ) : mounted ? (
             <div>
@@ -1026,7 +1017,7 @@ export default function StudentSession({
               ))}
             </div>
             <div className="rounded-xl border border-gray-200 bg-white shadow-sm px-5 py-3">
-              <p className="text-xs text-gray-400">Session</p>
+              <p className="text-xs text-gray-500">Session</p>
               <p className="text-base font-semibold text-gray-900">{session.title}</p>
             </div>
           </motion.div>
@@ -1157,7 +1148,7 @@ export default function StudentSession({
           <TimerBar timeLeft={timeLeft} total={timeLimitSecs} />
         )}
         {timeLimitSecs <= 0 && (
-          <div className="flex items-center gap-1.5 text-xs text-gray-400">
+          <div className="flex items-center gap-1.5 text-xs text-gray-500">
             <Clock className="size-3" /> Untimed
           </div>
         )}
@@ -1239,7 +1230,7 @@ export default function StudentSession({
                     ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
                     : opt === response?.answer && response?.is_correct === false
                       ? 'border-red-200 bg-red-50 text-red-700'
-                      : 'border-gray-100 bg-gray-50 text-gray-400'
+                      : 'border-gray-100 bg-gray-50 text-gray-500'
                 }`}
               >
                 {opt}
@@ -1320,7 +1311,7 @@ export default function StudentSession({
                 }`}
               />
             ))}
-            <span className="ml-2 text-xs text-gray-400">
+            <span className="ml-2 text-xs text-gray-500">
               {currentItemIdx + 1} / {sortedItems.length}
             </span>
           </motion.div>
@@ -1359,7 +1350,7 @@ export default function StudentSession({
 
             <div className="p-6">
               {!activeItem ? (
-                <p className="py-8 text-center text-sm text-gray-400">No items in this session.</p>
+                <p className="py-8 text-center text-sm text-gray-500">No items in this session.</p>
               ) : activeItem.type === 'visualisation' ? (
                 <VisPanel item={activeItem} sessionId={session.id} />
               ) : activeItem.type === 'quiz' ? (
@@ -1384,21 +1375,21 @@ export default function StudentSession({
                         </div>
                         <div className="flex items-center justify-center gap-6">
                           <div className="text-center">
-                            <p className="text-2xl font-black text-emerald-600">
+                            <p className="text-2xl font-black text-emerald-700">
                               {activeItem.quizQuestions.filter((q) =>
                                 myResponses.find((r) => r.question_id === q.id)?.is_correct === true
                               ).length}
                             </p>
-                            <p className="text-xs text-gray-400">Correct</p>
+                            <p className="text-xs text-gray-500">Correct</p>
                           </div>
                           <div className="h-8 w-px bg-gray-200" />
                           <div className="text-center">
-                            <p className="text-2xl font-black text-red-500">
+                            <p className="text-2xl font-black text-red-600">
                               {activeItem.quizQuestions.filter((q) =>
                                 myResponses.find((r) => r.question_id === q.id)?.is_correct === false
                               ).length}
                             </p>
-                            <p className="text-xs text-gray-400">Incorrect</p>
+                            <p className="text-xs text-gray-500">Incorrect</p>
                           </div>
                         </div>
                         <div className="flex items-center justify-center gap-3 pt-2">
@@ -1435,7 +1426,7 @@ export default function StudentSession({
                             />
                           )
                         })}
-                        <span className="ml-2 text-xs text-gray-400">
+                        <span className="ml-2 text-xs text-gray-500">
                           Q{quizQIdx + 1} / {activeItem.quizQuestions.length}
                         </span>
                       </div>
@@ -1469,7 +1460,7 @@ export default function StudentSession({
                     </>
                     )
                   ) : (
-                    <p className="text-sm text-gray-400">This quiz has no questions.</p>
+                    <p className="text-sm text-gray-500">This quiz has no questions.</p>
                   )}
                 </div>
               ) : (
@@ -1494,20 +1485,20 @@ export default function StudentSession({
             className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white shadow-sm px-5 py-3"
           >
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="size-4 text-emerald-500" />
+              <CheckCircle2 className="size-4 text-emerald-600" />
               <span className="text-sm text-gray-600">
-                <span className="font-bold text-emerald-600">{myResponses.filter((r) => r.is_correct).length}</span> correct
+                <span className="font-bold text-emerald-700">{myResponses.filter((r) => r.is_correct).length}</span> correct
               </span>
             </div>
             <div className="h-4 w-px bg-gray-200" />
             <div className="flex items-center gap-2">
-              <XCircle className="size-4 text-red-400" />
+              <XCircle className="size-4 text-red-600" />
               <span className="text-sm text-gray-600">
-                <span className="font-bold text-red-500">{myResponses.filter((r) => r.is_correct === false).length}</span> wrong
+                <span className="font-bold text-red-600">{myResponses.filter((r) => r.is_correct === false).length}</span> wrong
               </span>
             </div>
             <div className="h-4 w-px bg-gray-200" />
-            <span className="text-sm text-gray-400">{myResponses.length} answered</span>
+            <span className="text-sm text-gray-500">{myResponses.length} answered</span>
           </motion.div>
         )}
       </div>
@@ -1571,7 +1562,7 @@ export default function StudentSession({
                 </div>
                 <button
                   onClick={() => setShowLeaderboard(false)}
-                  className="rounded-lg p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+                  className="rounded-lg p-1 text-gray-500 transition hover:bg-gray-100 hover:text-gray-600"
                 >
                   <XCircle className="size-4" />
                 </button>
@@ -1588,7 +1579,7 @@ export default function StudentSession({
                         isMe ? 'bg-violet-100 ring-1 ring-violet-300' : 'bg-gray-50'
                       }`}
                     >
-                      <span className="w-5 shrink-0 text-center font-bold text-gray-400">
+                      <span className="w-5 shrink-0 text-center font-bold text-gray-500">
                         {medal ?? entry.rank}
                       </span>
                       <span className={`flex-1 truncate font-medium ${isMe ? 'text-violet-700' : 'text-gray-700'}`}>
@@ -1607,9 +1598,9 @@ export default function StudentSession({
                     const myEntry = leaderboard.find((e) => e.studentId === profile.id)!
                     return (
                       <>
-                        <li className="px-3 py-0.5 text-center text-xs text-gray-400">· · ·</li>
+                        <li className="px-3 py-0.5 text-center text-xs text-gray-500">· · ·</li>
                         <li className="flex items-center gap-3 rounded-xl bg-violet-100 px-3 py-2 text-sm ring-1 ring-violet-300">
-                          <span className="w-5 shrink-0 text-center font-bold text-gray-400">{myEntry.rank}</span>
+                          <span className="w-5 shrink-0 text-center font-bold text-gray-500">{myEntry.rank}</span>
                           <span className="flex-1 truncate font-medium text-violet-700">{myEntry.name} (you)</span>
                           <span className="tabular-nums font-bold text-violet-700">{myEntry.score.toLocaleString()}</span>
                         </li>
@@ -1619,7 +1610,7 @@ export default function StudentSession({
                 }
               </ol>
 
-              <p className="mt-3 text-center text-xs text-gray-400">Tap anywhere outside to dismiss</p>
+              <p className="mt-3 text-center text-xs text-gray-500">Tap anywhere outside to dismiss</p>
             </motion.div>
           </motion.div>
         )}
