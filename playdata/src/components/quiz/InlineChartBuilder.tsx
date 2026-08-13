@@ -380,8 +380,8 @@ export function InlineChartBuilder({
               <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Field mapping</p>
 
               <div>
-                <label className="mb-1 block text-xs text-gray-500">{fm.x}</label>
-                <select value={config.xAxis} onChange={(e) => patch({ xAxis: e.target.value })} className={SEL}>
+                <label htmlFor="icb-x-axis" className="mb-1 block text-xs text-gray-500">{fm.x}</label>
+                <select id="icb-x-axis" value={config.xAxis} onChange={(e) => patch({ xAxis: e.target.value })} className={SEL}>
                   <option value="">— select —</option>
                   {xCols.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}
                 </select>
@@ -389,8 +389,8 @@ export function InlineChartBuilder({
 
               {fm.y !== null && (
                 <div>
-                  <label className="mb-1 block text-xs text-gray-500">{fm.y}</label>
-                  <select value={config.yAxis} onChange={(e) => patch({ yAxis: e.target.value })} className={SEL}>
+                  <label htmlFor="icb-y-axis" className="mb-1 block text-xs text-gray-500">{fm.y}</label>
+                  <select id="icb-y-axis" value={config.yAxis} onChange={(e) => patch({ yAxis: e.target.value })} className={SEL}>
                     <option value="">{chartType === 'pie' ? '— count rows —' : '— select —'}</option>
                     {yCols.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}
                   </select>
@@ -399,8 +399,9 @@ export function InlineChartBuilder({
 
               {fm.showAgg && (
                 <div>
-                  <label className="mb-1 block text-xs text-gray-500">Aggregation</label>
+                  <label htmlFor="icb-aggregation" className="mb-1 block text-xs text-gray-500">Aggregation</label>
                   <select
+                    id="icb-aggregation"
                     value={config.aggregation}
                     onChange={(e) => patch({ aggregation: e.target.value as Aggregation })}
                     className={SEL}
@@ -415,8 +416,9 @@ export function InlineChartBuilder({
 
             {/* Filter */}
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Filter (optional)</p>
+              <label htmlFor="icb-filter-column" className="block text-xs font-semibold uppercase tracking-widest text-gray-500">Filter (optional)</label>
               <select
+                id="icb-filter-column"
                 value={config.filterColumn}
                 onChange={(e) => patch({ filterColumn: e.target.value, filterValue: '' })}
                 className={SEL}
@@ -428,6 +430,7 @@ export function InlineChartBuilder({
               {config.filterColumn && (
                 <>
                   <select
+                    aria-label="Filter condition"
                     value={config.filterOperator}
                     onChange={(e) => patch({ filterOperator: e.target.value as FilterOp })}
                     className={SEL}
@@ -435,6 +438,7 @@ export function InlineChartBuilder({
                     {FILTER_OPS.map(({ op, label }) => <option key={op} value={op}>{label}</option>)}
                   </select>
                   <input
+                    aria-label="Filter value"
                     value={config.filterValue}
                     onChange={(e) => patch({ filterValue: e.target.value })}
                     list="icb-filter-vals"

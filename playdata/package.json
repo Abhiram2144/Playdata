@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "a11y:seed": "node --env-file=.env scripts/seed-a11y-fixtures.mjs",
+    "a11y:cleanup": "node --env-file=.env scripts/cleanup-a11y-fixtures.mjs",
+    "test:a11y": "playwright test tests/a11y tests/setup"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
@@ -43,6 +46,8 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4.3.1",
     "@types/formidable": "^3.5.1",
     "@types/node": "^20",

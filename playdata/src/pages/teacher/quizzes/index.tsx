@@ -218,7 +218,7 @@ function QuizCard({
             <p className="mt-0.5 truncate text-xs text-gray-500">{quiz.description}</p>
           )}
 
-          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-400">
+          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-600">
             <span className="flex items-center gap-1">
               <FileQuestion className="size-3" />
               {quiz.question_count} question{quiz.question_count !== 1 ? 's' : ''}
@@ -240,7 +240,7 @@ function QuizCard({
               </span>
             )}
             {quiz.last_edited_by_name && quiz.last_edited_at && (
-              <span className="flex items-center gap-1 text-gray-400">
+              <span className="flex items-center gap-1 text-gray-600">
                 <Pencil className="size-3" />
                 {quiz.last_edited_by === currentUserId ? 'you' : quiz.last_edited_by_name}
                 {' · '}{timeAgo(quiz.last_edited_at)}
@@ -354,7 +354,7 @@ export default function QuizList({ profile, quizzes: initial }: Props) {
   };
 
   return (
-    <DashboardLayout navItems={NAV_ITEMS} profile={profile}>
+    <DashboardLayout navItems={NAV_ITEMS} profile={profile} title="Quizzes">
       <div className="max-w-5xl space-y-8">
 
         {/* Header */}
@@ -364,7 +364,7 @@ export default function QuizList({ profile, quizzes: initial }: Props) {
           className="flex items-center justify-between"
         >
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Quizzes</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-600">Quizzes</p>
             <h1 className="mt-0.5 text-2xl font-bold text-gray-900">Your Quizzes</h1>
           </div>
           <Link
@@ -382,7 +382,7 @@ export default function QuizList({ profile, quizzes: initial }: Props) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.04 }}
           >
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-gray-400 flex items-center gap-2">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-gray-600 flex items-center gap-2">
               <UserCheck className="size-3.5" /> Assigned to me
               <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
                 {assignedToMe.length}
@@ -408,7 +408,7 @@ export default function QuizList({ profile, quizzes: initial }: Props) {
               <BookOpen className="size-7 text-violet-600" />
             </span>
             <p className="mt-4 text-sm font-semibold text-gray-800">No quizzes yet</p>
-            <p className="mt-1 text-xs text-gray-400">Create your first quiz to get started.</p>
+            <p className="mt-1 text-xs text-gray-600">Create your first quiz to get started.</p>
             <Link
               href="/teacher/quizzes/new"
               className="mt-5 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500"
@@ -423,7 +423,7 @@ export default function QuizList({ profile, quizzes: initial }: Props) {
             transition={{ delay: 0.06 }}
           >
             {assignedToMe.length > 0 && (
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-gray-400 flex items-center gap-2">
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-gray-600 flex items-center gap-2">
                 <FolderPlus className="size-3.5" /> My quizzes
               </h2>
             )}

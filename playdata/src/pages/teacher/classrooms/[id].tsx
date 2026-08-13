@@ -820,7 +820,7 @@ export default function ClassroomRosterPage({ profile, classroom, students: init
   }
 
   return (
-    <DashboardLayout profile={profile} navItems={TEACHER_NAV}>
+    <DashboardLayout profile={profile} navItems={TEACHER_NAV} title={classroom.name}>
       <AnimatePresence>
         {showAdd && (
           <AddStudentsModal
@@ -852,17 +852,17 @@ export default function ClassroomRosterPage({ profile, classroom, students: init
         <div>
           <Link
             href="/teacher/classrooms"
-            className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors mb-3"
+            className="inline-flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-700 transition-colors mb-3"
           >
             <ArrowLeft className="size-3.5" />
             All classrooms
           </Link>
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Classroom</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-600">Classroom</p>
               <h1 className="mt-0.5 text-2xl font-bold text-gray-900">{classroom.name}</h1>
               {classroom.description && (
-                <p className="mt-0.5 text-sm text-gray-500">{classroom.description}</p>
+                <p className="mt-0.5 text-sm text-gray-600">{classroom.description}</p>
               )}
             </div>
             <div className="flex items-center gap-2 flex-wrap">

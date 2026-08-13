@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Head from 'next/head';
 import { motion } from 'framer-motion';
 import { Menu, Zap } from 'lucide-react';
 import { Sidebar, type NavItem } from './Sidebar';
@@ -14,13 +15,21 @@ interface DashboardLayoutProps {
   children: React.ReactNode;
   navItems: NavItem[];
   profile: Profile;
+  /** Page-specific title, e.g. "Datasets". Rendered as "{title} · PlayData".
+   *  Every screen-reader/browser tab needs a distinct, non-empty <title> to
+   *  orient by (WCAG 2.4.2) — falls back to plain "PlayData" if omitted. */
+  title?: string;
 }
 
-export function DashboardLayout({ children, navItems, profile }: DashboardLayoutProps) {
+export function DashboardLayout({ children, navItems, profile, title }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-[#f5f3ff]">
+      <Head>
+        <title>{title ? `${title} · PlayData` : 'PlayData'}</title>
+      </Head>
+
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div

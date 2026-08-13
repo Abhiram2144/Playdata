@@ -377,13 +377,13 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
     : [];
 
   return (
-    <DashboardLayout navItems={TEACHER_NAV} profile={profile}>
+    <DashboardLayout navItems={TEACHER_NAV} profile={profile} title={dataset.name}>
       <div className="max-w-6xl space-y-6">
 
         {/* Back */}
         <button
           onClick={() => router.push('/teacher/datasets')}
-          className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-violet-600 transition-colors"
+          className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-violet-600 transition-colors"
         >
           <ArrowLeft className="size-3.5" /> Back to Datasets
         </button>
@@ -396,7 +396,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
         >
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Dataset</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-600">Dataset</p>
 
               {editingName ? (
                 <div className="mt-1 flex items-center gap-2">
@@ -417,7 +417,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
               ) : (
                 <div className="mt-1 flex items-center gap-2">
                   <h1 className="text-2xl font-bold text-gray-900 truncate">{name}</h1>
-                  <button onClick={startRename} className="shrink-0 p-1 text-gray-300 hover:text-violet-500 transition-colors">
+                  <button onClick={startRename} aria-label="Rename dataset" className="shrink-0 p-1 text-gray-600 hover:text-violet-600 transition-colors">
                     <Pencil className="size-3.5" />
                   </button>
                 </div>
@@ -427,7 +427,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                 <p className="mt-1 text-sm text-gray-500">{dataset.description}</p>
               )}
 
-              <p className="mt-2 text-xs text-gray-400">
+              <p className="mt-2 text-xs text-gray-600">
                 {dataset.provider
                   ? (dataset.provider === 'google_drive' ? 'Google Drive' : 'Dropbox')
                   : 'Direct upload'}
@@ -441,11 +441,11 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
               <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
                 <Rows className="size-4 text-violet-500" />
                 <span className="text-sm font-semibold text-gray-800">{dataset.row_count.toLocaleString()}</span>
-                <span className="text-xs text-gray-400">rows</span>
+                <span className="text-xs text-gray-600">rows</span>
               </div>
               <button
                 onClick={openDelete}
-                className="flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-500 transition hover:bg-red-100"
+                className="flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-100"
               >
                 <Trash2 className="size-4" /> Delete
               </button>
@@ -469,7 +469,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
             </span>
             <div>
               <p className="text-sm font-semibold text-gray-800">Create visualisation</p>
-              <p className="text-xs text-gray-400">Build a chart from this dataset</p>
+              <p className="text-xs text-gray-600">Build a chart from this dataset</p>
             </div>
           </Link>
 
@@ -483,7 +483,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
             </span>
             <div>
               <p className="text-sm font-semibold text-gray-800">Create quiz</p>
-              <p className="text-xs text-gray-400">Generate questions from this dataset — coming soon</p>
+              <p className="text-xs text-gray-600">Generate questions from this dataset — coming soon</p>
             </div>
           </button>
         </motion.div>
@@ -502,7 +502,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`relative flex items-center gap-1.5 whitespace-nowrap px-6 py-4 text-sm font-semibold capitalize transition-colors ${
-                  activeTab === tab ? 'text-gray-900' : 'text-gray-400 hover:text-gray-700'
+                  activeTab === tab ? 'text-gray-900' : 'text-gray-600 hover:text-gray-700'
                 }`}
               >
                 {tab === 'clean' && <Wand2 className="size-3.5" />}
@@ -522,17 +522,17 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
           {activeTab === 'preview' && (
             <div className="p-6">
               {!dataset.storage_path ? (
-                <p className="text-sm text-gray-400">No data file attached to this dataset.</p>
+                <p className="text-sm text-gray-600">No data file attached to this dataset.</p>
               ) : loadingPreview ? (
                 <p className="text-sm text-gray-500">Loading rows…</p>
               ) : previewError ? (
-                <p className="text-sm text-red-500">{previewError}</p>
+                <p className="text-sm text-red-600">{previewError}</p>
               ) : previewRows.length === 0 ? (
-                <p className="text-sm text-gray-400">No rows found.</p>
+                <p className="text-sm text-gray-600">No rows found.</p>
               ) : (
                 <>
                   {visible.size > 0 && visible.size < columns.length && (
-                    <p className="mb-3 text-xs text-gray-400">
+                    <p className="mb-3 text-xs text-gray-600">
                       Showing {visible.size} of {columns.length} columns — student view.{' '}
                       <button onClick={() => setActiveTab('columns')} className="text-violet-600 hover:text-violet-500 transition">
                         Manage visibility
@@ -543,7 +543,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-gray-100 bg-gray-50">
-                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-400 w-10">#</th>
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 w-10">#</th>
                           {(visible.size > 0 ? columns.filter(c => visible.has(c.name)) : columns).map((col) => {
                             const meta = TYPE_META[col.type] ?? TYPE_META.string;
                             const Icon = meta.icon;
@@ -561,14 +561,14 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                       <tbody>
                         {previewRows.map((row, i) => (
                           <tr key={i} className="border-b border-gray-50 last:border-0 hover:bg-violet-50/40 transition">
-                            <td className="px-3 py-2 text-xs text-gray-300">
+                            <td className="px-3 py-2 text-xs text-gray-600">
                               {previewPage * PAGE_SIZE + i + 1}
                             </td>
                             {(visible.size > 0 ? columns.filter(c => visible.has(c.name)) : columns).map((col) => (
                               <td key={col.name} className="px-3 py-2 text-xs text-gray-700 max-w-[200px]">
                                 <span className="block truncate">
                                   {row[col.name] === undefined || row[col.name] === null || row[col.name] === ''
-                                    ? <span className="text-gray-300 italic">—</span>
+                                    ? <span className="text-gray-600 italic">—</span>
                                     : String(row[col.name])}
                                 </span>
                               </td>
@@ -581,7 +581,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
 
                   {/* Pagination */}
                   <div className="mt-4 flex items-center justify-between">
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-gray-600">
                       Rows {previewPage * PAGE_SIZE + 1}–{Math.min((previewPage + 1) * PAGE_SIZE, previewTotal)} of {previewTotal.toLocaleString()}
                     </p>
                     <div className="flex items-center gap-2">
@@ -592,7 +592,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                       >
                         <ChevronLeft className="size-3.5" /> Prev
                       </button>
-                      <span className="text-xs text-gray-400">{previewPage + 1} / {totalPages}</span>
+                      <span className="text-xs text-gray-600">{previewPage + 1} / {totalPages}</span>
                       <button
                         onClick={() => fetchPreview(previewPage + 1)}
                         disabled={previewPage >= totalPages - 1 || loadingPreview}
@@ -613,10 +613,10 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
               {loadingPreview ? (
                 <p className="text-sm text-gray-500">Loading statistics…</p>
               ) : previewRows.length === 0 ? (
-                <p className="text-sm text-gray-400">No data available — visit the Preview tab first.</p>
+                <p className="text-sm text-gray-600">No data available — visit the Preview tab first.</p>
               ) : (
                 <div className="space-y-6">
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-600">
                     Computed from the first {previewRows.length} rows (page {previewPage + 1}).
                     {previewTotal > previewRows.length && ` Full dataset has ${previewTotal.toLocaleString()} rows.`}
                   </p>
@@ -640,7 +640,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                             <div className="flex items-center gap-2">
                               <Hash className="size-3.5 text-blue-500" />
                               <span className="text-sm font-semibold text-gray-800">{col.name}</span>
-                              <span className="text-xs text-gray-400 rounded-full bg-blue-50 px-1.5 py-0.5">number</span>
+                              <span className="text-xs text-gray-600 rounded-full bg-blue-50 px-1.5 py-0.5">number</span>
                             </div>
                             <div className="grid grid-cols-3 gap-2">
                               {[
@@ -652,13 +652,13 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                                 { label: 'Count', val: nums.length.toString() },
                               ].map(({ label, val }) => (
                                 <div key={label} className="rounded-lg bg-gray-50 px-2 py-2 text-center">
-                                  <p className="text-xs text-gray-400">{label}</p>
+                                  <p className="text-xs text-gray-600">{label}</p>
                                   <p className="text-sm font-mono font-semibold text-gray-800 mt-0.5 truncate">{val}</p>
                                 </div>
                               ))}
                             </div>
                             <div className="mt-1">
-                              <div className="flex justify-between text-xs text-gray-300 mb-1">
+                              <div className="flex justify-between text-xs text-gray-600 mb-1">
                                 <span>{fmt(min)}</span><span>{fmt(max)}</span>
                               </div>
                               <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden relative">
@@ -673,7 +673,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                                   );
                                 })()}
                               </div>
-                              <p className="text-xs text-gray-300 mt-1 text-center">Median at {fmt(median)}</p>
+                              <p className="text-xs text-gray-600 mt-1 text-center">Median at {fmt(median)}</p>
                             </div>
                           </div>
                         );
@@ -689,19 +689,19 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                             <div className="flex items-center gap-2">
                               <Type className="size-3.5 text-violet-500" />
                               <span className="text-sm font-semibold text-gray-800">{col.name}</span>
-                              <span className="text-xs text-gray-400 rounded-full bg-violet-50 px-1.5 py-0.5">text</span>
+                              <span className="text-xs text-gray-600 rounded-full bg-violet-50 px-1.5 py-0.5">text</span>
                             </div>
                             <div className="grid grid-cols-2 gap-2 mb-2">
                               <div className="rounded-lg bg-gray-50 px-2 py-2 text-center">
-                                <p className="text-xs text-gray-400">Unique</p>
+                                <p className="text-xs text-gray-600">Unique</p>
                                 <p className="text-sm font-mono font-semibold text-gray-800 mt-0.5">{uniqueSet.size}</p>
                               </div>
                               <div className="rounded-lg bg-gray-50 px-2 py-2 text-center">
-                                <p className="text-xs text-gray-400">Total</p>
+                                <p className="text-xs text-gray-600">Total</p>
                                 <p className="text-sm font-mono font-semibold text-gray-800 mt-0.5">{strs.length}</p>
                               </div>
                             </div>
-                            <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Top values</p>
+                            <p className="text-xs text-gray-600 font-semibold uppercase tracking-wide">Top values</p>
                             <div className="space-y-1.5">
                               {top5.map(([val, count]) => (
                                 <div key={val} className="flex items-center gap-2">
@@ -709,7 +709,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                                     <div className="h-full rounded-full bg-violet-400" style={{ width: `${(count / strs.length) * 100}%` }} />
                                   </div>
                                   <span className="text-xs text-gray-600 truncate max-w-[90px]">{val}</span>
-                                  <span className="text-xs text-gray-400 tabular-nums">{count}</span>
+                                  <span className="text-xs text-gray-600 tabular-nums">{count}</span>
                                 </div>
                               ))}
                             </div>
@@ -730,7 +730,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
               {loadingValidation ? (
                 <p className="text-sm text-gray-500">Analysing dataset…</p>
               ) : validationError ? (
-                <p className="text-sm text-red-500">{validationError}</p>
+                <p className="text-sm text-red-600">{validationError}</p>
               ) : !validation ? null : (
                 <div className="space-y-6">
                   <div className="grid gap-3 sm:grid-cols-4">
@@ -741,7 +741,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                       { label: 'Duplicate rows', value: validation.duplicateRowCount.toLocaleString(), ok: validation.duplicateRowCount === 0 },
                     ].map(({ label, value, ok }) => (
                       <div key={label} className={`rounded-xl border p-4 ${ok ? 'border-gray-100 bg-white shadow-sm' : 'border-amber-200 bg-amber-50'}`}>
-                        <p className="text-xs text-gray-400">{label}</p>
+                        <p className="text-xs text-gray-600">{label}</p>
                         <p className={`mt-1 text-2xl font-bold ${ok ? 'text-gray-800' : 'text-amber-600'}`}>{value}</p>
                       </div>
                     ))}
@@ -767,7 +767,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                                   <Icon className="size-3" />
                                 </span>
                                 <span className="text-sm font-semibold text-gray-800">{col.name}</span>
-                                <span className="text-xs text-gray-400">({meta.label})</span>
+                                <span className="text-xs text-gray-600">({meta.label})</span>
                               </div>
                               <div className="flex flex-wrap gap-3 text-xs">
                                 {missing > 0 && (
@@ -777,11 +777,11 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                                   </span>
                                 )}
                                 {typeErr && (
-                                  <span className="text-red-500">
+                                  <span className="text-red-600">
                                     <AlertTriangle className="size-3 inline mr-1" />
                                     {typeErr.count} type mismatch{typeErr.count !== 1 ? 'es' : ''}
                                     {typeErr.examples.length > 0 && (
-                                      <span className="text-gray-400 ml-1">
+                                      <span className="text-gray-600 ml-1">
                                         (e.g. {typeErr.examples.map((e) => `"${e}"`).join(', ')})
                                       </span>
                                     )}
@@ -813,7 +813,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold text-gray-800">Student-visible columns</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Toggle which columns students can see.</p>
+                  <p className="text-xs text-gray-600 mt-0.5">Toggle which columns students can see.</p>
                 </div>
                 <div className="flex items-center gap-2">
                   {columnsSaved && (
@@ -855,11 +855,11 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-gray-800 truncate">{col.name}</p>
-                        <p className="text-xs text-gray-400">{meta.label}</p>
+                        <p className="text-xs text-gray-600">{meta.label}</p>
                       </div>
                       {isVisible
                         ? <Eye className="size-4 shrink-0 text-violet-500" />
-                        : <EyeOff className="size-4 shrink-0 text-gray-300" />}
+                        : <EyeOff className="size-4 shrink-0 text-gray-600" />}
                     </button>
                   );
                 })}
@@ -901,15 +901,15 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                         <input type="checkbox" checked={pendingPromote} onChange={(e) => setPendingPromote(e.target.checked)} className="accent-violet-600" />
                         <div>
                           <p className="text-sm font-medium text-gray-800">Use first row as column headers</p>
-                          <p className="text-xs text-gray-400 mt-0.5">Row 1 values become column names and are removed from data</p>
+                          <p className="text-xs text-gray-600 mt-0.5">Row 1 values become column names and are removed from data</p>
                         </div>
                       </label>
                       <div className="rounded-xl border border-gray-100 overflow-hidden">
                         <table className="w-full text-xs">
                           <thead>
                             <tr className="border-b border-gray-100 bg-gray-50">
-                              <th className="px-4 py-2 text-left font-semibold text-gray-400">Current header</th>
-                              <th className="px-4 py-2 text-left font-semibold text-gray-400">{pendingPromote ? 'New header (from row 1)' : 'Row 1 value'}</th>
+                              <th className="px-4 py-2 text-left font-semibold text-gray-600">Current header</th>
+                              <th className="px-4 py-2 text-left font-semibold text-gray-600">{pendingPromote ? 'New header (from row 1)' : 'Row 1 value'}</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -926,8 +926,8 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                                   </td>
                                   <td className="px-4 py-2.5">
                                     {rowVal
-                                      ? <span className={pendingPromote ? 'font-medium text-emerald-600' : 'text-gray-400'}>{rowVal}</span>
-                                      : <span className="italic text-gray-300">—</span>}
+                                      ? <span className={pendingPromote ? 'font-medium text-emerald-600' : 'text-gray-600'}>{rowVal}</span>
+                                      : <span className="italic text-gray-600">—</span>}
                                   </td>
                                 </tr>
                               );
@@ -952,7 +952,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-gray-400 mt-0.5">Keep only the first occurrence of each duplicate row</p>
+                        <p className="text-xs text-gray-600 mt-0.5">Keep only the first occurrence of each duplicate row</p>
                       </div>
                     </label>
                     <label className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition ${pendingDropMissingRows ? 'border-violet-200 bg-violet-50' : 'border-gray-100 bg-white'}`}>
@@ -967,7 +967,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                             <span className="text-xs rounded-full px-2 py-0.5 bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200">no missing values</span>
                           )}
                         </div>
-                        <p className="text-xs text-gray-400 mt-0.5">Drop any row that has an empty value in any column</p>
+                        <p className="text-xs text-gray-600 mt-0.5">Drop any row that has an empty value in any column</p>
                       </div>
                     </label>
                   </div>
@@ -976,7 +976,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                   {coercibleCols.length > 0 && (
                     <div className="space-y-3">
                       <p className="text-sm font-semibold text-gray-700">Numeric Columns</p>
-                      <p className="text-xs text-gray-400">These columns are stored as text but contain numeric values. Converting enables charts.</p>
+                      <p className="text-xs text-gray-600">These columns are stored as text but contain numeric values. Converting enables charts.</p>
                       <div className="space-y-2">
                         {coercibleCols.map((colIndex) => {
                           const colName = columns[colIndex]?.name ?? '';
@@ -995,10 +995,10 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="text-sm font-medium text-gray-800">{colName}</span>
                                   {sample !== undefined && sample !== null && sample !== '' && (
-                                    <span className="text-xs text-gray-400">e.g. &quot;{String(sample)}&quot;</span>
+                                    <span className="text-xs text-gray-600">e.g. &quot;{String(sample)}&quot;</span>
                                   )}
                                 </div>
-                                <p className="text-xs text-gray-400 mt-0.5">
+                                <p className="text-xs text-gray-600 mt-0.5">
                                   currently: <span className="text-gray-500">Text</span>
                                   {selected && <span className="text-violet-600 ml-1">→ will become: Number</span>}
                                 </p>
@@ -1013,7 +1013,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                   {/* Column Renames */}
                   <div className="space-y-3">
                     <p className="text-sm font-semibold text-gray-700">Column Renames</p>
-                    <p className="text-xs text-gray-400">Rename any column. Empty names are pre-filled with row 1 values as suggestions.</p>
+                    <p className="text-xs text-gray-600">Rename any column. Empty names are pre-filled with row 1 values as suggestions.</p>
                     <div className="grid gap-2 sm:grid-cols-2">
                       {columns.map((col, idx) => {
                         const isEmpty = !col.name.trim();
@@ -1021,7 +1021,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
                         const changed = currentVal.trim() && currentVal.trim() !== col.name;
                         return (
                           <div key={`${col.name}-${idx}`} className={`flex items-center gap-2 rounded-xl border px-3 py-2 ${isEmpty ? 'border-amber-200 bg-amber-50' : 'border-gray-100 bg-white'}`}>
-                            <span className={`text-xs shrink-0 min-w-[80px] truncate flex items-center gap-1 ${isEmpty ? 'text-amber-600 italic' : 'text-gray-400'}`}>
+                            <span className={`text-xs shrink-0 min-w-[80px] truncate flex items-center gap-1 ${isEmpty ? 'text-amber-600 italic' : 'text-gray-600'}`}>
                               {isEmpty ? <><AlertTriangle className="size-3 shrink-0" />empty</> : col.name}
                             </span>
                             <span className="text-gray-200 shrink-0 text-xs">→</span>
@@ -1082,7 +1082,7 @@ export default function DatasetDetail({ profile, dataset, initialVisibleColumns 
               </div>
 
               {deleteRefs === null ? (
-                <p className="text-sm text-gray-400 mb-4">Checking references…</p>
+                <p className="text-sm text-gray-600 mb-4">Checking references…</p>
               ) : (deleteRefs.visualisations.length > 0 || deleteRefs.quizzes.length > 0) && (
                 <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
                   <p className="font-semibold text-amber-700 mb-1 flex items-center gap-1.5">

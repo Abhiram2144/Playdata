@@ -364,6 +364,7 @@ const TYPE_PREFIX: Record<ColType, string> = {
 };
 
 function ColSelect({
+  id,
   label,
   value,
   onChange,
@@ -372,6 +373,7 @@ function ColSelect({
   hint,
   coercibleNames,
 }: {
+  id: string;
   label: string;
   value: string;
   onChange: (v: string) => void;
@@ -382,11 +384,12 @@ function ColSelect({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-xs font-medium text-gray-500">
+      <label htmlFor={id} className="mb-1 block text-xs font-medium text-gray-500">
         {label}
         {hint && <span className="ml-1 text-gray-500">({hint})</span>}
       </label>
       <select
+        id={id}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-violet-400 focus:outline-none"
@@ -559,14 +562,14 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
   const showNoNumericBanner = rows.length > 0 && numericCols.length === 0 && coercibleCols.length === 0;
 
   return (
-    <DashboardLayout navItems={NAV_ITEMS} profile={profile}>
+    <DashboardLayout navItems={NAV_ITEMS} profile={profile} title={`New chart · ${dataset.name}`}>
       <div className="max-w-7xl space-y-6">
 
         {/* Header */}
         <div className="flex items-center justify-between">
           <button
             onClick={() => router.push(`/teacher/datasets/${dataset.id}`)}
-            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-violet-600 transition-colors"
+            className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-violet-600 transition-colors"
           >
             <ArrowLeft className="size-3.5" /> Back to {dataset.name}
           </button>
@@ -647,6 +650,7 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
 
               <div>
                 <ColSelect
+                  id="viz-x-axis"
                   label={fieldMeta.x}
                   value={config.xAxis}
                   onChange={(v) => patchConfig({ xAxis: v })}
@@ -660,6 +664,7 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
 
               {fieldMeta.y !== null && (
                 <ColSelect
+                  id="viz-y-axis"
                   label={fieldMeta.y}
                   value={config.yAxis}
                   onChange={(v) => patchConfig({ yAxis: v })}
@@ -672,8 +677,9 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
 
               {fieldMeta.showAgg && (
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-500">Aggregation</label>
+                  <label htmlFor="viz-aggregation" className="mb-1 block text-xs font-medium text-gray-500">Aggregation</label>
                   <select
+                    id="viz-aggregation"
                     value={config.aggregation}
                     onChange={(e) => patchConfig({ aggregation: e.target.value as Aggregation })}
                     className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-violet-400 focus:outline-none"
@@ -699,8 +705,9 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
             <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm space-y-3">
               <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Filter (optional)</p>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-500">Column</label>
+                <label htmlFor="viz-filter-column" className="mb-1 block text-xs font-medium text-gray-500">Column</label>
                 <select
+                  id="viz-filter-column"
                   value={config.filterColumn}
                   onChange={(e) => patchConfig({ filterColumn: e.target.value, filterValue: '' })}
                   className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-violet-400 focus:outline-none"
@@ -715,8 +722,9 @@ export default function NewVisualisation({ profile, dataset, visibleColumns }: P
               {config.filterColumn && (
                 <>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-gray-500">Condition</label>
+                    <label htmlFor="viz-filter-operator" className="mb-1 block text-xs font-medium text-gray-500">Condition</label>
                     <select
+                      id="viz-filter-operator"
                       value={config.filterOperator}
                       onChange={(e) => patchConfig({ filterOperator: e.target.value as FilterOp })}
                       className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-violet-400 focus:outline-none"

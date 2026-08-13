@@ -352,14 +352,14 @@ export default function VisualisationView({ profile, visualisation }: Props) {
   const cfg = visualisation.config ?? {};
 
   return (
-    <DashboardLayout navItems={TEACHER_NAV} profile={profile}>
+    <DashboardLayout navItems={TEACHER_NAV} profile={profile} title={visualisation.name}>
       <div className="max-w-5xl space-y-6">
 
         {/* Back */}
         <div className="flex items-center justify-between">
           <button
             onClick={() => router.push('/teacher/visualisations')}
-            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-violet-600 transition-colors"
+            className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-violet-600 transition-colors"
           >
             <ArrowLeft className="size-3.5" /> Back to Visualisations
           </button>
@@ -406,7 +406,7 @@ export default function VisualisationView({ profile, visualisation }: Props) {
               ) : (
                 <div className="flex items-center gap-2 mt-1">
                   <h1 className="text-2xl font-bold text-gray-900 truncate">{nameInput}</h1>
-                  <button onClick={() => setEditingName(true)} className="shrink-0 p-1 text-gray-300 hover:text-violet-500 transition-colors">
+                  <button onClick={() => setEditingName(true)} aria-label="Rename visualisation" className="shrink-0 p-1 text-gray-400 hover:text-violet-600 transition-colors">
                     <Pencil className="size-3.5" />
                   </button>
                 </div>
@@ -419,7 +419,7 @@ export default function VisualisationView({ profile, visualisation }: Props) {
                     <Link href={`/teacher/datasets/${dataset.id}`} className="hover:text-violet-600 transition-colors">
                       {dataset.name}
                     </Link>
-                    <span className="text-gray-300">({dataset.row_count.toLocaleString()} rows)</span>
+                    <span className="text-gray-500">({dataset.row_count.toLocaleString()} rows)</span>
                   </span>
                 )}
                 <span className="flex items-center gap-1">
@@ -482,7 +482,7 @@ export default function VisualisationView({ profile, visualisation }: Props) {
           )}
 
           {rows.length > 0 && (
-            <p className="mt-3 text-xs text-gray-300">
+            <p className="mt-3 text-xs text-gray-500">
               Showing first {rows.length.toLocaleString()} of {dataset?.row_count.toLocaleString()} rows
             </p>
           )}

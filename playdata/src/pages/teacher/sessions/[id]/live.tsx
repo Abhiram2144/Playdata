@@ -308,7 +308,7 @@ function TimerBar({ timeLeft, total }: { timeLeft: number; total: number }) {
                       <div>
                         <p className="truncate text-sm font-bold text-gray-900">{entry.name}</p>
                         <p className="mt-1 text-2xl font-black tabular-nums text-gray-900">{entry.score.toLocaleString()}</p>
-                        <p className="text-xs text-gray-500">points</p>
+                        <p className="text-xs text-gray-600">points</p>
                       </div>
                     </motion.div>
                   )
@@ -553,7 +553,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
   const activeParticipants = participants.filter((p) => !p.left_at)
 
   return (
-    <DashboardLayout navItems={NAV_ITEMS} profile={profile}>
+    <DashboardLayout navItems={NAV_ITEMS} profile={profile} title={`Live · ${session.title}`}>
       <div className="max-w-7xl space-y-5">
 
         {/* Top bar */}
@@ -572,7 +572,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
           </div>
           <button
             onClick={() => setShowEndConfirm(true)}
-            className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100"
+            className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100"
           >
             <StopCircle className="size-4" /> End Session
           </button>
@@ -634,6 +634,8 @@ export default function LiveSession({ profile, session: initialSession, items, p
                               <button
                                 key={i}
                                 onClick={() => navigateQuizQuestion(i)}
+                                aria-label={`Go to question ${i + 1}`}
+                                aria-current={i === quizQuestionIndex ? 'true' : undefined}
                                 className={`rounded-full transition-all duration-200 ${
                                   i === quizQuestionIndex
                                     ? 'h-2.5 w-6 bg-violet-500'
@@ -788,6 +790,8 @@ export default function LiveSession({ profile, session: initialSession, items, p
                       key={i}
                       onClick={() => advance(i)}
                       disabled={advancing}
+                      aria-label={`Go to item ${i + 1} of ${sortedItems.length}`}
+                      aria-current={i === currentItem ? 'true' : undefined}
                       className={`rounded-full transition-all duration-200 ${
                         i === currentItem
                           ? 'h-2.5 w-6 bg-violet-500'
@@ -815,7 +819,7 @@ export default function LiveSession({ profile, session: initialSession, items, p
 
             {/* Join code + QR */}
             <div className="rounded-2xl border border-violet-200 bg-violet-50 p-5 text-center shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-widest text-violet-500 mb-1">Join Code</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-violet-700 mb-1">Join Code</p>
               <button onClick={copyCode} className="flex items-center justify-center gap-2 mx-auto" title="Click to copy">
                 <span className="font-mono text-3xl font-black tracking-[0.2em] text-violet-700 md:text-4xl md:tracking-[0.25em]">
                   {session.join_code}
@@ -825,10 +829,10 @@ export default function LiveSession({ profile, session: initialSession, items, p
               {copied && <p className="text-xs text-emerald-600 mt-1">Copied!</p>}
               <div className="mt-4 flex justify-center">
                 <div className="rounded-xl bg-white p-3 shadow-sm">
-                  <QRCodeSVG value={joinUrl} size={120} bgColor="#ffffff" fgColor="#1e1b4b" level="M" />
+                  <QRCodeSVG value={joinUrl} size={120} bgColor="#ffffff" fgColor="#1e1b4b" level="M" title={`QR code — scan to join with code ${session.join_code}`} />
                 </div>
               </div>
-              <p className="mt-2 text-xs text-violet-500">Scan to join</p>
+              <p className="mt-2 text-xs text-violet-700">Scan to join</p>
             </div>
 
             {/* Participants */}

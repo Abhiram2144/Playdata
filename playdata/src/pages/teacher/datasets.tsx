@@ -287,7 +287,7 @@ export default function TeacherDatasets({ profile, googleConnected: initGoogle, 
   }, []);
 
   return (
-    <DashboardLayout navItems={NAV_ITEMS} profile={profile}>
+    <DashboardLayout navItems={NAV_ITEMS} profile={profile} title="Datasets">
       <div className="max-w-5xl space-y-8">
 
         {/* Dataset list */}
@@ -298,7 +298,7 @@ export default function TeacherDatasets({ profile, googleConnected: initGoogle, 
         >
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-widest text-gray-400">Datasets</p>
+              <p className="text-sm font-semibold uppercase tracking-widest text-gray-600">Datasets</p>
               <h1 className="mt-3 text-3xl font-bold text-gray-900">My Datasets</h1>
             </div>
           </div>
@@ -307,8 +307,8 @@ export default function TeacherDatasets({ profile, googleConnected: initGoogle, 
             <p className="text-sm text-gray-500">Loading datasets…</p>
           ) : datasets.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-8 text-center">
-              <Database className="mx-auto size-8 text-gray-300 mb-3" />
-              <p className="text-sm text-gray-400">No datasets yet. Import one below.</p>
+              <Database className="mx-auto size-8 text-gray-600 mb-3" />
+              <p className="text-sm text-gray-600">No datasets yet. Import one below.</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -320,12 +320,12 @@ export default function TeacherDatasets({ profile, googleConnected: initGoogle, 
                 >
                   <div className="min-w-0">
                     <p className="font-medium text-gray-900 truncate">{ds.name}</p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-gray-600">
                       {ds.provider === 'google_drive' ? 'Google Drive' : ds.provider === 'dropbox' ? 'Dropbox' : 'Desktop upload'}
                       {' · '}{new Date(ds.created_at).toLocaleDateString('en-GB')}
                     </p>
                   </div>
-                  <span className="ml-4 shrink-0 text-xs text-gray-400">
+                  <span className="ml-4 shrink-0 text-xs text-gray-600">
                     {ds.row_count.toLocaleString()} rows
                   </span>
                 </Link>
@@ -343,7 +343,7 @@ export default function TeacherDatasets({ profile, googleConnected: initGoogle, 
         >
           <div className="flex items-center justify-between mb-6">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-widest text-gray-400 mb-1">Import</p>
+              <p className="text-sm font-semibold uppercase tracking-widest text-gray-600 mb-1">Import</p>
               <h2 className="text-xl font-bold text-gray-900">Add a dataset</h2>
             </div>
             <Link
@@ -376,7 +376,7 @@ export default function TeacherDatasets({ profile, googleConnected: initGoogle, 
               </span>
               <div>
                 <p className="text-sm font-semibold text-gray-800">Upload from desktop</p>
-                <p className="mt-0.5 text-xs text-gray-400">CSV or XLSX up to 50 MB</p>
+                <p className="mt-0.5 text-xs text-gray-600">CSV or XLSX up to 50 MB</p>
               </div>
             </Link>
 
@@ -397,7 +397,7 @@ export default function TeacherDatasets({ profile, googleConnected: initGoogle, 
                       <CheckCircle2 className="size-3" /> Connected
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-gray-400">
+                    <span className="inline-flex items-center gap-1 text-gray-600">
                       <AlertCircle className="size-3" /> Not connected
                     </span>
                   )}
@@ -442,7 +442,7 @@ export default function TeacherDatasets({ profile, googleConnected: initGoogle, 
                       <CheckCircle2 className="size-3" /> Connected
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-gray-400">
+                    <span className="inline-flex items-center gap-1 text-gray-600">
                       <AlertCircle className="size-3" /> Not connected
                     </span>
                   )}

@@ -202,7 +202,7 @@ function ClassroomGrid({
           </p>
 
           {classroom.description && (
-            <p className="text-xs text-gray-400 line-clamp-2">{classroom.description}</p>
+            <p className="text-xs text-gray-600 line-clamp-2">{classroom.description}</p>
           )}
 
           <div className="flex items-center gap-3">
@@ -220,7 +220,7 @@ function ClassroomGrid({
             <button
               onClick={() => onToggleArchive(classroom)}
               disabled={toggling === classroom.id}
-              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
             >
               {classroom.archived
                 ? <><ArchiveRestore className="size-3.5" /> Unarchive</>
@@ -275,7 +275,7 @@ export default function ClassroomsPage({ profile, classrooms: initial }: Props) 
   }
 
   return (
-    <DashboardLayout profile={profile} navItems={TEACHER_NAV}>
+    <DashboardLayout profile={profile} navItems={TEACHER_NAV} title="Classrooms">
       <AnimatePresence>
         {showCreate && (
           <CreateModal onClose={() => setShowCreate(false)} onCreate={handleCreated} />
@@ -286,9 +286,9 @@ export default function ClassroomsPage({ profile, classrooms: initial }: Props) 
         {/* Header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Teaching</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-600">Teaching</p>
             <h1 className="mt-0.5 text-2xl font-bold text-gray-900">Classrooms</h1>
-            <p className="mt-0.5 text-sm text-gray-500">
+            <p className="mt-0.5 text-sm text-gray-600">
               {active.length} active {active.length === 1 ? 'classroom' : 'classrooms'}
               {archived.length > 0 && `, ${archived.length} archived`}
             </p>
@@ -309,7 +309,7 @@ export default function ClassroomsPage({ profile, classrooms: initial }: Props) 
               <GraduationCap className="size-8 text-gray-300" />
             </div>
             <p className="text-base font-medium text-gray-700">No classrooms yet</p>
-            <p className="mt-1 text-sm text-gray-400">
+            <p className="mt-1 text-sm text-gray-600">
               Create a classroom to organise your students and link it to sessions.
             </p>
             <button

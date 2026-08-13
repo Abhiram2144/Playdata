@@ -153,7 +153,7 @@ function QuestionCard({
     >
       {/* Card header */}
       <div className="flex items-center gap-3 px-4 py-3">
-        <span className="cursor-grab touch-none text-gray-300 transition hover:text-gray-500 active:cursor-grabbing">
+        <span className="cursor-grab touch-none text-gray-600 transition hover:text-gray-700 active:cursor-grabbing">
           <GripVertical className="size-4" />
         </span>
 
@@ -166,20 +166,20 @@ function QuestionCard({
         </span>
 
         <p className="min-w-0 flex-1 truncate text-sm text-gray-700">
-          {q.text.trim() || <span className="italic text-gray-300">No question text yet…</span>}
+          {q.text.trim() || <span className="italic text-gray-600">No question text yet…</span>}
         </p>
 
         <div className="flex shrink-0 items-center gap-1">
           <button
             onClick={onToggle}
-            className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+            className="rounded-lg p-1.5 text-gray-600 transition hover:bg-gray-100 hover:text-gray-700"
           >
             {expanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
           </button>
           {total > 1 && (
             <button
               onClick={onDelete}
-              className="rounded-lg p-1.5 text-gray-300 transition hover:bg-red-50 hover:text-red-500"
+              className="rounded-lg p-1.5 text-gray-600 transition hover:bg-red-50 hover:text-red-500"
             >
               <Trash2 className="size-3.5" />
             </button>
@@ -201,7 +201,7 @@ function QuestionCard({
 
               {/* Question text */}
               <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-400">
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
                   Question text <span className="text-red-400">*</span>
                 </label>
                 <textarea
@@ -216,7 +216,7 @@ function QuestionCard({
               {/* Visualisation attachments */}
               <div>
                 <div className="mb-1.5 flex items-center justify-between">
-                  <label className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  <label className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-gray-600">
                     <BarChart2 className="size-3" /> Linked charts
                   </label>
                   {hasDataset && (
@@ -255,19 +255,19 @@ function QuestionCard({
                           />
                           <div className="min-w-0">
                             <p className="truncate text-xs font-medium text-gray-800">{v.name}</p>
-                            <p className="text-xs capitalize text-gray-400">{v.chart_type}</p>
+                            <p className="text-xs capitalize text-gray-600">{v.chart_type}</p>
                           </div>
                         </label>
                       );
                     })}
                   </div>
                 ) : hasDataset ? (
-                  <p className="text-xs text-gray-400">No charts yet — click &ldquo;Create chart&rdquo; to add one.</p>
+                  <p className="text-xs text-gray-600">No charts yet — click &ldquo;Create chart&rdquo; to add one.</p>
                 ) : (
-                  <p className="text-xs text-gray-400">Select a dataset for this quiz to create and link charts.</p>
+                  <p className="text-xs text-gray-600">Select a dataset for this quiz to create and link charts.</p>
                 )}
                 {q.visualisation_ids.length > 0 && (
-                  <p className="mt-1 text-xs text-gray-400">
+                  <p className="mt-1 text-xs text-gray-600">
                     {q.visualisation_ids.length} chart{q.visualisation_ids.length !== 1 ? 's' : ''} will be shown alongside this question.
                   </p>
                 )}
@@ -275,7 +275,7 @@ function QuestionCard({
 
               {/* Type selector */}
               <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-400">
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
                   Question type
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -302,9 +302,9 @@ function QuestionCard({
               {/* MCQ options */}
               {q.type === 'mcq' && (
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
                     Options <span className="text-red-400">*</span>
-                    <span className="ml-1 normal-case font-normal text-gray-400">(click circle to mark correct)</span>
+                    <span className="ml-1 normal-case font-normal text-gray-600">(click circle to mark correct)</span>
                   </label>
                   <div className="space-y-2">
                     {q.options.map((opt, oi) => (
@@ -330,7 +330,7 @@ function QuestionCard({
                         {q.options.length > 2 && (
                           <button
                             onClick={() => removeOption(oi)}
-                            className="p-1 text-gray-300 transition hover:text-red-400"
+                            className="p-1 text-gray-600 transition hover:text-red-400"
                           >
                             <X className="size-3.5" />
                           </button>
@@ -352,7 +352,7 @@ function QuestionCard({
               {/* Short answer */}
               {q.type === 'short_answer' && (
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
                     Correct answer <span className="text-red-400">*</span>
                   </label>
                   <input
@@ -368,7 +368,7 @@ function QuestionCard({
               {q.type === 'numerical' && (
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-400">
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
                       Correct answer <span className="text-red-400">*</span>
                     </label>
                     <input
@@ -380,7 +380,7 @@ function QuestionCard({
                     />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-400">
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
                       Tolerance (±)
                     </label>
                     <input
@@ -399,7 +399,7 @@ function QuestionCard({
               <div>
                 <button
                   onClick={() => setShowAdvanced((v) => !v)}
-                  className="flex items-center gap-1.5 text-xs font-medium text-gray-400 transition hover:text-gray-600"
+                  className="flex items-center gap-1.5 text-xs font-medium text-gray-600 transition hover:text-gray-600"
                 >
                   {showAdvanced ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
                   Advanced options
@@ -416,7 +416,7 @@ function QuestionCard({
                       <div className="mt-3 grid gap-3 sm:grid-cols-2">
                         {columns.length > 0 && (
                           <div>
-                            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-400">
+                            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
                               Dataset column
                             </label>
                             <select
@@ -433,7 +433,7 @@ function QuestionCard({
                         )}
 
                         <div>
-                          <label className="mb-1.5 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                          <label className="mb-1.5 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-gray-600">
                             <Clock className="size-3" /> Time limit (seconds)
                           </label>
                           <input
@@ -447,7 +447,7 @@ function QuestionCard({
                         </div>
 
                         <div className={columns.length > 0 ? '' : 'sm:col-span-2'}>
-                          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-400">
+                          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
                             Explanation (shown after answer)
                           </label>
                           <textarea
@@ -460,7 +460,7 @@ function QuestionCard({
                         </div>
 
                         <div>
-                          <label className="mb-1.5 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                          <label className="mb-1.5 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-gray-600">
                             <Tag className="size-3" /> Topic tag
                           </label>
                           <TagCombobox
@@ -679,11 +679,11 @@ export default function QuizBuilder({
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100 ring-1 ring-violet-200">
             <BookOpen className="size-3.5 text-violet-600" />
           </span>
-          <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">Quiz details</span>
+          <span className="text-xs font-semibold uppercase tracking-widest text-gray-600">Quiz details</span>
         </div>
 
         <div>
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-400">
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
             Title <span className="text-red-400">*</span>
           </label>
           <input
@@ -695,7 +695,7 @@ export default function QuizBuilder({
         </div>
 
         <div>
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-400">
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
             Description
           </label>
           <textarea
@@ -708,10 +708,11 @@ export default function QuizBuilder({
         </div>
 
         <div>
-          <label className="mb-1.5 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
+          <label htmlFor="quiz-linked-dataset" className="mb-1.5 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-gray-600">
             <Database className="size-3" /> Linked dataset (optional)
           </label>
           <select
+            id="quiz-linked-dataset"
             value={datasetId}
             onChange={(e) => handleDatasetChange(e.target.value)}
             className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 transition focus:border-violet-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-100"
@@ -735,10 +736,10 @@ export default function QuizBuilder({
           />
           <div>
             <div className="flex items-center gap-2">
-              <Clock className={`size-3.5 ${isTimed ? 'text-violet-600' : 'text-gray-400'}`} />
+              <Clock className={`size-3.5 ${isTimed ? 'text-violet-600' : 'text-gray-600'}`} />
               <p className="text-sm font-medium text-gray-800">Timed quiz</p>
             </div>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-600 mt-0.5">
               {isTimed
                 ? 'Each question has a countdown timer. Set time limits per question in Advanced options.'
                 : 'No time limits — students can answer at their own pace.'}
@@ -758,10 +759,10 @@ export default function QuizBuilder({
           />
           <div>
             <div className="flex items-center gap-2">
-              <PenLine className={`size-3.5 ${allowStudentCharts ? 'text-emerald-600' : 'text-gray-400'}`} />
+              <PenLine className={`size-3.5 ${allowStudentCharts ? 'text-emerald-600' : 'text-gray-600'}`} />
               <p className="text-sm font-medium text-gray-800">Allow student chart creation</p>
             </div>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-600 mt-0.5">
               {allowStudentCharts
                 ? 'Students can build their own charts while answering questions.'
                 : 'Students will only see the charts you linked to each question.'}
@@ -787,13 +788,13 @@ export default function QuizBuilder({
             )}
           </p>
           {questions.length > 1 && (
-            <p className="text-xs text-gray-400">Drag to reorder</p>
+            <p className="text-xs text-gray-600">Drag to reorder</p>
           )}
         </div>
 
         {questions.length === 0 && (
           <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-6 py-10 text-center">
-            <p className="text-sm text-gray-400">No questions yet — add one below.</p>
+            <p className="text-sm text-gray-600">No questions yet — add one below.</p>
           </div>
         )}
 
@@ -872,7 +873,7 @@ export default function QuizBuilder({
         >
           {saving === 'publish' ? 'Publishing…' : 'Save & Publish'}
         </button>
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-gray-600">
           Publish validates all questions have correct answers and MCQ has ≥2 options.
         </p>
       </motion.div>

@@ -114,14 +114,14 @@ export function Sidebar({ items, profile, isOpen, onClose }: SidebarProps) {
               <p className="truncate text-xs font-medium text-gray-800">
                 {profile.full_name || profile.email}
               </p>
-              <p className="truncate text-[11px] text-gray-400 capitalize">{profile.role}</p>
+              <p className="truncate text-[11px] text-gray-500 capitalize">{profile.role}</p>
             </div>
           </motion.div>
         </Link>
 
         <button
           onClick={handleSignOut}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors"
         >
           <LogOut className="size-4 shrink-0" />
           <span>Sign out</span>

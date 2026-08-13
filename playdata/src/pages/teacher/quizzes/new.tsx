@@ -97,7 +97,7 @@ export default function NewQuizPage({ profile, datasets, visualisations, prefill
   const router = useRouter();
 
   return (
-    <DashboardLayout navItems={NAV_ITEMS} profile={profile}>
+    <DashboardLayout navItems={NAV_ITEMS} profile={profile} title="New Quiz">
       <div className="max-w-3xl space-y-6">
 
         {/* Page header */}
@@ -108,13 +108,13 @@ export default function NewQuizPage({ profile, datasets, visualisations, prefill
         >
           <button
             onClick={() => router.push('/teacher/quizzes')}
-            className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-violet-600 transition-colors"
+            className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-violet-600 transition-colors"
           >
             <ArrowLeft className="size-3.5" /> Back to Quizzes
           </button>
           <h1 className="text-2xl font-bold text-gray-900">New Quiz</h1>
           {prefilledFrom && prefilledDatasetId && (
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-600">
               Pre-linked from {prefilledFrom}
               {' '}·{' '}
               <button

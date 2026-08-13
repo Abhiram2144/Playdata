@@ -98,7 +98,7 @@ function RenameModal({
       >
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 rounded-lg p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+          className="absolute right-4 top-4 rounded-lg p-1 text-gray-600 transition hover:bg-gray-100 hover:text-gray-600"
         >
           <X className="size-4" />
         </button>
@@ -159,7 +159,7 @@ function TagCard({ entry, onRename }: { entry: TagEntry; onRename: () => void })
       {/* Rename button — appears on hover */}
       <button
         onClick={onRename}
-        className="absolute right-3 top-3 flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-gray-400 opacity-0 transition hover:bg-violet-50 hover:text-violet-600 group-hover:opacity-100"
+        className="absolute right-3 top-3 flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-gray-600 opacity-0 transition hover:bg-violet-50 hover:text-violet-600 group-hover:opacity-100"
       >
         <Pencil className="size-3" /> Rename
       </button>
@@ -171,7 +171,7 @@ function TagCard({ entry, onRename }: { entry: TagEntry; onRename: () => void })
 
       <p className="truncate pr-16 text-sm font-semibold text-gray-900">{entry.tag}</p>
 
-      <p className="mt-1 text-xs text-gray-400">
+      <p className="mt-1 text-xs text-gray-600">
         {entry.count} question{entry.count !== 1 ? 's' : ''}
       </p>
 
@@ -214,12 +214,12 @@ export default function TagsPage({ profile }: Props) {
   const totalQuestions = tags.reduce((sum, t) => sum + t.count, 0);
 
   return (
-    <DashboardLayout navItems={NAV_ITEMS} profile={profile}>
+    <DashboardLayout navItems={NAV_ITEMS} profile={profile} title="Question Bank">
       <div className="max-w-4xl space-y-8">
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-          <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Question tags</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-gray-600">Question tags</p>
           <h1 className="mt-0.5 text-2xl font-bold text-gray-900">Topic Tags</h1>
           <p className="mt-1 text-sm text-gray-500">
             Tags drive per-topic analytics after each session — use them to spot where students
@@ -241,7 +241,7 @@ export default function TagsPage({ profile }: Props) {
               </span>
               <div>
                 <p className="text-lg font-bold leading-none text-gray-900">{tags.length}</p>
-                <p className="mt-0.5 text-xs text-gray-400">distinct tags</p>
+                <p className="mt-0.5 text-xs text-gray-600">distinct tags</p>
               </div>
             </div>
             <div className="flex items-center gap-2.5 rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
@@ -250,7 +250,7 @@ export default function TagsPage({ profile }: Props) {
               </span>
               <div>
                 <p className="text-lg font-bold leading-none text-gray-900">{totalQuestions}</p>
-                <p className="mt-0.5 text-xs text-gray-400">tagged questions</p>
+                <p className="mt-0.5 text-xs text-gray-600">tagged questions</p>
               </div>
             </div>
           </motion.div>
@@ -262,13 +262,13 @@ export default function TagsPage({ profile }: Props) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.06 }}
         >
-          <h2 className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
+          <h2 className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-gray-600">
             <Tag className="size-3.5" /> All tags
           </h2>
 
           {loading ? (
             <div className="flex h-32 items-center justify-center rounded-2xl border border-gray-100 bg-white shadow-sm">
-              <Loader2 className="size-5 animate-spin text-gray-300" />
+              <Loader2 className="size-5 animate-spin text-gray-600" />
             </div>
           ) : tags.length === 0 ? (
             <div className="rounded-2xl border border-gray-100 bg-white px-8 py-16 text-center shadow-sm">
@@ -276,7 +276,7 @@ export default function TagsPage({ profile }: Props) {
                 <Tag className="size-7 text-violet-600" />
               </span>
               <p className="mt-4 text-sm font-semibold text-gray-800">No tags yet</p>
-              <p className="mt-1 text-xs text-gray-400 max-w-xs mx-auto">
+              <p className="mt-1 text-xs text-gray-600 max-w-xs mx-auto">
                 Open a quiz, expand <span className="font-medium text-gray-600">Advanced options</span> on
                 any question, and set a Topic tag to get started.
               </p>

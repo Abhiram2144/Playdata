@@ -237,7 +237,7 @@ export default function EditQuizPage({
   }));
 
   return (
-    <DashboardLayout navItems={NAV_ITEMS} profile={profile}>
+    <DashboardLayout navItems={NAV_ITEMS} profile={profile} title={quiz.title}>
       <div className="max-w-3xl space-y-6">
 
         {/* Page header */}

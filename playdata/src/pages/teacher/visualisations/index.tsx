@@ -131,14 +131,14 @@ function DatasetPickerModal({
       >
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-base font-semibold text-gray-900">Select a dataset</h3>
-          <button onClick={onClose} className="rounded-lg p-1 text-gray-400 hover:text-gray-600 transition-colors">
+          <button onClick={onClose} className="rounded-lg p-1 text-gray-600 hover:text-gray-600 transition-colors">
             <X className="size-4" />
           </button>
         </div>
 
         {datasets.length === 0 ? (
           <div className="py-6 text-center">
-            <Database className="size-8 text-gray-300 mx-auto mb-3" />
+            <Database className="size-8 text-gray-600 mx-auto mb-3" />
             <p className="text-sm text-gray-500 mb-3">No datasets yet.</p>
             <Link
               href="/teacher/datasets"
@@ -156,7 +156,7 @@ function DatasetPickerModal({
                   onClick={() => onPick(d.id)}
                   className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-gray-700 hover:bg-violet-50 hover:text-violet-700 transition-colors"
                 >
-                  <Database className="size-4 text-gray-400 shrink-0" />
+                  <Database className="size-4 text-gray-600 shrink-0" />
                   {d.name}
                 </button>
               </li>
@@ -251,7 +251,7 @@ export default function VisualisationsPage({ profile, visualisations: initial, d
   const hasFilters = datasetFilter !== '' || chartFilter !== '';
 
   return (
-    <DashboardLayout profile={profile} navItems={TEACHER_NAV}>
+    <DashboardLayout profile={profile} navItems={TEACHER_NAV} title="Visualisations">
       <AnimatePresence>
         {showDatasetPicker && (
           <DatasetPickerModal
@@ -274,7 +274,7 @@ export default function VisualisationsPage({ profile, visualisations: initial, d
         {/* Header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Visualisations</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-600">Visualisations</p>
             <h1 className="mt-0.5 text-2xl font-bold text-gray-900">Visualisations</h1>
             <p className="mt-0.5 text-sm text-gray-500">
               {list.length} saved {list.length === 1 ? 'visualisation' : 'visualisations'}
@@ -292,8 +292,9 @@ export default function VisualisationsPage({ profile, visualisations: initial, d
         {/* Filters */}
         {(datasets.length > 0 || list.length > 0) && (
           <div className="flex items-center gap-3 flex-wrap">
-            <Filter className="size-4 text-gray-400 shrink-0" />
+            <Filter className="size-4 text-gray-600 shrink-0" aria-hidden="true" />
             <select
+              aria-label="Filter by dataset"
               value={datasetFilter}
               onChange={(e) => setDatasetFilter(e.target.value)}
               className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-400/40 min-w-[160px]"
@@ -304,6 +305,7 @@ export default function VisualisationsPage({ profile, visualisations: initial, d
               ))}
             </select>
             <select
+              aria-label="Filter by chart type"
               value={chartFilter}
               onChange={(e) => setChartFilter(e.target.value)}
               className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-400/40 min-w-[140px]"
@@ -316,7 +318,7 @@ export default function VisualisationsPage({ profile, visualisations: initial, d
             {hasFilters && (
               <button
                 onClick={() => { setDatasetFilter(''); setChartFilter(''); }}
-                className="text-sm text-gray-400 hover:text-gray-700 transition-colors"
+                className="text-sm text-gray-600 hover:text-gray-700 transition-colors"
               >
                 Clear filters
               </button>
@@ -328,12 +330,12 @@ export default function VisualisationsPage({ profile, visualisations: initial, d
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="mb-4 rounded-full bg-gray-100 p-4">
-              <BarChart3 className="size-8 text-gray-300" />
+              <BarChart3 className="size-8 text-gray-600" />
             </div>
             {list.length === 0 ? (
               <>
                 <p className="text-base font-medium text-gray-700">No visualisations yet</p>
-                <p className="mt-1 text-sm text-gray-400">
+                <p className="mt-1 text-sm text-gray-600">
                   Open a dataset and click &ldquo;Create visualisation&rdquo; to get started.
                 </p>
                 <Link
@@ -347,7 +349,7 @@ export default function VisualisationsPage({ profile, visualisations: initial, d
             ) : (
               <>
                 <p className="text-base font-medium text-gray-700">No matches</p>
-                <p className="mt-1 text-sm text-gray-400">Try adjusting the filters above.</p>
+                <p className="mt-1 text-sm text-gray-600">Try adjusting the filters above.</p>
               </>
             )}
           </div>
@@ -386,10 +388,10 @@ export default function VisualisationsPage({ profile, visualisations: initial, d
                 {vis.datasets ? (
                   (() => {
                     const dataset = Array.isArray(vis.datasets) ? vis.datasets[0] : vis.datasets
-                    if (!dataset) return <p className="text-xs text-gray-400">No dataset linked</p>
+                    if (!dataset) return <p className="text-xs text-gray-600">No dataset linked</p>
                     return (
-                  <p className="text-xs text-gray-400 truncate">
-                    <span className="text-gray-400">Dataset: </span>
+                  <p className="text-xs text-gray-600 truncate">
+                    <span className="text-gray-600">Dataset: </span>
                     <Link
                       href={`/teacher/datasets/${dataset.id}`}
                       className="text-gray-600 hover:text-violet-600 transition-colors"
@@ -400,12 +402,12 @@ export default function VisualisationsPage({ profile, visualisations: initial, d
                     )
                   })()
                 ) : (
-                  <p className="text-xs text-gray-400">No dataset linked</p>
+                  <p className="text-xs text-gray-600">No dataset linked</p>
                 )}
 
                 {/* Footer */}
                 <div className="mt-auto flex items-center justify-between pt-2 border-t border-gray-100">
-                  <time className="text-xs text-gray-400">
+                  <time className="text-xs text-gray-600">
                     {new Date(vis.created_at).toLocaleDateString('en-GB', {
                       day: 'numeric',
                       month: 'short',
@@ -415,14 +417,14 @@ export default function VisualisationsPage({ profile, visualisations: initial, d
                   <div className="flex items-center gap-1">
                     <Link
                       href={`/teacher/visualisations/${vis.id}`}
-                      className="rounded-lg p-1.5 text-gray-400 hover:text-violet-600 hover:bg-violet-50 transition-colors"
+                      className="rounded-lg p-1.5 text-gray-600 hover:text-violet-600 hover:bg-violet-50 transition-colors"
                       title="View visualisation"
                     >
                       <Eye className="size-3.5" />
                     </Link>
                     <button
                       onClick={() => setPendingDelete(vis)}
-                      className="rounded-lg p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                      className="rounded-lg p-1.5 text-gray-600 hover:text-red-500 hover:bg-red-50 transition-colors"
                       title="Delete visualisation"
                     >
                       <Trash2 className="size-3.5" />
