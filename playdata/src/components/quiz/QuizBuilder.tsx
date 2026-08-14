@@ -5,10 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Trash2, GripVertical, ChevronDown, ChevronUp,
   Database, Hash, AlignLeft, List, AlertTriangle, Check,
-  Clock, BookOpen, X, CheckCircle, BarChart2, PenLine, Tag,
+  Clock, BookOpen, X, CheckCircle, BarChart2, PenLine, Tag, Sparkles,
 } from 'lucide-react';
 import { TagCombobox } from '@/components/ui/TagCombobox';
 import { InlineChartBuilder, type CreatedVis } from '@/components/quiz/InlineChartBuilder';
+import { AIQuizGenerator } from '@/components/quiz/AIQuizGenerator';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export type QuestionType = 'mcq' | 'short_answer' | 'numerical';
@@ -30,6 +31,7 @@ export interface QuestionDraft {
   explanation: string;
   time_limit_secs: number;
   topic_tag: string;
+  _ai?: { generation_id: string | null; original_text: string };
 }
 
 export interface QuizBuilderProps {
@@ -518,6 +520,7 @@ export default function QuizBuilder({
   const [rows, setRows] = useState<Record<string, unknown>[]>([]);
   const [loadingRows, setLoadingRows] = useState(false);
   const [openChartFor, setOpenChartFor] = useState<string | null>(null);
+  const [showAIGenerator, setShowAIGenerator] = useState(false);
 
   useEffect(() => {
     if (!datasetId) { setRows([]); return; }
@@ -624,6 +627,7 @@ export default function QuizBuilder({
       explanation: q.explanation.trim() || null,
       time_limit_secs: isTimed ? q.time_limit_secs : 0,
       topic_tag: q.topic_tag.trim() || null,
+      ai_meta: q._ai ?? null,
     })),
   });
 
@@ -820,12 +824,20 @@ export default function QuizBuilder({
           />
         ))}
 
-        <button
-          onClick={addQuestion}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-violet-300 bg-violet-50 py-3 text-sm font-medium text-violet-600 transition hover:border-violet-400 hover:bg-violet-100"
-        >
-          <Plus className="size-4" /> Add question
-        </button>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <button
+            onClick={addQuestion}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-violet-300 bg-violet-50 py-3 text-sm font-medium text-violet-600 transition hover:border-violet-400 hover:bg-violet-100"
+          >
+            <Plus className="size-4" /> Add question
+          </button>
+          <button
+            onClick={() => setShowAIGenerator(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-fuchsia-300 bg-fuchsia-50 py-3 text-sm font-medium text-fuchsia-600 transition hover:border-fuchsia-400 hover:bg-fuchsia-100"
+          >
+            <Sparkles className="size-4" /> Generate with AI
+          </button>
+        </div>
       </motion.div>
 
       {/* Errors */}
@@ -877,6 +889,19 @@ export default function QuizBuilder({
           Publish validates all questions have correct answers and MCQ has ≥2 options.
         </p>
       </motion.div>
+
+      {/* AI quiz generator modal */}
+      <AnimatePresence>
+        {showAIGenerator && (
+          <AIQuizGenerator
+            datasets={datasets}
+            datasetId={datasetId}
+            onDatasetChange={handleDatasetChange}
+            onAccept={(draft) => setQuestions((prev) => [...prev, draft])}
+            onClose={() => setShowAIGenerator(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Inline chart builder modal */}
       <AnimatePresence>
