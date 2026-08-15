@@ -245,6 +245,12 @@ export default function AuthLoginPage() {
                 Sign in here
               </Link>
             </p>
+            <p className="text-center text-sm text-[#6a6a80]">
+              Administrator?{' '}
+              <Link href="/admin/login" className="text-violet-400 hover:text-violet-300 font-medium transition-colors">
+                Sign in as admin
+              </Link>
+            </p>
           </div>
         </motion.div>
       </div>

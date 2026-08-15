@@ -368,14 +368,14 @@ export default function SessionResults({ profile, session, analytics, questions,
           </button>
         </motion.div>
 
-        {/* AI performance summary */}
+        {/* Performance summary */}
         {session.ai_summary && (
           <motion.div
             initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.02 }}
             className="rounded-2xl border border-violet-200 bg-violet-50 p-5"
           >
             <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-violet-600">
-              <Sparkles className="size-3.5" /> AI Performance Summary
+              <Sparkles className="size-3.5" /> Performance Summary
             </p>
             <ul className="space-y-1.5">
               {session.ai_summary.split('\n').map((line, i) => {

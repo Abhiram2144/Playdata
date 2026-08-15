@@ -21,7 +21,11 @@ interface GeneratedQuestion {
   dataset_column: string | null;
   topic_tag: string;
   explanation: string;
+  suggested_chart_type: string | null;
+  suggested_chart_note: string;
 }
+
+const CHART_TYPES = ['bar', 'line', 'pie', 'scatter', 'histogram'] as const;
 
 function serializeCookie(name: string, value: string, opts: CookieOptions = {}): string {
   const parts = [`${encodeURIComponent(name)}=${encodeURIComponent(value)}`];
@@ -142,8 +146,17 @@ const RESPONSE_SCHEMA = {
             type: 'string',
             description: 'One or two sentences explaining why the correct answer is right, citing real values from the dataset; shown to students after they answer',
           },
+          suggested_chart_type: {
+            type: 'string',
+            enum: ['bar', 'line', 'pie', 'scatter', 'histogram', 'none'],
+            description: 'The chart type the teacher should create and link to this question so students can read the answer from it; "none" if no chart helps',
+          },
+          suggested_chart_note: {
+            type: 'string',
+            description: 'Short instruction for building that chart using exact column names, e.g. "X: team (category), Y: mean of kills". Empty string when suggested_chart_type is "none"',
+          },
         },
-        required: ['text', 'type', 'options', 'correct_answer', 'answer_tolerance', 'dataset_column', 'topic_tag', 'explanation'],
+        required: ['text', 'type', 'options', 'correct_answer', 'answer_tolerance', 'dataset_column', 'topic_tag', 'explanation', 'suggested_chart_type', 'suggested_chart_note'],
         additionalProperties: false,
       },
     },
@@ -179,6 +192,10 @@ function repairQuestions(raw: GeneratedQuestion[], validColumns: Set<string>): G
 
     const column = q.dataset_column && validColumns.has(q.dataset_column) ? q.dataset_column : null;
 
+    const chartType = CHART_TYPES.includes(q.suggested_chart_type as typeof CHART_TYPES[number])
+      ? q.suggested_chart_type
+      : null;
+
     out.push({
       text,
       type: q.type,
@@ -188,6 +205,8 @@ function repairQuestions(raw: GeneratedQuestion[], validColumns: Set<string>): G
       dataset_column: column,
       topic_tag: String(q.topic_tag ?? '').trim(),
       explanation: String(q.explanation ?? '').trim(),
+      suggested_chart_type: chartType,
+      suggested_chart_note: chartType ? String(q.suggested_chart_note ?? '').trim() : '',
     });
   }
   return out;
@@ -285,6 +304,8 @@ Rules:
 - dataset_column: the single most relevant column name, copied exactly from the list above, or null.
 - topic_tag: a short 1-3 word data-literacy topic such as "Averages", "Comparison", "Data Types", "Ranges".
 - explanation: 1-2 sentences explaining why the correct answer is correct, citing the real values or statistics listed above. Never invent values.
+- suggested_chart_type: the chart (bar, line, pie, scatter or histogram) a teacher should build and attach so students can read the answer from it, or "none" when a chart would not help. Prefer questions that can be answered from a chart.
+- suggested_chart_note: a short build instruction using exact column names from the list above, e.g. "X: team (category), Y: mean of kills" or "Histogram of match_duration". Empty when suggested_chart_type is "none".
 - Clear, unambiguous wording suitable for school students.`;
 
   // ── Call OpenAI with structured outputs ─────────────────────────────────────

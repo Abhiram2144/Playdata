@@ -39,7 +39,7 @@ function generateJoinCode(): string {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (!['GET', 'POST'].includes(req.method ?? '')) {
+  if (!['GET', 'POST', 'DELETE'].includes(req.method ?? '')) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
@@ -72,6 +72,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }))
 
     return res.status(200).json({ sessions: formatted })
+  }
+
+  // DELETE: clear session history — permanently removes all of this teacher's
+  // ended sessions (child rows cascade: items, participants, responses, analytics).
+  if (req.method === 'DELETE') {
+    const { data: deleted, error } = await admin
+      .from('sessions')
+      .delete()
+      .eq('teacher_id', user.id)
+      .eq('status', 'ended')
+      .select('id')
+    if (error) return res.status(500).json({ error: error.message })
+    return res.status(200).json({ deleted: (deleted ?? []).length })
   }
 
   // POST: create

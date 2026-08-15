@@ -33,9 +33,9 @@ const SECTIONS: { title: string; body: string[] }[] = [
     ],
   },
   {
-    title: '4. AI features',
+    title: '4. Automated features',
     body: [
-      'Some features (quiz generation, answer explanations, class performance summaries) send question text and aggregated statistics to an AI provider (OpenAI) for processing. These requests never include your name or email address.',
+      'Some features (quiz generation, answer explanations, class performance summaries) process question text and aggregated class statistics through trusted third-party data processors. These requests never include your name or email address.',
     ],
   },
   {

@@ -50,7 +50,7 @@ export default function HomePage() {
           </Button>
         </div>
 
-        <p className="text-xs text-[#6a6a80]">AI-powered · Real-time sessions · Esports datasets</p>
+        <p className="text-xs text-[#6a6a80]">Interactive quizzes · Real-time sessions · Esports datasets</p>
       </div>
     </div>
   );

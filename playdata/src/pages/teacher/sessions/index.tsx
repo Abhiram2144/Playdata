@@ -101,6 +101,10 @@ export default function SessionsList({ profile, sessions: initial }: Props) {
   const [createError, setCreateError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [confirmClear, setConfirmClear] = useState(false)
+  const [clearing, setClearing] = useState(false)
+
+  const endedCount = sessions.filter((s) => s.status === 'ended').length
 
   const handleCreate = async () => {
     if (!newTitle.trim()) { setCreateError('Session title is required'); return }
@@ -125,6 +129,14 @@ export default function SessionsList({ profile, sessions: initial }: Props) {
     if (res.ok) setSessions((prev) => prev.filter((s) => s.id !== id))
   }
 
+  const handleClearHistory = async () => {
+    setClearing(true)
+    const res = await fetch('/api/teacher/sessions', { method: 'DELETE' })
+    setClearing(false)
+    setConfirmClear(false)
+    if (res.ok) setSessions((prev) => prev.filter((s) => s.status !== 'ended'))
+  }
+
   return (
     <DashboardLayout navItems={TEACHER_NAV} profile={profile}>
       <div className="max-w-5xl space-y-8">
@@ -139,12 +151,22 @@ export default function SessionsList({ profile, sessions: initial }: Props) {
             <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Sessions</p>
             <h1 className="mt-0.5 text-2xl font-bold text-gray-900">Live Sessions</h1>
           </div>
-          <button
-            onClick={() => { setShowNew(true); setNewTitle(''); setCreateError(null) }}
-            className="flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500"
-          >
-            <Plus className="size-4" /> New Session
-          </button>
+          <div className="flex items-center gap-2">
+            {endedCount > 0 && (
+              <button
+                onClick={() => setConfirmClear(true)}
+                className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-500 transition hover:bg-red-100"
+              >
+                <Trash2 className="size-4" /> Clear history
+              </button>
+            )}
+            <button
+              onClick={() => { setShowNew(true); setNewTitle(''); setCreateError(null) }}
+              className="flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500"
+            >
+              <Plus className="size-4" /> New Session
+            </button>
+          </div>
         </motion.div>
 
         {/* Session cards */}
@@ -299,6 +321,54 @@ export default function SessionsList({ profile, sessions: initial }: Props) {
                   className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:opacity-50"
                 >
                   {creating ? 'Creating…' : 'Create'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Clear history confirmation modal */}
+      <AnimatePresence>
+        {confirmClear && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-xl"
+            >
+              <div className="flex items-start gap-3 mb-5">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-100 ring-1 ring-red-200">
+                  <AlertTriangle className="size-4 text-red-500" />
+                </span>
+                <div>
+                  <h2 className="text-sm font-bold text-gray-900">Clear session history?</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    This permanently deletes all {endedCount} ended session{endedCount !== 1 ? 's' : ''}, including
+                    student responses, results and analytics. Students will no longer see these sessions in their
+                    results. This cannot be undone.
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setConfirmClear(false)}
+                  className="rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-500 transition hover:text-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleClearHistory}
+                  disabled={clearing}
+                  className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500 disabled:opacity-50"
+                >
+                  {clearing ? 'Clearing…' : 'Clear history'}
                 </button>
               </div>
             </motion.div>

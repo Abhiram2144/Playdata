@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   X, Sparkles, Loader2, Check, Pencil, Trash2, Database,
-  AlertTriangle, List, AlignLeft, Hash, Tag, ArrowLeft,
+  AlertTriangle, List, AlignLeft, Hash, Tag, ArrowLeft, BarChart2,
 } from 'lucide-react';
 import type { DatasetOption, QuestionDraft, QuestionType } from '@/components/quiz/QuizBuilder';
 
@@ -16,6 +16,8 @@ interface GeneratedQuestion {
   dataset_column: string | null;
   topic_tag: string;
   explanation: string;
+  suggested_chart_type: string | null;
+  suggested_chart_note: string;
 }
 
 interface ReviewItem extends GeneratedQuestion {
@@ -165,7 +167,7 @@ function ReviewCard({
           </div>
           {item.explanation && (
             <p className="text-xs text-amber-600">
-              Changing the question text or correct answer discards the AI explanation — a fresh one is generated when the quiz is run.
+              Changing the question text or correct answer discards the explanation — a fresh one is generated when the quiz is run.
             </p>
           )}
         </div>
@@ -202,6 +204,16 @@ function ReviewCard({
           {item.explanation && (
             <p className="mt-2 rounded-lg bg-gray-50 px-2.5 py-1.5 text-xs text-gray-600">
               <span className="font-semibold text-gray-700">Explanation: </span>{item.explanation}
+            </p>
+          )}
+          {item.suggested_chart_type && (
+            <p className="mt-2 flex items-start gap-1.5 rounded-lg bg-sky-50 px-2.5 py-1.5 text-xs text-sky-700 ring-1 ring-inset ring-sky-100">
+              <BarChart2 className="mt-0.5 size-3 shrink-0" />
+              <span>
+                <span className="font-semibold capitalize">Suggested chart: {item.suggested_chart_type}</span>
+                {item.suggested_chart_note && <span> — {item.suggested_chart_note}</span>}
+                <span className="block text-sky-600/80">Create and link this chart to the question in the quiz builder.</span>
+              </span>
             </p>
           )}
         </div>
@@ -296,6 +308,9 @@ export function AIQuizGenerator({
       answer_tolerance: item.type === 'numerical' && item.answer_tolerance != null ? String(item.answer_tolerance) : '',
       dataset_column: item.dataset_column ?? '',
       visualisation_ids: [],
+      chart_hint: item.suggested_chart_type
+        ? `${item.suggested_chart_type}${item.suggested_chart_note ? ` — ${item.suggested_chart_note}` : ''}`
+        : undefined,
       explanation: answerChanged ? '' : item.explanation.trim(),
       time_limit_secs: 30,
       topic_tag: item.topic_tag.trim(),
@@ -328,7 +343,7 @@ export function AIQuizGenerator({
         <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-6 py-4">
           <div>
             <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-gray-500">
-              <Sparkles className="size-3.5 text-violet-500" /> Generate with AI
+              <Sparkles className="size-3.5 text-violet-500" /> Question generator
             </p>
             <h2 className="mt-0.5 text-base font-semibold text-gray-900">
               {phase === 'review'
@@ -440,7 +455,7 @@ export function AIQuizGenerator({
             </>
           ) : (
             <>
-              <p className="text-xs text-gray-500">Powered by OpenAI — every generation is logged.</p>
+              <p className="text-xs text-gray-500">Questions are drafted from your dataset&rsquo;s real values.</p>
               <button
                 onClick={generate}
                 disabled={phase === 'generating' || !datasetId || total < 1 || total > 15}

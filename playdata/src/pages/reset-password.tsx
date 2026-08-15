@@ -106,6 +106,9 @@ export default function ResetPasswordPage() {
                 {reqForm.formState.isSubmitting ? <><Loader2 size={15} className="animate-spin" />Sending…</> : 'Send reset link'}
               </Button>
             </form>
+            <div className="rounded-xl border border-[#35354a]/60 bg-[#151526]/70 px-4 py-3 text-sm text-[#8d8da0]">
+              Can&apos;t access your email or the link doesn&apos;t arrive? Contact your administrator to reset your password.
+            </div>
             <Link href="/loginpage" className="block text-center text-sm text-[#8d8da0] hover:text-violet-400 transition-colors">Back to sign in</Link>
           </div>
         )}

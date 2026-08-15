@@ -28,6 +28,7 @@ export interface QuestionDraft {
   answer_tolerance: string;
   dataset_column: string;
   visualisation_ids: string[];
+  chart_hint?: string;
   explanation: string;
   time_limit_secs: number;
   topic_tag: string;
@@ -217,6 +218,14 @@ function QuestionCard({
 
               {/* Visualisation attachments */}
               <div>
+                {q.chart_hint && q.visualisation_ids.length === 0 && (
+                  <p className="mb-2 flex items-start gap-1.5 rounded-lg bg-sky-50 px-2.5 py-1.5 text-xs text-sky-700 ring-1 ring-inset ring-sky-100">
+                    <BarChart2 className="mt-0.5 size-3 shrink-0" />
+                    <span>
+                      <span className="font-semibold">Suggested chart:</span> {q.chart_hint} — create it below and link it to this question.
+                    </span>
+                  </p>
+                )}
                 <div className="mb-1.5 flex items-center justify-between">
                   <label className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-gray-600">
                     <BarChart2 className="size-3" /> Linked charts
@@ -835,7 +844,7 @@ export default function QuizBuilder({
             onClick={() => setShowAIGenerator(true)}
             className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-fuchsia-300 bg-fuchsia-50 py-3 text-sm font-medium text-fuchsia-600 transition hover:border-fuchsia-400 hover:bg-fuchsia-100"
           >
-            <Sparkles className="size-4" /> Generate with AI
+            <Sparkles className="size-4" /> Auto-generate
           </button>
         </div>
       </motion.div>
