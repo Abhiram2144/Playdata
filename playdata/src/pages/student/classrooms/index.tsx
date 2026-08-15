@@ -58,7 +58,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
     .eq('id', user.id)
     .maybeSingle()
 
-  if (!profile) return { redirect: { destination: '/onboarding/student', permanent: false } }
+  if (!profile) return { redirect: { destination: '/auth/login', permanent: false } }
   if (profile.role !== 'student') return { redirect: { destination: '/teacher/dashboard', permanent: false } }
 
   const { data: memberships } = await admin

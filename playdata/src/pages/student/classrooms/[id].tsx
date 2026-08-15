@@ -67,7 +67,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
       .maybeSingle(),
   ])
 
-  if (!profileRes.data) return { redirect: { destination: '/onboarding/student', permanent: false } }
+  if (!profileRes.data) return { redirect: { destination: '/auth/login', permanent: false } }
   if (profileRes.data.role !== 'student') return { redirect: { destination: '/teacher/dashboard', permanent: false } }
   if (!membershipRes.data || membershipRes.data.status !== 'active') {
     return { notFound: true }

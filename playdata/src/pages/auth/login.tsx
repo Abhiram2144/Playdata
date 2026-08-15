@@ -80,19 +80,14 @@ export default function AuthLoginPage() {
       // Get profile to determine routing
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role, password_reset_required, onboarding_completed')
+        .select('role, password_reset_required')
         .eq('id', data.user.id)
         .maybeSingle();
 
       const role = profile?.role ?? 'student';
 
-      if (role === 'teacher' && (profile as { password_reset_required?: boolean } | null | undefined)?.password_reset_required) {
+      if (role === 'teacher' && profile?.password_reset_required) {
         router.push('/reset-password?phase=update&first_login=1');
-        return;
-      }
-
-      if (!profile || !profile.onboarding_completed) {
-        router.push(role === 'teacher' ? '/onboarding/teacher' : '/onboarding/student');
         return;
       }
 

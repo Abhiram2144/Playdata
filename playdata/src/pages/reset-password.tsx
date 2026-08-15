@@ -14,21 +14,45 @@ type Phase = 'request' | 'sent' | 'update';
 
 const requestSchema = z.object({ email: z.string().email('Enter a valid email') });
 const updateSchema = z.object({
+  full_name: z.string().optional(),
   password: z.string().min(8, 'Minimum 8 characters'),
   confirmPassword: z.string(),
 }).refine((d) => d.password === d.confirmPassword, { message: 'Passwords do not match', path: ['confirmPassword'] });
+const firstLoginSchema = updateSchema.refine(
+  (d) => (d.full_name ?? '').trim().length >= 2,
+  { message: 'Enter the name you want to be referred as', path: ['full_name'] }
+);
 
 export default function ResetPasswordPage() {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>('request');
   const supabase = createClient();
+  const isFirstLogin = router.query.first_login === '1';
 
   useEffect(() => {
     if (router.query.phase === 'update') setPhase('update');
   }, [router.query.phase]);
 
   const reqForm = useForm({ resolver: zodResolver(requestSchema) });
-  const updForm = useForm({ resolver: zodResolver(updateSchema) });
+  const updForm = useForm({ resolver: zodResolver(isFirstLogin ? firstLoginSchema : updateSchema) });
+
+  // Prefill the name field with the admin-entered name, unless it's just the
+  // email prefix placeholder — in that case the teacher should type their own.
+  useEffect(() => {
+    if (!isFirstLogin || phase !== 'update') return;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id) return;
+      const { data: profile } = await supabase
+        .from('profiles').select('full_name').eq('id', user.id).maybeSingle();
+      const emailPrefix = user.email?.split('@')[0].toLowerCase() ?? '';
+      const name = (profile?.full_name ?? '').trim();
+      if (name && name.toLowerCase() !== emailPrefix) {
+        updForm.setValue('full_name', name);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFirstLogin, phase]);
 
   const handleRequest = async ({ email }: { email: string }) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -38,17 +62,18 @@ export default function ResetPasswordPage() {
     setPhase('sent');
   };
 
-  const handleUpdate = async ({ password }: { password: string }) => {
+  const handleUpdate = async ({ password, full_name }: { password: string; full_name?: string }) => {
     const { error } = await supabase.auth.updateUser({ password });
     if (error) { toast.error(error.message); return; }
 
     const { data: { user } } = await supabase.auth.getUser();
     if (user?.id) {
-      await supabase.from('profiles').update({ password_reset_required: false }).eq('id', user.id);
+      const updates: Record<string, unknown> = { password_reset_required: false };
+      if (isFirstLogin && full_name?.trim()) updates.full_name = full_name.trim();
+      await supabase.from('profiles').update(updates).eq('id', user.id);
     }
 
-    toast.success('Password updated');
-    const isFirstLogin = router.query.first_login === '1';
+    toast.success(isFirstLogin ? 'You’re all set' : 'Password updated');
     router.push(isFirstLogin ? '/teacher/dashboard' : '/loginpage');
   };
 
@@ -101,10 +126,25 @@ export default function ResetPasswordPage() {
         {phase === 'update' && (
           <div className="space-y-5">
             <div className="space-y-1.5">
-              <h1 className="text-2xl font-bold text-white">Set new password</h1>
-              <p className="text-sm text-[#8d8da0]">Choose a strong password.</p>
+              <h1 className="text-2xl font-bold text-white">
+                {isFirstLogin ? 'Welcome to PlayData' : 'Set new password'}
+              </h1>
+              <p className="text-sm text-[#8d8da0]">
+                {isFirstLogin
+                  ? 'Choose your own password and tell us what to call you.'
+                  : 'Choose a strong password.'}
+              </p>
             </div>
             <form onSubmit={updForm.handleSubmit(handleUpdate as Parameters<typeof updForm.handleSubmit>[0])} className="space-y-4">
+              {isFirstLogin && (
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-[#c9c9d4]">Your name</label>
+                  <Input placeholder="Name you want to be referred as" {...updForm.register('full_name')} />
+                  {updForm.formState.errors.full_name && (
+                    <p className="text-xs text-red-400">{updForm.formState.errors.full_name.message as string}</p>
+                  )}
+                </div>
+              )}
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-[#c9c9d4]">New password</label>
                 <Input type="password" placeholder="Minimum 8 characters" {...updForm.register('password')} />

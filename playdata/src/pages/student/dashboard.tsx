@@ -22,7 +22,6 @@ interface Profile {
   email: string
   role: string
   education_level: string | null
-  onboarding_completed: boolean | null
   created_at: string
 }
 
@@ -79,16 +78,13 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, full_name, email, role, education_level, onboarding_completed, created_at')
+    .select('id, full_name, email, role, education_level, created_at')
     .eq('id', user.id)
     .maybeSingle()
 
-  if (!profile) return { redirect: { destination: '/onboarding/student', permanent: false } }
+  if (!profile) return { redirect: { destination: '/auth/login', permanent: false } }
   if (profile.role === 'teacher' || profile.role === 'admin') {
     return { redirect: { destination: '/teacher/dashboard', permanent: false } }
-  }
-  if (!profile.onboarding_completed) {
-    return { redirect: { destination: '/onboarding/student', permanent: false } }
   }
 
   const admin = createAdminClient()

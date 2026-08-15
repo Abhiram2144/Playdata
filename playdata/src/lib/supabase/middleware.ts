@@ -46,19 +46,19 @@ export async function updateSession(request: NextRequest) {
   // /api/* must never be blocked
   if (pathname.startsWith('/api/')) return supabaseResponse;
 
-  // Routes that authenticated users should not revisit
+  // Routes that authenticated users should not revisit.
+  // /reset-password is deliberately excluded: signed-in teachers must reach
+  // it to replace the temporary admin-set password on first login.
   const isAuthRoute =
     pathname === '/login' ||
     pathname === '/loginpage' ||
     pathname === '/register' ||
-    pathname === '/reset-password' ||
     pathname.startsWith('/auth/');
 
   // Routes protected by Supabase session (teachers/students)
   const isProtectedRoute =
     pathname.startsWith('/teacher') ||
     pathname.startsWith('/student') ||
-    pathname.startsWith('/onboarding') ||
     pathname === '/profile';
 
   // Admin pages that require a Supabase session

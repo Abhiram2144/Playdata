@@ -51,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   // Upsert profile
   const { data: existingProfile } = await supabase
     .from('profiles')
-    .select('role, password_reset_required, onboarding_completed')
+    .select('role, password_reset_required')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -95,14 +95,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     });
   }
 
-  const profile = existingProfile ?? { role: 'student', password_reset_required: false, onboarding_completed: false };
+  const profile = existingProfile ?? { role: 'student', password_reset_required: false };
 
   if (profile.role === 'teacher' && profile.password_reset_required) {
     return res.json({ redirect: '/reset-password?phase=update&first_login=1' });
-  }
-
-  if (!profile.onboarding_completed) {
-    return res.json({ redirect: profile.role === 'teacher' ? '/onboarding/teacher' : '/onboarding/student' });
   }
 
   const dest =

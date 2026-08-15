@@ -10,12 +10,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
+import { TermsModal } from '@/components/auth/TermsModal';
 
 const schema = z.object({
   fullName: z.string().min(2, 'Enter your full name'),
   email: z.string().email('Enter a valid email'),
   password: z.string().min(8, 'Minimum 8 characters'),
   confirmPassword: z.string(),
+  acceptTerms: z.boolean().refine((v) => v === true, {
+    message: 'You must accept the terms and conditions to sign up',
+  }),
 }).refine((d) => d.password === d.confirmPassword, {
   message: 'Passwords do not match',
   path: ['confirmPassword'],
@@ -25,10 +29,11 @@ type FormData = z.infer<typeof schema>;
 
 export default function RegisterPage() {
   const [showPw, setShowPw] = useState(false);
+  const [termsOpen, setTermsOpen] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
-  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
 
@@ -67,7 +72,7 @@ export default function RegisterPage() {
       return;
     }
 
-    router.push('/onboarding/student');
+    router.push('/student/dashboard');
   };
 
   return (
@@ -126,10 +131,40 @@ export default function RegisterPage() {
             {errors.confirmPassword && <p className="text-xs text-red-400">{errors.confirmPassword.message}</p>}
           </div>
 
+          <div className="space-y-1.5">
+            <label className="flex items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-[#35354a] bg-transparent accent-violet-600"
+                {...register('acceptTerms')}
+              />
+              <span className="text-sm text-[#8d8da0]">
+                I have read and agree to the{' '}
+                <button
+                  type="button"
+                  onClick={() => setTermsOpen(true)}
+                  className="font-medium text-violet-400 underline underline-offset-2 hover:text-violet-300 transition-colors"
+                >
+                  terms and conditions
+                </button>
+              </span>
+            </label>
+            {errors.acceptTerms && <p className="text-xs text-red-400">{errors.acceptTerms.message}</p>}
+          </div>
+
           <Button type="submit" disabled={isSubmitting} className="w-full bg-violet-600 text-white hover:bg-violet-700">
             {isSubmitting ? <><Loader2 size={15} className="animate-spin" />Creating…</> : 'Create account'}
           </Button>
         </form>
+
+        <TermsModal
+          open={termsOpen}
+          onClose={() => setTermsOpen(false)}
+          onAgree={() => {
+            setValue('acceptTerms', true, { shouldValidate: true });
+            setTermsOpen(false);
+          }}
+        />
 
         <p className="text-center text-sm text-[#8d8da0]">
           Already have an account?{' '}
