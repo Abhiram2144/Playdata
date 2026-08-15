@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import {
   LayoutDashboard, Trophy, Users, UserCircle,
   CheckCircle2, XCircle, Minus, ArrowLeft,
-  BookOpen, Zap, Calendar, Target,
+  BookOpen, Zap, Calendar, Target, Lightbulb, Loader2,
 } from 'lucide-react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { createClientFromContext } from '@/lib/supabase/server-props'
@@ -79,16 +79,16 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
   type QuizRow = {
     id: string
     title: string
-    questions: { id: string; text: string; type: string; options: unknown; correct_answer: string; order_index: number }[]
+    questions: { id: string; text: string; type: string; options: unknown; correct_answer: string; explanation: string | null; order_index: number }[]
   }
-  type StandaloneQ = { id: string; text: string; type: string; options: unknown; correct_answer: string }
+  type StandaloneQ = { id: string; text: string; type: string; options: unknown; correct_answer: string; explanation: string | null }
 
   const [quizzesRes, standaloneRes, responsesRes] = await Promise.all([
     quizIds.length > 0
-      ? admin.from('quizzes').select('id, title, questions(id, text, type, options, correct_answer, order_index)').in('id', quizIds)
+      ? admin.from('quizzes').select('id, title, questions(id, text, type, options, correct_answer, explanation, order_index)').in('id', quizIds)
       : { data: [] as QuizRow[] },
     questionIds.length > 0
-      ? admin.from('questions').select('id, text, type, options, correct_answer').in('id', questionIds)
+      ? admin.from('questions').select('id, text, type, options, correct_answer, explanation').in('id', questionIds)
       : { data: [] as StandaloneQ[] },
     admin.from('student_responses').select('question_id, answer, is_correct').eq('session_id', sessionId).eq('student_id', user.id),
   ])
@@ -116,6 +116,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
           type: q.type,
           options: Array.isArray(q.options) ? (q.options as string[]) : null,
           correct_answer: q.correct_answer,
+          explanation: q.explanation ?? null,
           student_answer: resp?.answer ?? null,
           is_correct: resp?.is_correct ?? null,
           group_title: quiz.title,
@@ -133,6 +134,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
         type: q.type,
         options: Array.isArray(q.options) ? (q.options as string[]) : null,
         correct_answer: q.correct_answer,
+        explanation: q.explanation ?? null,
         student_answer: resp?.answer ?? null,
         is_correct: resp?.is_correct ?? null,
         group_title: 'Session Questions',
@@ -280,6 +282,22 @@ function QuestionCard({ q, index }: { q: QuestionResult; index: number }) {
               <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Correct answer</p>
               <p className="text-sm font-semibold text-emerald-700">{q.correct_answer}</p>
             </div>
+          </div>
+        )}
+
+        {/* Explanation */}
+        {q.explanation ? (
+          <div className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Lightbulb className="size-3.5 text-violet-600" />
+              <p className="text-[10px] font-bold uppercase tracking-wider text-violet-600">Explanation</p>
+            </div>
+            <p className="text-sm text-gray-700 leading-relaxed">{q.explanation}</p>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+            <Loader2 className="size-3.5 animate-spin text-gray-500 shrink-0" />
+            <p className="text-xs text-gray-500 italic">Explanation generating — check back shortly</p>
           </div>
         )}
       </div>

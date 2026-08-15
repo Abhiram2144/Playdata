@@ -2,6 +2,8 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { awardPostSessionBadges } from '@/lib/post-session-awards'
+import { generateSessionSummary } from '@/lib/session-summary'
+import { backfillQuestionExplanations } from '@/lib/question-explanations'
 
 // ── Analytics helper ──────────────────────────────────────────────────────────
 // Called once when a session transitions to 'ended'.
@@ -327,6 +329,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       }
 
+      // Backfill missing answer explanations — fire-and-forget so session start
+      // is never blocked; results screens read questions.explanation later.
+      backfillQuestionExplanations(sessionId, user.id, admin).catch((e) =>
+        console.error('[explanations] backfill failed for session', sessionId, e)
+      )
+
       return res.status(200).json({ session: updated })
     }
 
@@ -384,6 +392,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Analytics — fire-and-forget; failure is non-fatal.
       computeAndStoreAnalytics(sessionId, admin).catch((e) =>
         console.error('[analytics] computation failed for session', sessionId, e)
+      )
+
+      // AI performance summary — fire-and-forget; failure is non-fatal.
+      generateSessionSummary(sessionId, user.id, admin).catch((e) =>
+        console.error('[summary] AI summary failed for session', sessionId, e)
       )
 
       return res.status(200).json({ session: updated })

@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import {
   ArrowLeft, Users, BookOpen, BarChart2, Clock, Trophy,
   CheckCircle2, XCircle, Minus, Download, MessageSquare,
-  Target, AlertTriangle,
+  Target, AlertTriangle, Sparkles,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { GetServerSidePropsResult } from 'next'
@@ -23,6 +23,7 @@ interface SessionMeta {
   status: string
   started_at: string | null
   ended_at: string | null
+  ai_summary: string | null
 }
 
 interface Analytics {
@@ -131,7 +132,7 @@ export const getServerSideProps = withAuth(
 
     const { data: session } = await admin
       .from('sessions')
-      .select('id, title, join_code, status, started_at, ended_at, teacher_id')
+      .select('id, title, join_code, status, started_at, ended_at, teacher_id, ai_summary')
       .eq('id', sessionId)
       .single()
 
@@ -257,7 +258,7 @@ export const getServerSideProps = withAuth(
     return {
       props: {
         profile,
-        session: { id: session.id, title: session.title, join_code: session.join_code, status: session.status, started_at: session.started_at, ended_at: session.ended_at },
+        session: { id: session.id, title: session.title, join_code: session.join_code, status: session.status, started_at: session.started_at, ended_at: session.ended_at, ai_summary: session.ai_summary ?? null },
         analytics, questions, participants, visItems,
       },
     }
@@ -366,6 +367,30 @@ export default function SessionResults({ profile, session, analytics, questions,
             {exporting ? 'Preparing…' : 'Export CSV'}
           </button>
         </motion.div>
+
+        {/* AI performance summary */}
+        {session.ai_summary && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.02 }}
+            className="rounded-2xl border border-violet-200 bg-violet-50 p-5"
+          >
+            <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-violet-600">
+              <Sparkles className="size-3.5" /> AI Performance Summary
+            </p>
+            <ul className="space-y-1.5">
+              {session.ai_summary.split('\n').map((line, i) => {
+                const text = line.replace(/^[-•]\s*/, '').trim()
+                if (!text) return null
+                return (
+                  <li key={i} className="flex items-start gap-2 text-sm text-gray-800">
+                    <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-violet-400" />
+                    {text}
+                  </li>
+                )
+              })}
+            </ul>
+          </motion.div>
+        )}
 
         {/* Stats */}
         <motion.div

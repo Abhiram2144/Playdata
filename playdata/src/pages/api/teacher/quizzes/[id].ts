@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { insertAiEvaluations, type AiMeta } from '@/lib/quiz-ai';
 
 type QuestionType = 'mcq' | 'short_answer' | 'numerical';
 const VALID_TYPES = new Set<QuestionType>(['mcq', 'short_answer', 'numerical']);
@@ -17,6 +18,7 @@ interface QuestionInput {
   explanation?: string | null;
   time_limit_secs?: number;
   topic_tag?: string | null;
+  ai_meta?: AiMeta | null;
 }
 
 function normalizeTopic(raw: string | null | undefined): string | null {
@@ -193,6 +195,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (updateErr) return res.status(500).json({ error: updateErr.message });
 
+  // Deleting questions cascades to ai_quiz_evaluations, so snapshot existing
+  // evaluations first and re-attach them to the reinserted questions by text.
+  const { data: oldQuestions } = await admin
+    .from('questions').select('id, text').eq('quiz_id', id);
+  const oldIds = (oldQuestions ?? []).map((q: { id: string }) => q.id);
+  const { data: oldEvals } = oldIds.length > 0
+    ? await admin
+        .from('ai_quiz_evaluations')
+        .select('question_id, teacher_id, generation_id, teacher_rating, was_edited, edit_distance, created_at')
+        .in('question_id', oldIds)
+    : { data: [] };
+
+  const textById = new Map((oldQuestions ?? []).map((q: { id: string; text: string }) => [q.id, q.text]));
+  const evalsByText = new Map<string, Record<string, unknown>[]>();
+  for (const ev of oldEvals ?? []) {
+    const { question_id, ...rest } = ev;
+    const text = textById.get(question_id);
+    if (!text) continue;
+    const list = evalsByText.get(text) ?? [];
+    list.push(rest);
+    evalsByText.set(text, list);
+  }
+
   // Replace questions atomically
   await admin.from('questions').delete().eq('quiz_id', id);
 
@@ -214,8 +239,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       topic_tag: normalizeTopic(q.topic_tag),
     }));
 
-    const { error: qErr } = await admin.from('questions').insert(rows);
+    const { data: inserted, error: qErr } = await admin
+      .from('questions')
+      .insert(rows)
+      .select('id, order_index');
     if (qErr) return res.status(500).json({ error: qErr.message });
+
+    // New AI-accepted questions carry ai_meta from the client
+    await insertAiEvaluations(admin, user.id, questions, inserted ?? []);
+
+    // Restore preserved evaluations for unchanged questions without new ai_meta
+    const restored: Record<string, unknown>[] = [];
+    for (const { id: newId, order_index } of inserted ?? []) {
+      const q = questions[order_index];
+      if (!q || q.ai_meta?.original_text) continue;
+      const list = evalsByText.get(q.text);
+      if (!list || list.length === 0) continue;
+      const ev = list.shift()!;
+      restored.push({ ...ev, question_id: newId });
+    }
+    if (restored.length > 0) {
+      const { error: evErr } = await admin.from('ai_quiz_evaluations').insert(restored);
+      if (evErr) console.error('ai_quiz_evaluations restore failed:', evErr.message);
+    }
   }
 
   return res.status(200).json({ ok: true });

@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { insertAiEvaluations, type AiMeta } from '@/lib/quiz-ai';
 
 type QuestionType = 'mcq' | 'short_answer' | 'numerical';
 const VALID_TYPES = new Set<QuestionType>(['mcq', 'short_answer', 'numerical']);
@@ -18,6 +19,7 @@ interface QuestionInput {
   explanation?: string | null;
   time_limit_secs?: number;
   topic_tag?: string | null;
+  ai_meta?: AiMeta | null;
 }
 
 function normalizeTopic(raw: string | null | undefined): string | null {
@@ -248,11 +250,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (questions.length > 0) {
     const rows = questions.map((q, idx) => buildQuestionRow(q, quiz.id, idx));
-    const { error: qErr } = await admin.from('questions').insert(rows);
+    const { data: inserted, error: qErr } = await admin
+      .from('questions')
+      .insert(rows)
+      .select('id, order_index');
     if (qErr) {
       await admin.from('quizzes').delete().eq('id', quiz.id);
       return res.status(500).json({ error: qErr.message });
     }
+    await insertAiEvaluations(admin, user.id, questions, inserted ?? []);
   }
 
   return res.status(201).json({ quizId: quiz.id });

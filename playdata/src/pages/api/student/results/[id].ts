@@ -37,6 +37,7 @@ export interface QuestionResult {
   type: string
   options: string[] | null
   correct_answer: string
+  explanation: string | null
   student_answer: string | null
   is_correct: boolean | null
   group_title: string
@@ -92,6 +93,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       type: string
       options: unknown
       correct_answer: string
+      explanation: string | null
       order_index: number
     }[]
   }
@@ -101,19 +103,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     type: string
     options: unknown
     correct_answer: string
+    explanation: string | null
   }
 
   const [quizzesRes, standaloneRes] = await Promise.all([
     quizIds.length > 0
       ? admin
           .from('quizzes')
-          .select('id, title, questions(id, text, type, options, correct_answer, order_index)')
+          .select('id, title, questions(id, text, type, options, correct_answer, explanation, order_index)')
           .in('id', quizIds)
       : { data: [] as QuizRow[] },
     questionIds.length > 0
       ? admin
           .from('questions')
-          .select('id, text, type, options, correct_answer')
+          .select('id, text, type, options, correct_answer, explanation')
           .in('id', questionIds)
       : { data: [] as StandaloneQuestionRow[] },
   ])
@@ -158,6 +161,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           type: q.type,
           options: Array.isArray(q.options) ? (q.options as string[]) : null,
           correct_answer: q.correct_answer,
+          explanation: q.explanation ?? null,
           student_answer: resp?.answer ?? null,
           is_correct: resp?.is_correct ?? null,
           group_title: quiz.title,
@@ -175,6 +179,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         type: q.type,
         options: Array.isArray(q.options) ? (q.options as string[]) : null,
         correct_answer: q.correct_answer,
+        explanation: q.explanation ?? null,
         student_answer: resp?.answer ?? null,
         is_correct: resp?.is_correct ?? null,
         group_title: 'Session Questions',
