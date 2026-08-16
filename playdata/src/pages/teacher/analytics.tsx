@@ -14,6 +14,7 @@ import { TEACHER_NAV } from '@/lib/teacher-nav'
 import { withAuth } from '@/lib/auth'
 import { createClientFromContext } from '@/lib/supabase/server-props'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { computeAndStoreAnalytics, SessionAnalyticsRow } from '@/lib/session-analytics'
 import { categoricalColor, CHART_PRIMARY, CHART_AXIS_STYLE } from '@/lib/chart-colors'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -81,10 +82,31 @@ export const getServerSideProps = withAuth(
       .eq('status', 'ended')
       .order('ended_at', { ascending: false })
 
+    // Backfill: sessions ended before analytics stored participant_count /
+    // total_questions (or before the analytics table was written at all) have
+    // missing or zeroed rows — recompute them once so the page has real data.
+    const recomputed = new Map<string, SessionAnalyticsRow>()
+    await Promise.all(
+      (rawSessions ?? []).map(async (s: Record<string, unknown>) => {
+        const a = Array.isArray(s.session_analytics)
+          ? (s.session_analytics[0] as Record<string, unknown> | undefined)
+          : (s.session_analytics as Record<string, unknown> | undefined)
+        if (!a || ((a.participant_count as number | null) ?? 0) === 0) {
+          try {
+            recomputed.set(s.id as string, await computeAndStoreAnalytics(s.id as string, admin))
+          } catch {
+            // non-fatal — the row just renders with dashes
+          }
+        }
+      })
+    )
+
     const sessions: SessionRow[] = (rawSessions ?? []).map((s: Record<string, unknown>) => {
-      const analytics = Array.isArray(s.session_analytics)
-        ? (s.session_analytics[0] as Record<string, unknown> | undefined)
-        : (s.session_analytics as Record<string, unknown> | undefined)
+      const analytics: Record<string, unknown> | undefined =
+        recomputed.get(s.id as string) as unknown as Record<string, unknown> | undefined ??
+        (Array.isArray(s.session_analytics)
+          ? (s.session_analytics[0] as Record<string, unknown> | undefined)
+          : (s.session_analytics as Record<string, unknown> | undefined))
 
       const durationMins =
         s.started_at && s.ended_at
