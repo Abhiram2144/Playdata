@@ -12,6 +12,7 @@ import {
   ChevronDown,
   UserPlus,
   Trash2,
+  KeyRound,
 } from 'lucide-react';
 import { Sidebar, Navbar, LoadingState, AddTeacherModal } from '@/components/admin';
 import { useAdmin } from '@/contexts/AdminContext';
@@ -41,6 +42,8 @@ export default function AdminTeachers() {
   const [updating, setUpdating] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [pendingReset, setPendingReset] = useState<string | null>(null);
+  const [resetting, setResetting] = useState<string | null>(null);
   const [addModalOpen, setAddModalOpen] = useState(false);
 
   useEffect(() => {
@@ -80,6 +83,26 @@ export default function AdminTeachers() {
       toast.success(`${teacher.full_name || teacher.email} ${!teacher.is_active ? 'activated' : 'deactivated'}`);
     } finally {
       setUpdating(null);
+    }
+  };
+
+  const resetPassword = async (teacher: Teacher) => {
+    setResetting(teacher.id);
+    try {
+      const res = await fetch('/api/admin/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: teacher.id }),
+      });
+      const json = await res.json() as { success?: boolean; error?: string };
+      if (json.error) { toast.error(json.error); return; }
+      toast.success(
+        `Password reset for ${teacher.full_name || teacher.email}`,
+        { description: `Temporary password: ${teacher.email.split('@')[0].toLowerCase()} — they'll set a new one at next sign-in.` }
+      );
+    } finally {
+      setResetting(null);
+      setPendingReset(null);
     }
   };
 
@@ -305,6 +328,35 @@ export default function AdminTeachers() {
                               'Activate'
                             )}
                           </button>
+
+                          {pendingReset === teacher.id ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs text-slate-500">Reset password?</span>
+                              <button
+                                onClick={() => resetPassword(teacher)}
+                                disabled={resetting === teacher.id}
+                                className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition-all disabled:opacity-50"
+                              >
+                                {resetting === teacher.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Yes'}
+                              </button>
+                              <button
+                                onClick={() => setPendingReset(null)}
+                                disabled={resetting === teacher.id}
+                                className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all"
+                              >
+                                No
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setPendingReset(teacher.id)}
+                              disabled={resetting === teacher.id}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-all disabled:opacity-50"
+                              title="Reset password"
+                            >
+                              <KeyRound className="w-4 h-4" />
+                            </button>
+                          )}
 
                           {pendingDelete === teacher.id ? (
                             <div className="flex items-center gap-1.5">

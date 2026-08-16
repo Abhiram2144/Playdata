@@ -86,7 +86,7 @@ export default function AuthLoginPage() {
 
       const role = profile?.role ?? 'student';
 
-      if (role === 'teacher' && profile?.password_reset_required) {
+      if (profile?.password_reset_required) {
         router.push('/reset-password?phase=update&first_login=1');
         return;
       }

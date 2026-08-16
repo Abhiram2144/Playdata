@@ -295,7 +295,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // ── PATCH ─────────────────────────────────────────────────────────────────────
   if (req.method === 'PATCH') {
-    const { action, itemIndex } = req.body as { action?: string; itemIndex?: number }
+    const { action, itemIndex, notes } = req.body as { action?: string; itemIndex?: number; notes?: string }
+
+    if (action === 'notes') {
+      if (typeof notes !== 'string') {
+        return res.status(400).json({ error: 'notes must be a string' })
+      }
+      const { error } = await admin
+        .from('sessions')
+        .update({ teacher_notes: notes.trim() || null })
+        .eq('id', sessionId)
+      if (error) return res.status(500).json({ error: error.message })
+      return res.status(200).json({ ok: true })
+    }
 
     if (action === 'start') {
       if (session.status !== 'waiting') {

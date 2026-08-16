@@ -10,6 +10,7 @@ import {
   RefreshCw,
   ChevronUp,
   ChevronDown,
+  KeyRound,
 } from 'lucide-react';
 import { Sidebar, Navbar, LoadingState } from '@/components/admin';
 import { useAdmin } from '@/contexts/AdminContext';
@@ -36,6 +37,8 @@ export default function AdminStudents() {
   const [sortKey, setSortKey] = useState<SortKey>('created_at');
   const [sortAsc, setSortAsc] = useState(false);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [pendingReset, setPendingReset] = useState<string | null>(null);
+  const [resetting, setResetting] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) router.replace('/admin/login');
@@ -74,6 +77,26 @@ export default function AdminStudents() {
       toast.success(`${student.full_name || student.email} ${!student.is_active ? 'activated' : 'deactivated'}`);
     } finally {
       setUpdating(null);
+    }
+  };
+
+  const resetPassword = async (student: Student) => {
+    setResetting(student.id);
+    try {
+      const res = await fetch('/api/admin/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: student.id }),
+      });
+      const json = await res.json() as { success?: boolean; error?: string };
+      if (json.error) { toast.error(json.error); return; }
+      toast.success(
+        `Password reset for ${student.full_name || student.email}`,
+        { description: `Temporary password: ${student.email.split('@')[0].toLowerCase()} — they'll set a new one at next sign-in.` }
+      );
+    } finally {
+      setResetting(null);
+      setPendingReset(null);
     }
   };
 
@@ -246,23 +269,54 @@ export default function AdminStudents() {
                         )}
                       </td>
                       <td className="px-5 py-4">
-                        <button
-                          onClick={() => toggleActive(student)}
-                          disabled={updating === student.id}
-                          className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all disabled:opacity-50 ${
-                            (student.is_active ?? true)
-                              ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                              : 'bg-green-50 text-green-700 hover:bg-green-100'
-                          }`}
-                        >
-                          {updating === student.id ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (student.is_active ?? true) ? (
-                            'Deactivate'
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => toggleActive(student)}
+                            disabled={updating === student.id}
+                            className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all disabled:opacity-50 ${
+                              (student.is_active ?? true)
+                                ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                                : 'bg-green-50 text-green-700 hover:bg-green-100'
+                            }`}
+                          >
+                            {updating === student.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (student.is_active ?? true) ? (
+                              'Deactivate'
+                            ) : (
+                              'Activate'
+                            )}
+                          </button>
+
+                          {pendingReset === student.id ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs text-slate-500">Reset password?</span>
+                              <button
+                                onClick={() => resetPassword(student)}
+                                disabled={resetting === student.id}
+                                className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition-all disabled:opacity-50"
+                              >
+                                {resetting === student.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Yes'}
+                              </button>
+                              <button
+                                onClick={() => setPendingReset(null)}
+                                disabled={resetting === student.id}
+                                className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all"
+                              >
+                                No
+                              </button>
+                            </div>
                           ) : (
-                            'Activate'
+                            <button
+                              onClick={() => setPendingReset(student.id)}
+                              disabled={resetting === student.id}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-all disabled:opacity-50"
+                              title="Reset password"
+                            >
+                              <KeyRound className="w-4 h-4" />
+                            </button>
                           )}
-                        </button>
+                        </div>
                       </td>
                     </motion.tr>
                   ))}

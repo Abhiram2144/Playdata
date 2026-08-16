@@ -24,6 +24,7 @@ interface SessionMeta {
   started_at: string | null
   ended_at: string | null
   ai_summary: string | null
+  teacher_notes: string | null
 }
 
 interface Analytics {
@@ -132,7 +133,7 @@ export const getServerSideProps = withAuth(
 
     const { data: session } = await admin
       .from('sessions')
-      .select('id, title, join_code, status, started_at, ended_at, teacher_id, ai_summary')
+      .select('id, title, join_code, status, started_at, ended_at, teacher_id, ai_summary, teacher_notes')
       .eq('id', sessionId)
       .single()
 
@@ -258,7 +259,7 @@ export const getServerSideProps = withAuth(
     return {
       props: {
         profile,
-        session: { id: session.id, title: session.title, join_code: session.join_code, status: session.status, started_at: session.started_at, ended_at: session.ended_at, ai_summary: session.ai_summary ?? null },
+        session: { id: session.id, title: session.title, join_code: session.join_code, status: session.status, started_at: session.started_at, ended_at: session.ended_at, ai_summary: session.ai_summary ?? null, teacher_notes: session.teacher_notes ?? null },
         analytics, questions, participants, visItems,
       },
     }
@@ -304,7 +305,24 @@ function HorizBar({ value, total, cls }: { value: number; total: number; cls: st
 export default function SessionResults({ profile, session, analytics, questions, participants, visItems }: Props) {
   const [activeTab, setActiveTab] = useState<'questions' | 'students'>('questions')
   const [exporting, setExporting] = useState(false)
-  const [notes, setNotes] = useState('')
+  const [notes, setNotes] = useState(session.teacher_notes ?? '')
+  const [savingNotes, setSavingNotes] = useState(false)
+
+  const saveNotes = async () => {
+    setSavingNotes(true)
+    const res = await fetch(`/api/teacher/sessions/${session.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'notes', notes }),
+    })
+    setSavingNotes(false)
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}))
+      toast.error(d.error ?? 'Failed to save notes')
+      return
+    }
+    toast.success('Notes saved')
+  }
 
   const sorted = [...participants].sort((a, b) => b.score - a.score)
   const avgScorePct = analytics.total_questions > 0 && analytics.avg_score != null
@@ -605,17 +623,13 @@ export default function SessionResults({ profile, session, analytics, questions,
             />
             <div className="flex items-center gap-3">
               <button
-                onClick={() => {
-                  if (notes.trim()) {
-                    localStorage.setItem(`playdata_notes_${session.id}`, notes)
-                    toast.success('Notes saved locally')
-                  }
-                }}
-                className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-500"
+                onClick={saveNotes}
+                disabled={savingNotes}
+                className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:opacity-50"
               >
-                Save notes
+                {savingNotes ? 'Saving…' : 'Save notes'}
               </button>
-              <p className="text-xs text-gray-500">Saved in your browser only.</p>
+              <p className="text-xs text-gray-500">Saved to this session — you can come back to them any time.</p>
             </div>
           </div>
         </motion.div>
