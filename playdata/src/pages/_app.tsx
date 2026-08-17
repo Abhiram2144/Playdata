@@ -22,6 +22,10 @@ const StudentInviteListener = dynamic(
   { ssr: false }
 );
 
+const AccessibilityWidget = dynamic(() => import('@/components/AccessibilityWidget'), {
+  ssr: false,
+});
+
 export default function App({ Component, pageProps }: AppPropsWithLayout) {
   const getLayout = Component.getLayout ?? ((page) => page);
   return (
@@ -29,6 +33,7 @@ export default function App({ Component, pageProps }: AppPropsWithLayout) {
       {getLayout(<Component {...pageProps} />)}
       <ToasterClient />
       <StudentInviteListener />
+      <AccessibilityWidget />
     </AdminProvider>
   );
 }

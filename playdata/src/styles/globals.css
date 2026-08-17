@@ -58,3 +58,95 @@
     -moz-osx-font-smoothing: grayscale;
   }
 }
+
+/* ── Accessibility: adjustable font size ────────────────────
+   Tailwind sizing is rem-based, so scaling the root font-size
+   scales text app-wide. Attribute is set pre-paint by the
+   inline script in _document.tsx and toggled by
+   AccessibilityWidget. "md" is the default (no attribute). */
+html[data-font-scale='sm'] { font-size: 87.5%; }
+html[data-font-scale='lg'] { font-size: 112.5%; }
+html[data-font-scale='xl'] { font-size: 125%; }
+
+/* ── Accessibility: high contrast mode ──────────────────────
+   Pages hard-code Tailwind utilities rather than theme vars,
+   so this layer overrides both the theme variables AND the
+   most common low-contrast utility classes. Dark surfaces
+   (bg-[#0d0d18] auth/landing pages) get the inverse treatment
+   via higher-specificity descendant rules below. */
+html[data-contrast='high'] {
+  --background: #ffffff;
+  --foreground: #000000;
+  --card-foreground: #000000;
+  --primary: #5b21b6;
+  --secondary-foreground: #2e1065;
+  --muted-foreground: #1f2937;
+  --accent-foreground: #2e1065;
+  --border: #475569;
+  --ring: #4c1d95;
+}
+
+/* Page + card surfaces: lift the lavender wash to pure white. */
+html[data-contrast='high'] .bg-\[\#f5f3ff\],
+html[data-contrast='high'] .bg-violet-50,
+html[data-contrast='high'] .bg-\[\#f0eeff\] {
+  background-color: #ffffff !important;
+}
+
+/* Muted greys → near-black (light surfaces). */
+html[data-contrast='high'] .text-gray-300 { color: #4b5563 !important; }
+html[data-contrast='high'] .text-gray-400,
+html[data-contrast='high'] .text-slate-400 { color: #374151 !important; }
+html[data-contrast='high'] .text-gray-500,
+html[data-contrast='high'] .text-slate-500 { color: #1f2937 !important; }
+html[data-contrast='high'] .text-gray-600,
+html[data-contrast='high'] .text-slate-600 { color: #111827 !important; }
+
+/* Violet accents: darken so they clear 7:1 on white. */
+html[data-contrast='high'] .text-violet-400,
+html[data-contrast='high'] .text-violet-500,
+html[data-contrast='high'] .text-violet-600 { color: #5b21b6 !important; }
+
+/* Primary buttons: darker violet keeps white label past 7:1. */
+html[data-contrast='high'] .bg-violet-500,
+html[data-contrast='high'] .bg-violet-600 { background-color: #4c1d95 !important; }
+
+/* Hairline borders → strong slate. */
+html[data-contrast='high'] .border-\[\#e4e0f8\],
+html[data-contrast='high'] .border-gray-100,
+html[data-contrast='high'] .border-gray-200,
+html[data-contrast='high'] .border-slate-200,
+html[data-contrast='high'] .border-violet-100,
+html[data-contrast='high'] .border-violet-200 {
+  border-color: #475569 !important;
+}
+
+html[data-contrast='high'] input::placeholder,
+html[data-contrast='high'] textarea::placeholder {
+  color: #374151 !important;
+}
+
+/* Unmissable keyboard focus indicator. */
+html[data-contrast='high'] :focus-visible {
+  outline: 3px solid #1e1b4b !important;
+  outline-offset: 2px;
+}
+
+/* Dark surfaces (auth/landing): deepen the background and
+   brighten muted text instead. These descendant rules have
+   higher specificity than the light-surface rules above, so
+   they win inside a dark container. */
+html[data-contrast='high'] .bg-\[\#0d0d18\] { background-color: #000000 !important; }
+html[data-contrast='high'] .bg-\[\#0d0d18\] .text-gray-300,
+html[data-contrast='high'] .bg-\[\#0d0d18\] .text-gray-400,
+html[data-contrast='high'] .bg-\[\#0d0d18\] .text-slate-400 { color: #e5e7eb !important; }
+html[data-contrast='high'] .bg-\[\#0d0d18\] .text-gray-500,
+html[data-contrast='high'] .bg-\[\#0d0d18\] .text-slate-500 { color: #d1d5db !important; }
+html[data-contrast='high'] .bg-\[\#0d0d18\] .text-violet-400,
+html[data-contrast='high'] .bg-\[\#0d0d18\] .text-violet-500,
+html[data-contrast='high'] .bg-\[\#0d0d18\] .text-violet-600 { color: #c4b5fd !important; }
+html[data-contrast='high'] .bg-\[\#0d0d18\] input::placeholder,
+html[data-contrast='high'] .bg-\[\#0d0d18\] textarea::placeholder { color: #d1d5db !important; }
+html[data-contrast='high'] .bg-\[\#0d0d18\] :focus-visible {
+  outline-color: #ffffff !important;
+}
