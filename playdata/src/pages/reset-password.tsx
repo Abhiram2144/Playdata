@@ -4,11 +4,12 @@ import { useRouter } from 'next/router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Zap, ShieldCheck, Mail } from 'lucide-react';
+import { Loader2, ShieldCheck, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { createClient } from '@/lib/supabase/client';
+import { AuthShell, AuthCard } from '@/components/auth/AuthShell';
 
 type Phase = 'contact' | 'update';
 
@@ -69,90 +70,83 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0d0d18] p-4">
-      <div className="w-full max-w-sm space-y-6">
-
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600/20 ring-1 ring-violet-500/30">
-            <Zap className="size-4 text-violet-400" />
+    <AuthShell maxWidth="max-w-sm">
+      {phase === 'contact' && (
+        <div className="space-y-5">
+          <div className="space-y-1.5">
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">Forgot your password?</h1>
+            <p className="text-sm text-gray-500">Password resets are handled by your administrator.</p>
           </div>
-          <p className="text-xl font-bold text-white">PlayData</p>
-        </div>
 
-        {phase === 'contact' && (
-          <div className="space-y-5">
-            <div className="space-y-1.5">
-              <h1 className="text-2xl font-bold text-white">Forgot your password?</h1>
-              <p className="text-sm text-[#8d8da0]">Password resets are handled by your administrator.</p>
-            </div>
-
-            <div className="space-y-4 rounded-2xl border border-white/8 bg-white/3 p-6">
-              <div className="flex items-start gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-600/20 ring-1 ring-violet-500/30">
-                  <ShieldCheck className="size-4 text-violet-400" />
-                </div>
-                <p className="text-sm leading-relaxed text-[#c9c9d4]">
-                  For security, only your organisation&apos;s administrator can reset your password.
-                </p>
+          <AuthCard className="space-y-4 !p-6">
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-100 ring-1 ring-violet-200">
+                <ShieldCheck className="size-4 text-violet-600" />
               </div>
-              <div className="flex items-start gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-600/20 ring-1 ring-violet-500/30">
-                  <Mail className="size-4 text-violet-400" />
-                </div>
-                <p className="text-sm leading-relaxed text-[#c9c9d4]">
-                  Contact your administrator by email and ask them to reset it. You&apos;ll then sign in with the
-                  temporary password they give you and choose a new one.
-                </p>
-              </div>
-            </div>
-
-            <Link href="/loginpage" className="block text-center text-sm text-[#8d8da0] hover:text-violet-400 transition-colors">Back to sign in</Link>
-          </div>
-        )}
-
-        {phase === 'update' && (
-          <div className="space-y-5">
-            <div className="space-y-1.5">
-              <h1 className="text-2xl font-bold text-white">
-                {isFirstLogin ? 'Welcome to PlayData' : 'Set new password'}
-              </h1>
-              <p className="text-sm text-[#8d8da0]">
-                {isFirstLogin
-                  ? 'Choose your own password and tell us what to call you.'
-                  : 'Choose a strong password.'}
+              <p className="text-sm leading-relaxed text-gray-600">
+                For security, only your organisation&apos;s administrator can reset your password.
               </p>
             </div>
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-100 ring-1 ring-violet-200">
+                <Mail className="size-4 text-violet-600" />
+              </div>
+              <p className="text-sm leading-relaxed text-gray-600">
+                Contact your administrator by email and ask them to reset it. You&apos;ll then sign in with the
+                temporary password they give you and choose a new one.
+              </p>
+            </div>
+          </AuthCard>
+
+          <Link href="/loginpage" className="block text-center text-sm text-gray-500 hover:text-violet-600 transition-colors">Back to sign in</Link>
+        </div>
+      )}
+
+      {phase === 'update' && (
+        <div className="space-y-5">
+          <div className="space-y-1.5">
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+              {isFirstLogin ? 'Welcome to PlayData' : 'Set new password'}
+            </h1>
+            <p className="text-sm text-gray-500">
+              {isFirstLogin
+                ? 'Choose your own password and tell us what to call you.'
+                : 'Choose a strong password.'}
+            </p>
+          </div>
+          <AuthCard>
             <form onSubmit={updForm.handleSubmit(handleUpdate as Parameters<typeof updForm.handleSubmit>[0])} className="space-y-4">
               {isFirstLogin && (
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-[#c9c9d4]">Your name</label>
-                  <Input placeholder="Name you want to be referred as" {...updForm.register('full_name')} />
+                  <label className="text-sm font-medium text-gray-700">Your name</label>
+                  <Input className="h-10" placeholder="Name you want to be referred as" {...updForm.register('full_name')} />
                   {updForm.formState.errors.full_name && (
-                    <p className="text-xs text-red-400">{updForm.formState.errors.full_name.message as string}</p>
+                    <p className="text-xs text-red-500">{updForm.formState.errors.full_name.message as string}</p>
                   )}
                 </div>
               )}
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-[#c9c9d4]">New password</label>
-                <Input type="password" placeholder="Minimum 8 characters" {...updForm.register('password')} />
+                <label className="text-sm font-medium text-gray-700">New password</label>
+                <Input className="h-10" type="password" placeholder="Minimum 8 characters" {...updForm.register('password')} />
                 {updForm.formState.errors.password && (
-                  <p className="text-xs text-red-400">{updForm.formState.errors.password.message as string}</p>
+                  <p className="text-xs text-red-500">{updForm.formState.errors.password.message as string}</p>
                 )}
               </div>
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-[#c9c9d4]">Confirm password</label>
-                <Input type="password" placeholder="Repeat your password" {...updForm.register('confirmPassword')} />
+                <label className="text-sm font-medium text-gray-700">Confirm password</label>
+                <Input className="h-10" type="password" placeholder="Repeat your password" {...updForm.register('confirmPassword')} />
                 {updForm.formState.errors.confirmPassword && (
-                  <p className="text-xs text-red-400">{updForm.formState.errors.confirmPassword.message as string}</p>
+                  <p className="text-xs text-red-500">{updForm.formState.errors.confirmPassword.message as string}</p>
                 )}
               </div>
-              <Button type="submit" disabled={updForm.formState.isSubmitting} className="w-full bg-violet-600 text-white hover:bg-violet-700">
+              <Button type="submit" disabled={updForm.formState.isSubmitting}
+                className="w-full h-10 bg-violet-600 text-white hover:bg-violet-700 shadow-md shadow-violet-600/25">
                 {updForm.formState.isSubmitting ? <><Loader2 size={15} className="animate-spin" />Updating…</> : 'Update password'}
               </Button>
             </form>
-          </div>
-        )}
-      </div>
-    </div>
+          </AuthCard>
+        </div>
+      )}
+    </AuthShell>
   );
 }

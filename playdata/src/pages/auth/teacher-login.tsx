@@ -3,13 +3,13 @@ import { useRouter } from 'next/router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Zap, ArrowRight, Mail, Lock, Sparkles } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Loader2, ArrowRight, Mail, Lock, GraduationCap } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
+import { AuthShell, AuthCard } from '@/components/auth/AuthShell';
 
 const schema = z.object({
   email: z.string().email('Enter a valid email address'),
@@ -50,94 +50,83 @@ export default function TeacherLoginPage() {
   };
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0d0d18] px-6 py-12">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(124,58,237,0.12),transparent_50%)]" />
-
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="relative w-full max-w-md space-y-8"
-      >
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600/20 ring-1 ring-violet-500/30">
-            <Zap className="size-4 text-violet-400" />
-          </div>
-          <p className="text-xl font-bold text-white">PlayData</p>
-        </div>
-
-        <div className="rounded-2xl border border-white/8 bg-white/3 p-8 shadow-xl shadow-black/30 backdrop-blur-xl">
-          <div className="mb-6 space-y-1.5">
-            <h1 className="text-2xl font-bold text-white">Teacher sign in</h1>
-            <p className="text-sm text-[#8d8da0]">
+    <AuthShell>
+      <AuthCard>
+        <div className="mb-6 space-y-3">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700 ring-1 ring-violet-200">
+            <GraduationCap className="size-3.5" /> Teacher
+          </span>
+          <div className="space-y-1.5">
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">Teacher sign in</h1>
+            <p className="text-sm text-gray-500">
               Enter your email and password to access your teacher dashboard.
             </p>
           </div>
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium text-[#c9c9d4]">
-                Email
-              </label>
-              <div className="relative">
-                <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[#8d8da0]" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@university.ac.uk"
-                  autoComplete="email"
-                  className={cn('pl-9', errors.email && 'border-red-500/70 focus-visible:ring-red-500/40')}
-                  {...register('email')}
-                />
-              </div>
-              {errors.email && <p className="text-xs text-red-400">{errors.email.message}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium text-[#c9c9d4]">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[#8d8da0]" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  autoComplete="current-password"
-                  className={cn('pl-9', errors.password && 'border-red-500/70 focus-visible:ring-red-500/40')}
-                  {...register('password')}
-                />
-              </div>
-              {errors.password && <p className="text-xs text-red-400">{errors.password.message}</p>}
-            </div>
-
-            {errorMessage ? (
-              <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
-                {errorMessage}
-              </div>
-            ) : null}
-
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full bg-violet-600 text-white hover:bg-violet-700 focus-visible:ring-violet-500"
-            >
-              {isSubmitting ? (
-                <><Loader2 size={15} className="animate-spin" />Signing in…</>
-              ) : (
-                <><span>Sign in</span><ArrowRight size={15} /></>
-              )}
-            </Button>
-          </form>
         </div>
 
-        <p className="text-center text-sm text-[#6a6a80]">
-          Not a teacher?{' '}
-          <Link href="/auth/login" className="text-violet-400 hover:text-violet-300 font-medium transition-colors">
-            Sign in with password
-          </Link>
-        </p>
-      </motion.div>
-    </main>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="email" className="text-sm font-medium text-gray-700">
+              Email
+            </label>
+            <div className="relative">
+              <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@university.ac.uk"
+                autoComplete="email"
+                className={cn('pl-9 h-10', errors.email && 'border-red-400 focus-visible:ring-red-300')}
+                {...register('email')}
+              />
+            </div>
+            {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="password" className="text-sm font-medium text-gray-700">
+              Password
+            </label>
+            <div className="relative">
+              <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter your password"
+                autoComplete="current-password"
+                className={cn('pl-9 h-10', errors.password && 'border-red-400 focus-visible:ring-red-300')}
+                {...register('password')}
+              />
+            </div>
+            {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
+          </div>
+
+          {errorMessage ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+              {errorMessage}
+            </div>
+          ) : null}
+
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full h-10 bg-violet-600 text-white hover:bg-violet-700 focus-visible:ring-violet-500 shadow-md shadow-violet-600/25"
+          >
+            {isSubmitting ? (
+              <><Loader2 size={15} className="animate-spin" />Signing in…</>
+            ) : (
+              <><span>Sign in</span><ArrowRight size={15} /></>
+            )}
+          </Button>
+        </form>
+      </AuthCard>
+
+      <p className="text-center text-sm text-gray-500">
+        Not a teacher?{' '}
+        <Link href="/auth/login" className="font-medium text-violet-600 hover:text-violet-700 transition-colors">
+          Sign in as Student
+        </Link>
+      </p>
+    </AuthShell>
   );
 }

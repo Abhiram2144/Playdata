@@ -7,7 +7,7 @@ import {
   Database, BarChart3, BookOpen, Users,
   TrendingUp, Zap, UploadCloud, ArrowRight, Play, Trophy,
   Gamepad2, CheckCircle2, ChevronLeft, ChevronRight as ChevronRightIcon,
-  Search,
+  Search, GraduationCap,
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { withAuth } from '@/lib/auth';
@@ -211,7 +211,7 @@ const TOUR_STEPS = [
     href: '/teacher/quizzes',
     icon: BookOpen,
     title: 'Create a quiz',
-    body: 'Build MCQ, short-answer, and numerical questions. Attach charts and set answer timers.',
+    body: 'Build MCQ, short-answer, and numerical questions. Attach charts, set answer timers — or let the AI assistant generate questions from your dataset and you approve the final quiz.',
   },
   {
     sidebarHref: '/teacher/sessions',
@@ -219,6 +219,13 @@ const TOUR_STEPS = [
     icon: Users,
     title: 'Run a live session',
     body: 'Start a session and share a 6-character code. Students join in real time from any device.',
+  },
+  {
+    sidebarHref: '/teacher/classrooms',
+    href: '/teacher/classrooms',
+    icon: GraduationCap,
+    title: 'Organise classrooms',
+    body: 'Group students into classrooms, upload rosters, invite them straight into sessions, and track per-classroom progress.',
   },
   {
     sidebarHref: '/teacher/analytics',

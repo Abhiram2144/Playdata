@@ -4,13 +4,14 @@ import { useRouter } from 'next/router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, EyeOff, Loader2, Zap } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import { TermsModal } from '@/components/auth/TermsModal';
+import { AuthShell, AuthCard } from '@/components/auth/AuthShell';
 
 const schema = z.object({
   fullName: z.string().min(2, 'Enter your full name'),
@@ -76,104 +77,100 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0d0d18] p-4">
-      <div className="w-full max-w-sm space-y-6">
-
-        {/* Brand */}
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600/20 ring-1 ring-violet-500/30">
-            <Zap className="size-4 text-violet-400" />
-          </div>
-          <p className="text-xl font-bold text-white">PlayData</p>
-        </div>
-
-        <div className="space-y-1.5">
-          <h1 className="text-2xl font-bold tracking-tight text-white">Create account</h1>
-          <p className="text-sm text-[#8d8da0]">Join PlayData to get started</p>
-        </div>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-
+    <AuthShell maxWidth="max-w-sm">
+      <AuthCard>
+        <div className="space-y-6">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-[#c9c9d4]">Full name</label>
-            <Input placeholder="Abhiram Sathiraju" {...register('fullName')}
-              className={cn(errors.fullName && 'border-red-500/70')} />
-            {errors.fullName && <p className="text-xs text-red-400">{errors.fullName.message}</p>}
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">Create account</h1>
+            <p className="text-sm text-gray-500">Join PlayData to get started</p>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-[#c9c9d4]">Email</label>
-            <Input type="email" placeholder="as1809@student.le.ac.uk" {...register('email')}
-              className={cn(errors.email && 'border-red-500/70')} />
-            {username && !errors.email && (
-              <p className="text-xs text-[#8d8da0]">Username: <span className="font-semibold text-violet-400">@{username}</span></p>
-            )}
-            {errors.email && <p className="text-xs text-red-400">{errors.email.message}</p>}
-          </div>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
 
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-[#c9c9d4]">Password</label>
-            <div className="relative">
-              <Input type={showPw ? 'text' : 'password'} placeholder="Minimum 8 characters"
-                {...register('password')} className={cn('pr-10', errors.password && 'border-red-500/70')} />
-              <button type="button" tabIndex={-1} onClick={() => setShowPw(v => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8d8da0] hover:text-white transition-colors">
-                {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
-              </button>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-700">Full name</label>
+              <Input placeholder="Abhiram Sathiraju" {...register('fullName')}
+                className={cn('h-10', errors.fullName && 'border-red-400')} />
+              {errors.fullName && <p className="text-xs text-red-500">{errors.fullName.message}</p>}
             </div>
-            {errors.password && <p className="text-xs text-red-400">{errors.password.message}</p>}
-          </div>
 
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-[#c9c9d4]">Confirm password</label>
-            <Input type="password" placeholder="Repeat your password" {...register('confirmPassword')}
-              className={cn(errors.confirmPassword && 'border-red-500/70')} />
-            {errors.confirmPassword && <p className="text-xs text-red-400">{errors.confirmPassword.message}</p>}
-          </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-700">Email</label>
+              <Input type="email" placeholder="as1809@student.le.ac.uk" {...register('email')}
+                className={cn('h-10', errors.email && 'border-red-400')} />
+              {username && !errors.email && (
+                <p className="text-xs text-gray-500">Username: <span className="font-semibold text-violet-600">@{username}</span></p>
+              )}
+              {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
+            </div>
 
-          <div className="space-y-1.5">
-            <label className="flex items-start gap-2.5 cursor-pointer">
-              <input
-                type="checkbox"
-                className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-[#35354a] bg-transparent accent-violet-600"
-                {...register('acceptTerms')}
-              />
-              <span className="text-sm text-[#8d8da0]">
-                I have read and agree to the{' '}
-                <button
-                  type="button"
-                  onClick={() => setTermsOpen(true)}
-                  className="font-medium text-violet-400 underline underline-offset-2 hover:text-violet-300 transition-colors"
-                >
-                  terms and conditions
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-700">Password</label>
+              <div className="relative">
+                <Input type={showPw ? 'text' : 'password'} placeholder="Minimum 8 characters"
+                  {...register('password')} className={cn('h-10 pr-10', errors.password && 'border-red-400')} />
+                <button type="button" tabIndex={-1} onClick={() => setShowPw(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors">
+                  {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
-              </span>
-            </label>
-            {errors.acceptTerms && <p className="text-xs text-red-400">{errors.acceptTerms.message}</p>}
-          </div>
+              </div>
+              {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
+            </div>
 
-          <Button type="submit" disabled={isSubmitting} className="w-full bg-violet-600 text-white hover:bg-violet-700">
-            {isSubmitting ? <><Loader2 size={15} className="animate-spin" />Creating…</> : 'Create account'}
-          </Button>
-        </form>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-700">Confirm password</label>
+              <Input type="password" placeholder="Repeat your password" {...register('confirmPassword')}
+                className={cn('h-10', errors.confirmPassword && 'border-red-400')} />
+              {errors.confirmPassword && <p className="text-xs text-red-500">{errors.confirmPassword.message}</p>}
+            </div>
 
-        <TermsModal
-          open={termsOpen}
-          onClose={() => setTermsOpen(false)}
-          onAgree={() => {
-            setValue('acceptTerms', true, { shouldValidate: true });
-            setTermsOpen(false);
-          }}
-        />
+            <div className="space-y-1.5">
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-[#e4e0f8] accent-violet-600"
+                  {...register('acceptTerms')}
+                />
+                <span className="text-sm text-gray-500">
+                  I have read and agree to the{' '}
+                  <button
+                    type="button"
+                    onClick={() => setTermsOpen(true)}
+                    className="font-medium text-violet-600 underline underline-offset-2 hover:text-violet-700 transition-colors"
+                  >
+                    terms and conditions
+                  </button>
+                </span>
+              </label>
+              {errors.acceptTerms && <p className="text-xs text-red-500">{errors.acceptTerms.message}</p>}
+            </div>
 
-        <p className="text-center text-sm text-[#8d8da0]">
+            <Button type="submit" disabled={isSubmitting}
+              className="w-full h-10 bg-violet-600 text-white hover:bg-violet-700 shadow-md shadow-violet-600/25">
+              {isSubmitting ? <><Loader2 size={15} className="animate-spin" />Creating…</> : 'Create account'}
+            </Button>
+          </form>
+        </div>
+      </AuthCard>
+
+      <TermsModal
+        open={termsOpen}
+        onClose={() => setTermsOpen(false)}
+        onAgree={() => {
+          setValue('acceptTerms', true, { shouldValidate: true });
+          setTermsOpen(false);
+        }}
+      />
+
+      <div className="space-y-2 text-center">
+        <p className="text-sm text-gray-500">
           Already have an account?{' '}
-          <Link href="/loginpage" className="font-medium text-violet-400 hover:text-violet-300 transition-colors">Sign in</Link>
+          <Link href="/loginpage" className="font-medium text-violet-600 hover:text-violet-700 transition-colors">Sign in</Link>
         </p>
-        <p className="text-center text-xs text-[#6a6a80]">
+        <p className="text-xs text-gray-400">
           Teacher account? Your administrator creates it for you — check your email for an invite link.
         </p>
       </div>
-    </div>
+    </AuthShell>
   );
 }

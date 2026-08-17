@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
-import { Loader2, Zap, ShieldCheck, RefreshCw } from 'lucide-react';
+import { Loader2, ShieldCheck, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
+import { AuthShell, AuthCard } from '@/components/auth/AuthShell';
 
 const CODE_LENGTH = 6;
 
@@ -94,102 +95,84 @@ export default function AuthVerifyPage() {
     : '';
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center bg-[#0d0d18] px-6 py-12">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(124,58,237,0.12),transparent_50%)]" />
-
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="relative w-full max-w-md space-y-8"
-      >
-        {/* Logo */}
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600/20 ring-1 ring-violet-500/30">
-            <Zap className="size-4 text-violet-400" />
-          </div>
-          <p className="text-xl font-bold text-white">PlayData</p>
+    <AuthShell>
+      <AuthCard>
+        {/* Icon */}
+        <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-100 ring-1 ring-violet-200">
+          <ShieldCheck className="size-7 text-violet-600" />
         </div>
 
-        {/* Card */}
-        <div className="rounded-2xl border border-white/8 bg-white/3 p-8 shadow-xl shadow-black/30 backdrop-blur-xl">
-          {/* Icon */}
-          <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-600/15 ring-1 ring-violet-500/25">
-            <ShieldCheck className="size-7 text-violet-400" />
-          </div>
-
-          <div className="mb-6 space-y-1.5">
-            <h1 className="text-2xl font-bold text-white">Check your email</h1>
-            <p className="text-sm text-[#8d8da0]">
-              We sent a 6-digit code to{' '}
-              <span className="font-medium text-[#c9c9d4]">{maskedEmail}</span>
-            </p>
-          </div>
-
-          {/* OTP inputs */}
-          <div className="mb-6 flex items-center gap-2" onPaste={handlePaste}>
-            {code.map((digit, i) => (
-              <motion.input
-                key={i}
-                ref={(el) => { inputRefs.current[i] = el; }}
-                type="text"
-                inputMode="numeric"
-                maxLength={1}
-                value={digit}
-                onChange={(e) => handleInput(i, e.target.value)}
-                onKeyDown={(e) => handleKeyDown(i, e)}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: i * 0.04 }}
-                className={[
-                  'h-12 w-full rounded-xl border text-center text-xl font-bold text-white',
-                  'bg-[#1a1a2e] transition-all duration-150 focus:outline-none',
-                  digit
-                    ? 'border-violet-500 ring-1 ring-violet-500/40'
-                    : 'border-[#35354a] focus:border-violet-500/70 focus:ring-1 focus:ring-violet-500/30',
-                  verifying && 'opacity-50',
-                ].join(' ')}
-                disabled={verifying}
-                autoFocus={i === 0}
-              />
-            ))}
-          </div>
-
-          {/* Verify button */}
-          <Button
-            onClick={() => verify(code.join(''))}
-            disabled={verifying || code.some((c) => !c)}
-            className="w-full bg-violet-600 text-white hover:bg-violet-700 mb-4"
-          >
-            {verifying ? <><Loader2 size={15} className="animate-spin" />Verifying…</> : 'Verify code'}
-          </Button>
-
-          {/* Resend */}
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-[#6a6a80]">Didn&apos;t receive it?</span>
-            <button
-              onClick={resend}
-              disabled={resending || cooldown > 0}
-              className="flex items-center gap-1.5 font-medium text-violet-400 hover:text-violet-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {resending ? (
-                <><Loader2 size={13} className="animate-spin" />Sending…</>
-              ) : cooldown > 0 ? (
-                `Resend in ${cooldown}s`
-              ) : (
-                <><RefreshCw size={13} />Resend code</>
-              )}
-            </button>
-          </div>
+        <div className="mb-6 space-y-1.5">
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Check your email</h1>
+          <p className="text-sm text-gray-500">
+            We sent a 6-digit code to{' '}
+            <span className="font-medium text-gray-700">{maskedEmail}</span>
+          </p>
         </div>
 
-        <button
-          onClick={() => router.push('/auth/login')}
-          className="block w-full text-center text-sm text-[#6a6a80] hover:text-violet-400 transition-colors"
+        {/* OTP inputs */}
+        <div className="mb-6 flex items-center gap-2" onPaste={handlePaste}>
+          {code.map((digit, i) => (
+            <motion.input
+              key={i}
+              ref={(el) => { inputRefs.current[i] = el; }}
+              type="text"
+              inputMode="numeric"
+              maxLength={1}
+              value={digit}
+              onChange={(e) => handleInput(i, e.target.value)}
+              onKeyDown={(e) => handleKeyDown(i, e)}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: i * 0.04 }}
+              className={[
+                'h-12 w-full rounded-xl border text-center text-xl font-bold text-gray-900',
+                'bg-white transition-all duration-150 focus:outline-none',
+                digit
+                  ? 'border-violet-500 ring-1 ring-violet-300'
+                  : 'border-[#e4e0f8] focus:border-violet-400 focus:ring-1 focus:ring-violet-200',
+                verifying && 'opacity-50',
+              ].join(' ')}
+              disabled={verifying}
+              autoFocus={i === 0}
+            />
+          ))}
+        </div>
+
+        {/* Verify button */}
+        <Button
+          onClick={() => verify(code.join(''))}
+          disabled={verifying || code.some((c) => !c)}
+          className="w-full h-10 bg-violet-600 text-white hover:bg-violet-700 mb-4 shadow-md shadow-violet-600/25"
         >
-          ← Use a different email
-        </button>
-      </motion.div>
-    </main>
+          {verifying ? <><Loader2 size={15} className="animate-spin" />Verifying…</> : 'Verify code'}
+        </Button>
+
+        {/* Resend */}
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-gray-500">Didn&apos;t receive it?</span>
+          <button
+            onClick={resend}
+            disabled={resending || cooldown > 0}
+            className="flex items-center gap-1.5 font-medium text-violet-600 hover:text-violet-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {resending ? (
+              <><Loader2 size={13} className="animate-spin" />Sending…</>
+            ) : cooldown > 0 ? (
+              `Resend in ${cooldown}s`
+            ) : (
+              <><RefreshCw size={13} />Resend code</>
+            )}
+          </button>
+        </div>
+      </AuthCard>
+
+      <button
+        onClick={() => router.push('/auth/login')}
+        className="block w-full text-center text-sm text-gray-500 hover:text-violet-600 transition-colors"
+      >
+        ← Use a different email
+      </button>
+    </AuthShell>
   );
 }
