@@ -5,7 +5,8 @@ import {
   X, Sparkles, Loader2, Check, Pencil, Trash2, Database,
   AlertTriangle, List, AlignLeft, Hash, Tag, ArrowLeft, BarChart2,
 } from 'lucide-react';
-import type { DatasetOption, QuestionDraft, QuestionType } from '@/components/quiz/QuizBuilder';
+import { QUESTION_TYPE_HELP, type DatasetOption, type QuestionDraft, type QuestionType } from '@/components/quiz/QuizBuilder';
+import { InfoTip } from '@/components/ui/InfoTip';
 
 interface GeneratedQuestion {
   text: string;
@@ -384,10 +385,16 @@ export function AIQuizGenerator({
                 </p>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                <CountStepper label="MCQ" value={counts.mcq} onChange={(v) => setCounts((c) => ({ ...c, mcq: v }))} />
-                <CountStepper label="Numerical" value={counts.numerical} onChange={(v) => setCounts((c) => ({ ...c, numerical: v }))} />
-                <CountStepper label="Short answer" value={counts.short_answer} onChange={(v) => setCounts((c) => ({ ...c, short_answer: v }))} />
+              <div>
+                <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  Number of questions
+                  <InfoTip ariaLabel="What do the question types mean?" entries={QUESTION_TYPE_HELP} />
+                </p>
+                <div className="grid grid-cols-3 gap-3">
+                  <CountStepper label="MCQ" value={counts.mcq} onChange={(v) => setCounts((c) => ({ ...c, mcq: v }))} />
+                  <CountStepper label="Numerical" value={counts.numerical} onChange={(v) => setCounts((c) => ({ ...c, numerical: v }))} />
+                  <CountStepper label="Short answer" value={counts.short_answer} onChange={(v) => setCounts((c) => ({ ...c, short_answer: v }))} />
+                </div>
               </div>
               <p className="text-xs text-gray-500">{total} question{total !== 1 ? 's' : ''} total (max 15).</p>
 

@@ -97,7 +97,7 @@ const TYPE_META: Record<QuestionType, { label: string; icon: React.ElementType; 
   numerical:    { label: 'Numerical',       icon: Hash,      colour: 'text-emerald-700 bg-emerald-100 ring-emerald-200' },
 };
 
-const QUESTION_TYPE_HELP = [
+export const QUESTION_TYPE_HELP = [
   { term: 'Multiple Choice (MCQ)', desc: 'Students pick the correct answer from a set of options you provide.' },
   { term: 'Short Answer', desc: 'Students type a free-text response, marked correct when it matches your expected answer.' },
   { term: 'Numerical', desc: 'Students enter a number — you can allow a ± tolerance around the correct value.' },
