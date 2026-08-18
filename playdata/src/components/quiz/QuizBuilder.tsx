@@ -8,6 +8,7 @@ import {
   Clock, BookOpen, X, CheckCircle, BarChart2, PenLine, Tag, Sparkles,
 } from 'lucide-react';
 import { TagCombobox } from '@/components/ui/TagCombobox';
+import { InfoTip } from '@/components/ui/InfoTip';
 import { InlineChartBuilder, type CreatedVis } from '@/components/quiz/InlineChartBuilder';
 import { AIQuizGenerator } from '@/components/quiz/AIQuizGenerator';
 
@@ -95,6 +96,12 @@ const TYPE_META: Record<QuestionType, { label: string; icon: React.ElementType; 
   short_answer: { label: 'Short Answer',    icon: AlignLeft, colour: 'text-blue-700 bg-blue-100 ring-blue-200' },
   numerical:    { label: 'Numerical',       icon: Hash,      colour: 'text-emerald-700 bg-emerald-100 ring-emerald-200' },
 };
+
+const QUESTION_TYPE_HELP = [
+  { term: 'Multiple Choice (MCQ)', desc: 'Students pick the correct answer from a set of options you provide.' },
+  { term: 'Short Answer', desc: 'Students type a free-text response, marked correct when it matches your expected answer.' },
+  { term: 'Numerical', desc: 'Students enter a number — you can allow a ± tolerance around the correct value.' },
+];
 
 // shared input class
 const INPUT = 'w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 transition focus:border-violet-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-100';
@@ -286,8 +293,9 @@ function QuestionCard({
 
               {/* Type selector */}
               <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                <label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
                   Question type
+                  <InfoTip ariaLabel="What do the question types mean?" entries={QUESTION_TYPE_HELP} />
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {(Object.keys(TYPE_META) as QuestionType[]).map((t) => {

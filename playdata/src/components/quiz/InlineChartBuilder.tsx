@@ -14,6 +14,7 @@ import {
   categoricalColor, CHART_PIE_STROKE, CHART_PRIMARY,
   CHART_TOOLTIP_STYLE, CHART_AXIS_STYLE,
 } from '@/lib/chart-colors';
+import { InfoTip } from '@/components/ui/InfoTip';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type ChartType = 'bar' | 'line' | 'pie' | 'scatter' | 'histogram';
@@ -110,6 +111,14 @@ const CHART_TYPES: { type: ChartType; label: string; icon: React.ElementType }[]
   { type: 'pie',       label: 'Pie',       icon: PieIcon    },
   { type: 'scatter',   label: 'Scatter',   icon: Maximize2  },
   { type: 'histogram', label: 'Histogram', icon: AlignLeft  },
+];
+
+const CHART_TYPE_HELP = [
+  { term: 'Bar', desc: 'Compares values across categories using bars.' },
+  { term: 'Line', desc: 'Shows trends or change across an ordered axis, e.g. over time.' },
+  { term: 'Pie', desc: 'Shows each category’s share of a whole as slices.' },
+  { term: 'Scatter', desc: 'Plots two numeric columns as points to reveal relationships.' },
+  { term: 'Histogram', desc: 'Shows how values of one numeric column are distributed across ranges (bins).' },
 ];
 
 const FIELD_META: Record<ChartType, { x: string; y: string | null; showAgg: boolean }> = {
@@ -343,7 +352,10 @@ export function InlineChartBuilder({
 
             {/* Chart type */}
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-500">Chart type</p>
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-gray-500">
+                Chart type
+                <InfoTip ariaLabel="What do the chart types mean?" entries={CHART_TYPE_HELP} />
+              </p>
               <div className="grid grid-cols-5 gap-1">
                 {CHART_TYPES.map(({ type, label, icon: Icon }) => (
                   <button
